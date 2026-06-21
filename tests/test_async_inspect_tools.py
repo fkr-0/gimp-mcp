@@ -54,6 +54,10 @@ def test_inspection_tools_are_async_coroutines() -> None:
     tools = _registered_tools()
 
     assert set(tools) == {
+        "session_capabilities",
+        "observe_document_state",
+        "get_layer_tree_detailed",
+        "observe_region",
         "get_image_bitmap",
         "get_image_metadata",
         "get_context_state",

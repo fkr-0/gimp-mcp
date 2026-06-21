@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 
 from gimp_mcp_pro.async_bridge import AsyncGimpBridge
 from gimp_mcp_pro.config import ServerConfig
+from gimp_mcp_pro.gimp_dev_integration import GimpDevAdapter
 from gimp_mcp_pro.utils.logging import setup_logging
 
 logger = logging.getLogger("gimp_mcp_pro.server")
@@ -43,17 +44,21 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     # Register tool modules
     # ------------------------------------------------------------------
 
+    from gimp_mcp_pro.tools.agent_tools import register_agent_tools
     from gimp_mcp_pro.tools.color_tools import register_color_tools
     from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
     from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+    from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
     from gimp_mcp_pro.tools.history_tools import register_history_tools
     from gimp_mcp_pro.tools.image_tools import register_image_tools
     from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
     from gimp_mcp_pro.tools.layer_tools import register_layer_tools
     from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
     from gimp_mcp_pro.tools.selection_tools import register_selection_tools
+    from gimp_mcp_pro.tools.target_tools import register_target_tools
     from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 
+    register_agent_tools(mcp, bridge)
     register_image_tools(mcp, bridge)
     register_layer_tools(mcp, bridge)
     register_selection_tools(mcp, bridge)
@@ -61,9 +66,11 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     register_inspect_tools(mcp, bridge)
     register_history_tools(mcp, bridge)
     register_pdb_tools(mcp, bridge)
+    register_target_tools(mcp, bridge)
     register_transform_tools(mcp, bridge)
     register_filter_tools(mcp, bridge)
     register_color_tools(mcp, bridge)
+    register_gimp_dev_tools(mcp, bridge, GimpDevAdapter.from_config(config))
 
     logger.info("All tool modules registered")
 

@@ -98,13 +98,13 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 75
+    current_total: 84
     by_module:
       image_tools: 6
       layer_tools: 9
       selection_tools: 8
       drawing_tools: 10
-      inspect_tools: 4
+      inspect_tools: 8
       history_tools: 4
       pdb_tools: 2
       transform_tools: 11
@@ -112,7 +112,7 @@ known_repo_observations:
       color_tools: 13
     reconciliation_required: >-
       README currently advertises 67 typed tools while current code registers
-      75 @mcp.tool decorators. The compatibility gate MUST reconcile the public
+      84 unique MCP tool decorators. The compatibility gate MUST reconcile the public
       count with the runtime registry before publishing a 3.2.4 support claim.
   plugin_entrypoint:
     source: gimp_plugin/gimp_mcp_plugin.py
@@ -528,7 +528,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 75
+  expected_registry_total: 84
   registry:
     image:
       - create_image
@@ -568,6 +568,10 @@ mcp_tool_contract:
       - add_text
       - edit_clear
     inspection:
+      - session_capabilities
+      - observe_document_state
+      - get_layer_tree_detailed
+      - observe_region
       - get_image_bitmap
       - get_image_metadata
       - get_context_state
@@ -580,6 +584,13 @@ mcp_tool_contract:
     pdb:
       - search_pdb
       - execute_python
+    target:
+      - resolve_target
+      - validate_targets
+    agent_transaction:
+      - begin_edit_transaction
+      - end_edit_transaction
+      - rollback_transaction
     transform:
       - scale_image
       - scale_layer
@@ -677,7 +688,7 @@ live_smoke_scenarios:
     title: Asyncio-native bridge transport and async MCP tool path
     assertions:
       - AsyncGimpBridge performs a length-prefixed get_gimp_info round-trip.
-      - AsyncGimpBridge can register the complete 75-tool MCP surface.
+      - AsyncGimpBridge can register the complete 84-tool MCP surface.
       - Representative image, layer, metadata, and bitmap tools succeed through actual async tool handlers.
       - The async bridge closes its stream cleanly after the scenario.
   - id: C-030-image-basics

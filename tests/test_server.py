@@ -45,6 +45,7 @@ def patch_tool_registrars(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Patch all tool registrars with capture callables."""
     calls: list[str] = []
     modules = {
+        "agent_tools": "register_agent_tools",
         "color_tools": "register_color_tools",
         "drawing_tools": "register_drawing_tools",
         "filter_tools": "register_filter_tools",
@@ -54,6 +55,7 @@ def patch_tool_registrars(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "layer_tools": "register_layer_tools",
         "pdb_tools": "register_pdb_tools",
         "selection_tools": "register_selection_tools",
+        "target_tools": "register_target_tools",
         "transform_tools": "register_transform_tools",
     }
     for module_name, function_name in modules.items():
@@ -86,6 +88,7 @@ def test_create_server_wires_bridge_and_tool_registrars(monkeypatch: pytest.Monk
     assert FakeAsyncGimpBridge.last_kwargs["port"] == 9911
     assert FakeAsyncGimpBridge.last_kwargs["reconnect_delays"] == [0.25]
     assert calls == [
+        "register_agent_tools",
         "register_image_tools",
         "register_layer_tools",
         "register_selection_tools",
@@ -93,6 +96,7 @@ def test_create_server_wires_bridge_and_tool_registrars(monkeypatch: pytest.Monk
         "register_inspect_tools",
         "register_history_tools",
         "register_pdb_tools",
+        "register_target_tools",
         "register_transform_tools",
         "register_filter_tools",
         "register_color_tools",

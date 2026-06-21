@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse, ToolResult
+from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
@@ -24,6 +25,7 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
+from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.tools.types import AsyncToolBridge
 from gimp_mcp_pro.utils.errors import GimpCommandError
@@ -77,6 +79,131 @@ class ScriptedToolBridge:
         del timeout
         self.execute_calls.append(code_lines)
         source = "\n".join(code_lines)
+
+        if "gimp-mcp-pro:agent:begin_edit_transaction" in source:
+            return {
+                "status": "success",
+                "results": [json.dumps({"image_id": 101, "undo_group_started": True})],
+            }
+        if "gimp-mcp-pro:agent:end_edit_transaction" in source:
+            return {"status": "success", "results": [json.dumps({"undo_group_ended": True})]}
+        if "gimp-mcp-pro:agent:rollback_transaction" in source:
+            return {
+                "status": "success",
+                "results": [json.dumps({"undo_group_ended": True, "rolled_back": True})],
+            }
+        if "__gimp_mcp_session_capabilities__" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "gimp_version": "3.2.4",
+                            "api_namespace": "3.0",
+                            "capabilities": {
+                                "pdb_available": True,
+                                "procedures": {"file-png-export": True},
+                                "export": {"file-png-export": True},
+                                "safety_mode": "localhost-only",
+                            },
+                            "unavailable": [],
+                        }
+                    )
+                ],
+            }
+        if "__gimp_mcp_document_state__" in source and "__gimp_mcp_layer_tree__" not in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "has_image": True,
+                            "image_id": 101,
+                            "dimensions": {"width": 320, "height": 200},
+                            "color_mode": "RGB",
+                            "active_layer": {"id": 201, "name": "Layer 1", "kind": "layer"},
+                            "selected_layer_ids": [201],
+                            "layer_tree": [{"id": 201, "name": "Layer 1", "visible": True}],
+                            "layers_flat": [{"id": 201, "name": "Layer 1", "visible": True}],
+                            "selections": {"non_empty": False},
+                            "guides": [],
+                            "paths": [],
+                            "channels": [],
+                            "warnings": [],
+                        }
+                    )
+                ],
+            }
+        if "__gimp_mcp_layer_tree__" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "image_id": 101,
+                            "layers": [
+                                {
+                                    "id": 201,
+                                    "name": "Layer 1",
+                                    "visible": True,
+                                    "editable": True,
+                                    "bounds": {"x": 0, "y": 0, "width": 320, "height": 200},
+                                }
+                            ],
+                            "groups": [],
+                            "warnings": [],
+                        }
+                    )
+                ],
+            }
+        if "__gimp_mcp_region_samples__" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "region_bounds": {"x": 1, "y": 2, "width": 30, "height": 40},
+                            "sampled_colors": [
+                                {"x": 1, "y": 2, "color": {"r": 0.1, "g": 0.2, "b": 0.3, "a": 1.0}}
+                            ],
+                            "histogram": None,
+                        }
+                    )
+                ],
+            }
+        if "__gimp_mcp_resolve_target__" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "query": "layer 1",
+                            "target_types": ["layer"],
+                            "matches": [
+                                {"kind": "layer", "id": 201, "name": "Layer 1", "score": 90}
+                            ],
+                            "count": 1,
+                            "selected": {"kind": "layer", "id": 201, "name": "Layer 1"},
+                            "ambiguity": {"ambiguous": False, "reason": "none"},
+                        }
+                    )
+                ],
+            }
+        if "__gimp_mcp_validate_targets__" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "valid": True,
+                            "targets": [{"kind": "layer", "id": 201, "name": "Layer 1"}],
+                            "failures": [],
+                            "warnings": [],
+                            "required_capabilities": ["editable", "visible"],
+                        }
+                    )
+                ],
+            }
 
         if "for img in images" in source and "json.dumps(result)" in source:
             return {
@@ -234,6 +361,7 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
     """Register all tool groups against a bridge fake."""
     mcp = CaptureMCP()
     for register in [
+        register_agent_tools,
         register_image_tools,
         register_layer_tools,
         register_selection_tools,
@@ -241,6 +369,7 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
         register_inspect_tools,
         register_history_tools,
         register_pdb_tools,
+        register_target_tools,
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
@@ -267,6 +396,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "apply_unsharp_mask": ((), {"amount": 0.4, "radius": 2.0}),
     "auto_white_balance": ((), {}),
     "autocrop_image": ((), {}),
+    "begin_edit_transaction": ((), {"label": "matrix", "capture_before_state": True}),
     "begin_undo_group": ((), {"name": "matrix"}),
     "color_to_alpha": ((), {"color": "white"}),
     "create_image": ((320, 200), {"color_mode": "rgb", "fill": "white"}),
@@ -283,6 +413,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "duplicate_image": ((), {}),
     "duplicate_layer": ((), {"layer_index": 0, "new_name": "Copy"}),
     "edit_clear": ((), {}),
+    "end_edit_transaction": ((), {}),
     "end_undo_group": ((), {}),
     "execute_python": ((["print('ok')"],), {"timeout_seconds": 1.0}),
     "export_image": (("/tmp/gimp-mcp-test.png",), {"format": "png", "quality": 90}),
@@ -303,6 +434,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "offset_layer": ((5, -3), {"layer_index": 0}),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
+    "rollback_transaction": ((), {}),
     "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
     "rotate_image": ((90,), {}),
     "rotate_layer": ((15.0,), {"layer_index": 0}),
@@ -318,12 +450,21 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "select_polygon": (([0, 0, 20, 0, 10, 12],), {}),
     "select_rectangle": ((1, 2, 30, 40), {"feather_radius": 1.0}),
     "select_shrink": ((2,), {}),
+    "observe_document_state": ((), {"include_thumbnail": True, "max_preview_size": 64}),
+    "observe_region": ((1, 2, 30, 40), {"max_size": 64}),
+    "get_layer_tree_detailed": ((), {}),
+    "resolve_target": (("Layer 1",), {"target_types": ["layer"], "require_unique": True}),
+    "session_capabilities": ((), {}),
     "set_active_layer": ((), {"layer_index": 0}),
     "set_background_color": (("#ffffff",), {}),
     "set_foreground_color": (("#000000",), {}),
     "set_layer_opacity": ((75.0,), {"layer_index": 0}),
     "set_layer_visibility": ((False,), {"layer_index": 0}),
     "swap_colors": ((), {}),
+    "validate_targets": (
+        ([{"kind": "layer", "id": 201}],),
+        {"required_capabilities": ["visible", "editable"]},
+    ),
     "undo": ((), {"steps": 1}),
 }
 
@@ -348,7 +489,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 75
+    assert len(TOOL_SUCCESS_CASES) == 84
 
 
 @pytest.mark.asyncio
@@ -415,6 +556,10 @@ async def test_validation_failures_do_not_call_bridge() -> None:
         await tools["execute_python"]([]),
         await tools["rotate_image"](45),
         await tools["set_active_layer"](),
+        await tools["observe_region"](1, 2, 0, 5),
+        await tools["observe_document_state"](max_preview_size=0),
+        await tools["resolve_target"](""),
+        await tools["validate_targets"]([]),
     ]
 
     assert all(result["success"] is False for result in invalid_results)

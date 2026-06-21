@@ -13,6 +13,7 @@ import pytest
 from gimp_mcp_pro.async_bridge import AsyncGimpBridge
 from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse
+from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
@@ -22,6 +23,7 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
+from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.tools.types import AsyncToolBridge
 from gimp_mcp_pro.utils.errors import GimpCommandError
@@ -148,6 +150,7 @@ class RecordingAsyncBridge(AsyncNoopBridge):
 
 def register_functions() -> list[RegisterFn]:
     return [
+        register_agent_tools,
         register_image_tools,
         register_layer_tools,
         register_selection_tools,
@@ -155,6 +158,7 @@ def register_functions() -> list[RegisterFn]:
         register_inspect_tools,
         register_history_tools,
         register_pdb_tools,
+        register_target_tools,
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
@@ -217,7 +221,7 @@ def test_all_mcp_tool_handlers_return_tool_result_alias() -> None:
 def test_all_registered_tools_are_coroutine_functions() -> None:
     tools = registered_tools()
 
-    assert len(tools) == 75
+    assert len(tools) == 84
     assert all(inspect.iscoroutinefunction(tool) for tool in tools.values())
 
 
@@ -363,7 +367,7 @@ async def test_async_native_bridge_can_drive_registered_tool_surface() -> None:
     assert info_result["success"] is True
     assert bitmap_result["success"] is True
     assert gimp_result["success"] is True
-    assert len(tools) == 75
+    assert len(tools) == 84
     assert ("get_gimp_info", None) in bridge.calls
     assert (
         "get_image_bitmap",

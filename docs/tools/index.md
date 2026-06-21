@@ -5,22 +5,30 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **75**
+Total tools: **84**
 
 | Category | Tools | Page |
 |---|---:|---|
+| Agent Tools | 3 | [agent_tools](agent_tools.md) |
 | Color Adjustments | 13 | [color_tools](color_tools.md) |
 | Drawing and Text | 10 | [drawing_tools](drawing_tools.md) |
 | Filters and Effects | 8 | [filter_tools](filter_tools.md) |
 | History | 4 | [history_tools](history_tools.md) |
 | Image Management | 6 | [image_tools](image_tools.md) |
-| Inspection | 4 | [inspect_tools](inspect_tools.md) |
+| Inspection | 8 | [inspect_tools](inspect_tools.md) |
 | Layer Operations | 9 | [layer_tools](layer_tools.md) |
 | PDB and Escape Hatch | 2 | [pdb_tools](pdb_tools.md) |
 | Selections | 8 | [selection_tools](selection_tools.md) |
+| Target Resolution | 2 | [target_tools](target_tools.md) |
 | Transforms | 11 | [transform_tools](transform_tools.md) |
 
 ## Tool inventory
+
+### Agent Tools
+
+- [`begin_edit_transaction`](agent_tools.md#begin-edit-transaction) — Begin a reversible edit transaction backed by a GIMP undo group.
+- [`end_edit_transaction`](agent_tools.md#end-edit-transaction) — End a tracked or best-effort GIMP undo transaction.
+- [`rollback_transaction`](agent_tools.md#rollback-transaction) — Rollback a transaction using GIMP undo where available.
 
 ### Color Adjustments
 
@@ -80,6 +88,10 @@ Total tools: **75**
 
 ### Inspection
 
+- [`session_capabilities`](inspect_tools.md#session-capabilities) — Report GIMP runtime capabilities and safety-relevant environment state.
+- [`observe_document_state`](inspect_tools.md#observe-document-state) — Return a compact snapshot of the active GIMP document state.
+- [`get_layer_tree_detailed`](inspect_tools.md#get-layer-tree-detailed) — Return detailed layer, group, visibility, lock, and bounds metadata.
+- [`observe_region`](inspect_tools.md#observe-region) — Return a bounded visual observation and metadata for a rectangular region.
 - [`get_image_bitmap`](inspect_tools.md#get-image-bitmap) — Get the current image as a viewable bitmap (PNG).
 - [`get_image_metadata`](inspect_tools.md#get-image-metadata) — Get detailed metadata about the active image without bitmap data.
 - [`get_context_state`](inspect_tools.md#get-context-state) — Get current GIMP context state (colors, brush, opacity, settings).
@@ -112,6 +124,11 @@ Total tools: **75**
 - [`select_invert`](selection_tools.md#select-invert) — Invert the current selection (select everything NOT currently selected).
 - [`select_grow`](selection_tools.md#select-grow) — Grow the current selection by a number of pixels.
 - [`select_shrink`](selection_tools.md#select-shrink) — Shrink the current selection by a number of pixels.
+
+### Target Resolution
+
+- [`resolve_target`](target_tools.md#resolve-target) — Resolve a user or agent target reference into concrete GIMP object IDs.
+- [`validate_targets`](target_tools.md#validate-targets) — Validate that proposed targets still exist and support required actions.
 
 ### Transforms
 

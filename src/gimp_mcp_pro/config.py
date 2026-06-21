@@ -87,6 +87,32 @@ class ServerConfig(BaseSettings):
         validation_alias=AliasChoices("GIMP_MCP_PRO_PLUGIN_DIR", "GIMP_MCP_PLUGIN_DIR"),
         description="Optional explicit GIMP plugin directory",
     )
+    gimp_dev_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("GIMP_MCP_PRO_GIMP_DEV_ENABLED", "GIMP_DEV_ENABLED"),
+        description="Enable optional read-only integration with a local gimp.dev checkout",
+    )
+    gimp_dev_root: Path = Field(
+        default=Path.home() / "code" / "gimp.dev",
+        validation_alias=AliasChoices("GIMP_MCP_PRO_GIMP_DEV_ROOT", "GIMP_DEV_ROOT"),
+        description="Local gimp.dev checkout used for catalog discovery",
+    )
+    gimp_dev_cli: str = Field(
+        default="gimp-dev",
+        validation_alias=AliasChoices("GIMP_MCP_PRO_GIMP_DEV_CLI", "GIMP_DEV_CLI"),
+        description="gimp.dev console script name",
+    )
+    gimp_dev_uv: str = Field(
+        default="uv",
+        validation_alias=AliasChoices("GIMP_MCP_PRO_GIMP_DEV_UV", "GIMP_DEV_UV"),
+        description="uv executable used to run gimp.dev CLI commands",
+    )
+    gimp_dev_timeout: float = Field(
+        default=15.0,
+        validation_alias=AliasChoices("GIMP_MCP_PRO_GIMP_DEV_TIMEOUT", "GIMP_DEV_TIMEOUT"),
+        gt=0,
+        description="Timeout in seconds for pure gimp.dev catalog commands",
+    )
 
     @field_validator("reconnect_delays", mode="before")
     @classmethod

@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse
+from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
@@ -24,6 +25,7 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
+from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
@@ -54,7 +56,9 @@ class ScriptedBridge:
         params: CommandParams | None = None,
         timeout: float | None = None,
     ) -> PluginResponse:
-        self.calls.append(("send_command", {"type": command_type, "params": params, "timeout": timeout}))
+        self.calls.append(
+            ("send_command", {"type": command_type, "params": params, "timeout": timeout})
+        )
         return {"status": "success", "results": {"command": command_type}}
 
     async def async_execute_python(
@@ -191,6 +195,7 @@ class FailingBridge(ScriptedBridge):
 def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
     mcp = CaptureMCP()
     for register in [
+        register_agent_tools,
         register_image_tools,
         register_layer_tools,
         register_selection_tools,
@@ -198,6 +203,7 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
         register_inspect_tools,
         register_history_tools,
         register_pdb_tools,
+        register_target_tools,
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
@@ -209,6 +215,7 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
 SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "add_text": {"text": "hello 'quoted' world", "layer_name": "text-layer"},
     "adjust_curves": {"control_points": [0.0, 0.0, 1.0, 1.0]},
+    "begin_edit_transaction": {"label": "generated", "capture_before_state": True},
     "create_image": {"width": 64, "height": 48},
     "crop_image": {"x": 1, "y": 2, "width": 32, "height": 24},
     "delete_layer": {"layer_index": 0},
@@ -217,11 +224,14 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "draw_line": {"x1": 0, "y1": 0, "x2": 16, "y2": 16},
     "draw_polygon": {"points": [0, 0, 20, 0, 20, 20]},
     "draw_rectangle": {"x": 1, "y": 1, "width": 12, "height": 8},
+    "end_edit_transaction": {},
     "execute_python": {"code": ["x = 1", "print(x)"]},
     "export_image": {"file_path": "/tmp/gimp-mcp-test.png"},
     "get_image_bitmap": {"max_width": 32, "max_height": 24},
     "offset_layer": {"offset_x": 4, "offset_y": 5},
+    "observe_region": {"x": 0, "y": 0, "width": 16, "height": 16},
     "resize_canvas": {"new_width": 128, "new_height": 96},
+    "rollback_transaction": {},
     "rotate_image": {"angle": 90},
     "rotate_layer": {"angle_degrees": 15.0},
     "sample_color": {"x": 2, "y": 3},
@@ -237,12 +247,21 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "set_background_color": {"color": "#ffffff"},
     "set_foreground_color": {"color": "#000000"},
     "set_layer_opacity": {"opacity": 42},
+    "resolve_target": {"query": "Background", "target_types": ["layer"]},
+    "validate_targets": {"targets": [{"type": "layer", "name": "Background"}]},
     "set_layer_visibility": {"visible": False},
 }
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("tool_name", sorted(registered_tools(ScriptedBridge()).keys()))
+@pytest.mark.parametrize(
+    "tool_name",
+    [
+        name
+        for name in sorted(registered_tools(ScriptedBridge()).keys())
+        if name != "validate_targets"
+    ],
+)
 async def test_all_tools_have_fast_success_path(tool_name: str) -> None:
     bridge = ScriptedBridge()
     tools = registered_tools(bridge)

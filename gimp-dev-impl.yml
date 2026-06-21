@@ -1,0 +1,655 @@
+schema: gimp-mcp.gimp-dev-impl.v1
+created_at: 2026-06-21
+status: analysis-roadmap
+owner_project: gimp-mcp
+external_project:
+  name: gimp.dev
+  path: /home/user/code/gimp.dev
+  package: gimp_dev
+  cli: gimp-dev
+  pyproject_script: gimp_dev.launch:main
+
+summary:
+  decision: yes-but-adapter-gated
+  recommendation: >-
+    Incorporate tooling for discovering and using user/code/gimp.dev plug-ins from
+    the MCP server, but do not import arbitrary gimp.dev plug-in internals directly
+    into the MCP server process and do not expose the gimp.dev REPL as a general
+    MCP escape hatch. Treat gimp.dev as an optional local capability provider with
+    three explicit integration layers: pure catalog discovery, pure command/planner
+    execution, and live GIMP procedure invocation when the plug-ins are installed
+    in the same spawned/clean-profile GIMP instance as the MCP plug-in.
+  reason: >-
+    gimp.dev already has a useful split between pure metadata/spec modules,
+    pure planner commands, and thin GIMP-facing adapters. That matches the MCP
+    direction well: tool discovery can be static and testable, pure planners can
+    run safely through uv without opening GIMP, and live procedures can be reached
+    through GIMP's PDB only when a verified GIMP session advertises them.
+  non_goal: >-
+    This is not a plan to merge gimp.dev into gimp-mcp or to let arbitrary local
+    Python modules become MCP tools automatically.
+
+observed_inventory:
+  inspected_at: 2026-06-21
+  root: /home/user/code/gimp.dev
+  useful_current_modules:
+    pure_catalog_specs:
+      - gimp_dev/repl_plugin_specs.py
+      - gimp_dev/sprite_plugin_specs.py
+      - gimp_dev/views_plugin_specs.py
+    command_registry:
+      - gimp_dev/commands.py
+    launch_and_environment:
+      - gimp_dev/launch.py
+      - bridge.yml
+    plugin_runtime_support:
+      - gimp_dev/plugin_support.py
+    sprite_domain:
+      - gimp_dev/sprite_export.py
+      - gimp_dev/sprite_manifest.py
+      - gimp_dev/sprite_onion.py
+      - gimp_dev/sprite_clip.py
+      - gimp_dev/sprite_raster_export.py
+      - gimp_dev/gimp_sprite_raster_export.py
+      - gimp_dev/sprite_plugin_handlers.py
+    saved_views_domain:
+      - gimp_dev/views_plugin_specs.py
+      - gimp_dev/gimp_views.py
+      - gimp_dev/views_presenter.py
+    repl_domain:
+      - gimp_dev/repl.py
+      - gimp_dev/repl_plugin_specs.py
+  non_gui_commands_from_bridge_manifest:
+    safe_for_discovery_or_planning:
+      - uv run gimp-dev doctor
+      - uv run gimp-dev env
+      - uv run gimp-dev command -- --verbose
+      - uv run gimp-dev plugin-catalog --check
+      - uv run gimp-dev gtk-frame-plan
+      - uv run gimp-dev sprite-sheet-plan --name demo --columns 2 --rows 1 --cell-width 16 --cell-height 16
+      - uv run gimp-dev sprite-onion-plan --frame-count 6 --active-index 3
+      - uv run gimp-dev sprite-clip-plan --name demo --frame-count 3
+    explicit_gui_or_profile_mutating:
+      - uv run gimp-dev start
+      - uv run gimp-dev plugin-install
+      - uv run gimp-dev plugin-uninstall
+  catalog_check:
+    command_run: cd /home/user/code/gimp.dev && uv run gimp-dev plugin-catalog --check
+    result: pass
+    validation_errors: []
+    plugins:
+      - name: async-repl
+        procedures:
+          - name: python-fu-gimp-async-repl-start
+            handler: run_repl_start
+            commands: []
+            arguments: []
+          - name: python-fu-gimp-async-repl-stop
+            handler: run_repl_stop
+            commands: []
+            arguments: []
+      - name: saved-views
+        procedures:
+          - name: python-fu-gimp-dev-views-manager
+            handler: run_manager
+            commands: []
+            arguments: []
+          - name: python-fu-gimp-dev-view-save
+            handler: run_save_view
+            commands: []
+            arguments: []
+          - name: python-fu-gimp-dev-view-spawn
+            handler: run_spawn_view
+            commands: []
+            arguments: []
+          - name: python-fu-gimp-dev-view-apply-transform
+            handler: run_transform_view
+            commands: []
+            arguments: []
+      - name: sprite-tools
+        procedures:
+          - name: python-fu-gimp-dev-sprite-tools
+            handler: run_sprite_tools
+            commands: []
+            arguments: []
+          - name: python-fu-gimp-dev-sprite-background-remove
+            handler: run_background_remove
+            commands:
+              - sprite.bg.remove
+            arguments:
+              - red
+              - green
+              - blue
+              - alpha
+              - tolerance
+              - intensity
+              - eight-connected
+          - name: python-fu-gimp-dev-sprite-sheet-plan
+            handler: run_sheet_plan
+            commands:
+              - sprite.sheet.detect
+            arguments:
+              - sheet-name
+              - columns
+              - rows
+              - cell-width
+              - cell-height
+              - gap-x
+              - gap-y
+              - offset-x
+              - offset-y
+          - name: python-fu-gimp-dev-sprite-sheet-export-pngs
+            handler: run_sheet_export_pngs
+            commands:
+              - sprite.sheet.export
+            arguments:
+              - sheet-name
+              - columns
+              - rows
+              - cell-width
+              - cell-height
+              - gap-x
+              - gap-y
+              - offset-x
+              - offset-y
+              - output-dir
+              - overwrite
+
+fit_analysis:
+  makes_sense: true
+  strongest_fit:
+    - >-
+      gimp.dev's pure procedure catalogs can feed MCP capability discovery without
+      importing GI or starting GIMP.
+    - >-
+      gimp.dev's pure sprite planner commands are useful MCP tools immediately:
+      they return JSON plans and do not mutate an image.
+    - >-
+      gimp.dev's plug-in procedure names can become live-session capabilities that
+      are only advertised when the active GIMP PDB reports those procedures.
+    - >-
+      The existing gimp-mcp compatibility discipline can absorb this cleanly:
+      catalog checks become static checks and live procedures become optional
+      capability assertions in spawned/Xvfb smoke tests.
+  weak_fit_or_do_not_do:
+    - >-
+      Do not expose the ptpython REPL as an ordinary MCP tool. It is useful for
+      developer sessions, but from MCP it is equivalent to arbitrary code execution
+      in the GIMP process.
+    - >-
+      Do not make gimp-mcp import gimp_dev.api directly in normal server startup;
+      that module imports GI/Gimp and belongs inside the GIMP process, not the MCP
+      server process.
+    - >-
+      Do not auto-generate public MCP tools for every catalog procedure until the
+      argument schema, safety classification, and live availability are checked.
+  relationship_to_future_tools_roadmap:
+    overlaps:
+      FEAT-034: pdb_introspect_typed
+      FEAT-035: execute_pdb_call
+      FEAT-036: safe_python_eval
+      FEAT-045: session_capabilities
+    complements:
+      FEAT-001: observe_document_state
+      FEAT-002: get_layer_tree_detailed
+      FEAT-003: observe_region
+      FEAT-007: resolve_target
+      FEAT-008: validate_targets
+      FEAT-010: begin_edit_transaction
+      FEAT-011: end_edit_transaction
+      FEAT-012: rollback_transaction
+    note: >-
+      Implement gimp.dev integration as an optional capability provider after or
+      alongside session_capabilities + typed PDB introspection. It should not block
+      core document observation tooling.
+
+architecture:
+  principle: capability-provider-adapter
+  runtime_boundaries:
+    - id: pure_catalog_boundary
+      direction: gimp-mcp -> gimp.dev CLI or pure parser
+      mutates_gimp: false
+      starts_gui: false
+      default_enabled: true_if_project_exists_and_catalog_check_passes
+      recommended_mechanism: subprocess-json
+      command: uv run gimp-dev plugin-catalog --check
+      output_contract:
+        plugins: list
+        validation_errors: list
+      use_cases:
+        - discover known gimp.dev procedure names
+        - map procedure arguments into candidate MCP schemas
+        - decide whether integration should be advertised at all
+    - id: pure_command_boundary
+      direction: gimp-mcp -> gimp.dev CLI
+      mutates_gimp: false
+      starts_gui: false
+      default_enabled: true_for_allowlisted_commands
+      recommended_mechanism: subprocess-json-with-timeout
+      allowlist_initial:
+        - doctor
+        - env
+        - command
+        - plugin-catalog
+        - gtk-frame-plan
+        - sprite-sheet-plan
+        - sprite-onion-plan
+        - sprite-clip-plan
+      use_cases:
+        - expose planning helpers as MCP tools
+        - inspect launch/profile environment
+        - verify plugin-install targets without writing them
+    - id: live_pdb_boundary
+      direction: gimp-mcp MCP server -> gimp-mcp GIMP bridge -> GIMP PDB -> gimp.dev plug-in procedures
+      mutates_gimp: procedure_dependent
+      starts_gui: false
+      default_enabled: false_until_live_capability_probe_passes
+      recommended_mechanism: typed-pdb-procedure-call
+      use_cases:
+        - call python-fu-gimp-dev-sprite-sheet-plan inside live GIMP when installed
+        - call sprite background removal or PNG export only inside a transaction and after target validation
+        - call saved view operations when current image/session supports them
+    - id: developer_repl_boundary
+      direction: human-developer -> gimp.dev REPL
+      mutates_gimp: arbitrary
+      starts_gui: may_require_gimp
+      default_enabled: false
+      mcp_policy: do_not_expose_as_regular_tool
+      use_cases:
+        - manual debugging
+        - controlled development sessions
+
+configuration_contract:
+  new_settings:
+    GIMP_MCP_GIMP_DEV_ENABLED:
+      type: bool
+      default: false
+      meaning: Enable optional gimp.dev integration probes and tools.
+    GIMP_MCP_GIMP_DEV_ROOT:
+      type: path
+      default: /home/user/code/gimp.dev
+      meaning: Local gimp.dev checkout used for CLI/catalog integration.
+    GIMP_MCP_GIMP_DEV_UV:
+      type: string
+      default: uv
+      meaning: Command used to execute gimp.dev tooling.
+    GIMP_MCP_GIMP_DEV_TIMEOUT_SECONDS:
+      type: float
+      default: 10.0
+      meaning: Timeout for pure gimp.dev CLI calls.
+    GIMP_MCP_GIMP_DEV_LIVE_ENABLED:
+      type: bool
+      default: false
+      meaning: Enable live PDB calls into gimp.dev procedures after capability probes pass.
+    GIMP_MCP_GIMP_DEV_ALLOW_MUTATING:
+      type: bool
+      default: false
+      meaning: Allow mutating gimp.dev live tools; otherwise only read-only/planning tools are visible.
+  source_of_truth_files:
+    - gimp-dev-impl.yml
+    - compat.yml
+    - features.yml
+    - /home/user/code/gimp.dev/bridge.yml
+    - /home/user/code/gimp.dev/gimp_dev/*_plugin_specs.py
+
+proposed_mcp_tools:
+  phase_1_pure_discovery:
+    - name: gimp_dev_status
+      kind: read_only
+      inputs:
+        include_catalog: bool
+      returns:
+        enabled: bool
+        root: path
+        exists: bool
+        cli_available: bool
+        catalog_valid: bool
+        plugins: optional_list
+        validation_errors: list
+      implementation: Run existence checks and optionally the allowlisted plugin-catalog command.
+    - name: gimp_dev_plugin_catalog
+      kind: read_only
+      inputs:
+        refresh: bool
+      returns:
+        plugins: list
+        procedure_count: int
+        validation_errors: list
+      implementation: Run `uv run gimp-dev plugin-catalog --check` with cwd at GIMP_MCP_GIMP_DEV_ROOT.
+    - name: gimp_dev_command_plan
+      kind: read_only
+      inputs:
+        command: enum
+        args: object
+      returns:
+        json: object
+      allowlist:
+        - gtk-frame-plan
+        - sprite-sheet-plan
+        - sprite-onion-plan
+        - sprite-clip-plan
+      implementation: >-
+        Translate validated structured args to CLI argv. Do not accept arbitrary
+        argv from the user or model.
+  phase_2_live_capabilities:
+    - name: gimp_dev_live_capabilities
+      kind: read_only
+      inputs:
+        include_pdb_probe: bool
+      returns:
+        installed_procedures: list
+        missing_procedures: list
+        mutable_available: bool
+      implementation: >-
+        In the active GIMP process, ask PDB for the exact procedure names found in
+        the catalog. Do not claim availability based only on local files.
+    - name: gimp_dev_call_procedure
+      kind: typed_pdb_adapter
+      inputs:
+        procedure_name: enum_from_catalog_and_probe
+        args: object
+        transaction_label: optional_string
+        dry_run: bool
+      returns:
+        status: string
+        procedure_name: string
+        outputs: object
+      guardrails:
+        - procedure must be known from catalog
+        - procedure must be reported present by live_pdb_boundary
+        - mutating procedure requires GIMP_MCP_GIMP_DEV_ALLOW_MUTATING=true
+        - mutating procedure should run inside a gimp-mcp undo transaction
+        - arguments must be validated against PluginArgumentSpec or a generated pydantic model
+  phase_3_named_typed_wrappers:
+    - name: gimp_dev_sprite_sheet_plan
+      maps_to:
+        pure_cli: sprite-sheet-plan
+        live_procedure: python-fu-gimp-dev-sprite-sheet-plan
+      kind: read_only_plan
+    - name: gimp_dev_sprite_onion_plan
+      maps_to:
+        pure_cli: sprite-onion-plan
+      kind: read_only_plan
+    - name: gimp_dev_sprite_clip_plan
+      maps_to:
+        pure_cli: sprite-clip-plan
+      kind: read_only_plan
+    - name: gimp_dev_sprite_background_remove
+      maps_to:
+        live_procedure: python-fu-gimp-dev-sprite-background-remove
+      kind: mutating_live_image
+      default_visible: false
+    - name: gimp_dev_sprite_sheet_export_pngs
+      maps_to:
+        live_procedure: python-fu-gimp-dev-sprite-sheet-export-pngs
+      kind: mutating_filesystem_and_live_image
+      default_visible: false
+    - name: gimp_dev_saved_view_save
+      maps_to:
+        live_procedure: python-fu-gimp-dev-view-save
+      kind: project_metadata_or_live_view
+      default_visible: after_probe
+    - name: gimp_dev_saved_view_spawn
+      maps_to:
+        live_procedure: python-fu-gimp-dev-view-spawn
+      kind: live_ui_view
+      default_visible: after_probe
+
+safety_model:
+  classifications:
+    read_only_catalog:
+      examples:
+        - plugin-catalog
+        - doctor
+        - env
+      allowed_by_default_when_enabled: true
+    pure_planner:
+      examples:
+        - sprite-sheet-plan
+        - sprite-onion-plan
+        - sprite-clip-plan
+      allowed_by_default_when_enabled: true
+    live_read_only:
+      examples:
+        - saved view capture when implemented read-only
+        - live capability probes
+      allowed_by_default_when_live_enabled: true
+    live_mutating_image:
+      examples:
+        - sprite background removal
+        - onion preview layers
+      allowed_by_default: false
+      requires:
+        - live_pdb_probe_passed
+        - target_validation
+        - transaction_or_undo_group
+        - explicit config enablement
+    live_filesystem_write:
+      examples:
+        - sprite sheet PNG export
+      allowed_by_default: false
+      requires:
+        - path allowlist or workspace-relative output path
+        - overwrite false by default
+        - explicit overwrite argument for replacement
+        - result manifest
+    arbitrary_code_or_repl:
+      examples:
+        - async REPL server
+        - raw Python evaluation
+      mcp_policy: do_not_expose_as_general_tool
+  path_policy:
+    pure_cli_cwd: GIMP_MCP_GIMP_DEV_ROOT
+    filesystem_outputs: workspace_or_explicit_allowlist_only
+    disallow_implicit_write_locations:
+      - home root
+      - /tmp without explicit request
+      - existing files unless overwrite=true and tool is enabled
+  process_policy:
+    subprocess_timeout_seconds_default: 10.0
+    stdout_limit_bytes: 1048576
+    stderr_limit_bytes: 65536
+    argv_construction: typed-args-only-no-freeform-shell
+    env_policy: minimal_env_plus_configured_overrides
+
+implementation_plan:
+  - id: GDI-001
+    title: Add gimp.dev settings and status helper
+    priority: P0
+    files:
+      - src/gimp_mcp_pro/config.py
+      - src/gimp_mcp_pro/gimp_dev_adapter.py
+      - tests/test_gimp_dev_adapter.py
+    deliverables:
+      - pydantic settings for root/enabled/live/mutating/timeouts
+      - root existence probe
+      - uv command availability probe
+      - no-GIMP unit tests
+    acceptance:
+      - disabled by default
+      - missing gimp.dev root degrades to unavailable status, not import failure
+      - config can point to another checkout
+  - id: GDI-002
+    title: Implement pure catalog adapter
+    priority: P0
+    files:
+      - src/gimp_mcp_pro/gimp_dev_adapter.py
+      - tests/test_gimp_dev_adapter.py
+    deliverables:
+      - run plugin-catalog --check through typed subprocess wrapper
+      - parse JSON into typed models
+      - cache with explicit refresh flag
+    acceptance:
+      - zero validation errors required for catalog_valid=true
+      - catalogs produce 10 observed procedures for current gimp.dev
+      - invalid JSON and timeouts return structured failures
+  - id: GDI-003
+    title: Expose read-only MCP catalog/status tools
+    priority: P1
+    files:
+      - src/gimp_mcp_pro/tools/gimp_dev_tools.py
+      - src/gimp_mcp_pro/server.py
+      - tools.yml
+      - tests/test_tool_invocation_matrix.py
+      - tests/test_gimp_dev_tools.py
+    deliverables:
+      - gimp_dev_status
+      - gimp_dev_plugin_catalog
+    acceptance:
+      - tools hidden or return disabled status when integration disabled
+      - tool invocation matrix tracks the new tools
+      - no GUI is started
+  - id: GDI-004
+    title: Expose pure planner MCP tools
+    priority: P1
+    files:
+      - src/gimp_mcp_pro/tools/gimp_dev_tools.py
+      - src/gimp_mcp_pro/models/gimp_dev.py
+      - tests/test_gimp_dev_tools.py
+    deliverables:
+      - typed sprite sheet plan wrapper
+      - typed onion plan wrapper
+      - typed clip plan wrapper
+    acceptance:
+      - no freeform argv parameter exists
+      - every argument has bounds matching or stricter than gimp.dev specs
+      - stdout JSON is parsed and returned under OperationResult.data
+  - id: GDI-005
+    title: Add live PDB capability probe
+    priority: P1
+    depends_on:
+      - FEAT-045
+      - FEAT-034
+    files:
+      - src/gimp_mcp_pro/tools/gimp_dev_tools.py
+      - tests/live_gimp_324_smoke.py
+    deliverables:
+      - compare catalog procedure names to GIMP PDB lookup results
+      - report present/missing procedures
+    acceptance:
+      - pure catalog presence is not treated as live availability
+      - live smoke output records plugin install/profile path
+  - id: GDI-006
+    title: Generate typed procedure adapters from PluginArgumentSpec
+    priority: P2
+    depends_on:
+      - GDI-002
+      - GDI-005
+    deliverables:
+      - argument schema conversion for string/int/float/bool/path
+      - safe Python kwarg names for dash-style GIMP arguments
+      - procedure-name allowlist from catalog + probe
+    acceptance:
+      - known arguments validate before crossing bridge
+      - unknown args fail locally
+      - read-only procedures can be called when live enabled
+  - id: GDI-007
+    title: Add optional mutating wrappers with transactions
+    priority: P2
+    depends_on:
+      - FEAT-010
+      - FEAT-011
+      - FEAT-012
+      - GDI-006
+    deliverables:
+      - sprite background removal wrapper
+      - sprite sheet export wrapper
+      - saved view save/spawn wrappers if capability probe passes
+    acceptance:
+      - mutating wrappers hidden unless explicitly enabled
+      - image mutations run inside undo group/transaction
+      - filesystem writes are workspace/allowlist restricted
+      - live smoke covers each enabled wrapper under Xvfb/clean profile
+  - id: GDI-008
+    title: Document integration and update compat gates
+    priority: P1
+    files:
+      - docs/gimp-dev-integration.md
+      - compat.yml
+      - compat.results.template.yml
+      - gimp-dev-impl.yml
+    deliverables:
+      - docs for enabling/disabling integration
+      - compatibility result fields for optional gimp.dev catalog and live probes
+      - explicit statement that gimp.dev support is optional/local
+    acceptance:
+      - docs never claim gimp.dev live support without compat.results.yml evidence
+      - mkdocs strict build passes
+
+validation_strategy:
+  static:
+    - yaml parses: gimp-dev-impl.yml
+    - gimp.dev catalog check: uv run gimp-dev plugin-catalog --check
+    - gimp.dev non-GUI verify remains separate: cd /home/user/code/gimp.dev && uv run python scripts/verify.py
+    - gimp-mcp full gate: uv run python scripts/project.py check
+  unit_tests:
+    - adapter handles missing root
+    - adapter handles command timeout
+    - adapter rejects non-allowlisted command
+    - adapter parses plugin-catalog JSON
+    - generated argument schema handles dash names such as cell-width -> cell_width
+    - pure planner tools cannot pass freeform shell/argv
+  integration_tests_without_gimp:
+    - use fake gimp.dev root and fake uv script to simulate catalog/status/planner outputs
+    - use current local gimp.dev only for optional developer smoke, not mandatory CI unless root is present
+  live_tests_with_gimp:
+    - spawn clean-profile GIMP through a controlled harness, preferably Xvfb
+    - install or expose both gimp-mcp plugin and gimp.dev plugin wrappers to the same profile
+    - call gimp_dev_live_capabilities and record present/missing procedures
+    - run read-only live procedure smoke first
+    - run mutating procedures only after target validation and transaction support exist
+
+compat_result_extension:
+  optional_section: gimp_dev_integration
+  result_fields:
+    enabled: bool
+    root: path
+    root_exists: bool
+    catalog_check:
+      status: pass_fail_skip
+      procedure_count: int
+      validation_errors: list
+    pure_planner_checks:
+      status: pass_fail_skip
+      checked_tools: list
+    live_probe:
+      status: pass_fail_skip
+      gimp_profile: optional_path
+      present_procedures: list
+      missing_procedures: list
+    mutating_live_checks:
+      status: pass_fail_skip
+      checked_tools: list
+      skipped_reason: optional_string
+  claim_policy: >-
+    gimp.dev integration may be documented as optional and catalog-compatible after
+    static checks pass. Live use of gimp.dev plug-ins must not be claimed until a
+    compat.results.yml live_probe records the relevant procedures as present in a
+    clean-profile GIMP 3.2.4 run.
+
+open_questions:
+  - >-
+    Should gimp.dev pure planner tools become first-class MCP tools immediately,
+    or stay behind a single gimp_dev_command_plan tool until the interface settles?
+  - >-
+    Should gimp-mcp call live gimp.dev procedures through a generic typed PDB tool,
+    or generate named wrappers for each supported procedure?
+  - >-
+    Should gimp.dev profile wrapper installation be managed by gimp-mcp tooling, or
+    remain a separate user-invoked gimp-dev plugin-install step?
+  - >-
+    What workspace/output path policy should be used for sprite PNG export from an
+    MCP session?
+  - >-
+    Should saved-views support land before sprite mutators, because it is more
+    useful for agent observation and less destructive?
+
+recommended_next_step:
+  implement_first: GDI-001 and GDI-002
+  why: >-
+    They provide immediate value with low risk: gimp-mcp can report whether local
+    gimp.dev is available, parse its procedure catalog, and prove that the adapter
+    boundary is deterministic before any live GIMP or mutating behavior is exposed.
+  concrete_commands:
+    - cd /home/user/code/gimp-mcp && uv run pytest tests/test_gimp_dev_adapter.py -q
+    - cd /home/user/code/gimp-mcp && uv run python scripts/project.py check

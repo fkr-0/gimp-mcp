@@ -33,7 +33,7 @@ Returns:
 
 ## `redo` {#redo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:52`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:61`
 
 ```python
 async def redo(steps: int = 1) -> ToolResult
@@ -55,7 +55,7 @@ Returns:
 
 ## `begin_undo_group` {#begin-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:86`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:104`
 
 ```python
 async def begin_undo_group(name: str = 'AI Operation') -> ToolResult
@@ -85,7 +85,7 @@ Returns:
 
 ## `end_undo_group` {#end-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:120`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:138`
 
 ```python
 async def end_undo_group() -> ToolResult

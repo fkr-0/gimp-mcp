@@ -28,6 +28,7 @@ MODULE_TITLES: dict[str, str] = {
     "image_tools": "Image Management",
     "layer_tools": "Layer Operations",
     "selection_tools": "Selections",
+    "target_tools": "Target Resolution",
     "drawing_tools": "Drawing and Text",
     "inspect_tools": "Inspection",
     "history_tools": "History",

@@ -56,6 +56,7 @@ nav:
       - Tool Docstring Audit: tool-docstring-audit.md
   - Tool Reference:
       - Overview: tools/index.md
+      - Agent Tools: tools/agent_tools.md
       - Color Adjustments: tools/color_tools.md
       - Drawing and Text: tools/drawing_tools.md
       - Filters and Effects: tools/filter_tools.md
@@ -65,9 +66,11 @@ nav:
       - Layer Operations: tools/layer_tools.md
       - PDB and Escape Hatch: tools/pdb_tools.md
       - Selections: tools/selection_tools.md
+      - Target Resolution: tools/target_tools.md
       - Transforms: tools/transform_tools.md
   - Architecture:
       - Async Tool Architecture: async-tool-architecture.md
+      - Future Tool Roadmap: future-tools-roadmap.md
   - Python API:
       - Overview: api/index.md
       - Configuration: api/config.md
