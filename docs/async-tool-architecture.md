@@ -135,7 +135,7 @@ sync_handlers: 0
 tool_return_annotation: ToolResult
 raw_transport_response_annotation: PluginResponse
 server_transport: AsyncGimpBridge
-remaining_live_dependency: actual GIMP 3.2.4 clean-profile smoke run
+live_compat_gate: C-025-async-transport verifies AsyncGimpBridge against a clean-profile GIMP 3.2.4 run
 ```
 
 

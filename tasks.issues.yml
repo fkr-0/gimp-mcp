@@ -14,7 +14,7 @@ issues:
   - compatibility
   - plugin
   - contract
-  status: fanned-out
+  status: verified-local
   spec: compat.yml
   goal: Verify and certify support for GIMP 3.2.4 through the dedicated compatibility
     contract in compat.yml. The contract is now the normative source for API/interface
@@ -43,7 +43,7 @@ issues:
   - bridge
   - mcp
   - typing
-  status: implemented-static-typed
+  status: implemented-live-verified
   docs:
   - docs/async-tool-architecture.md
   - src/gimp_mcp_pro/protocol.py
