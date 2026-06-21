@@ -2,7 +2,7 @@ schema: gimp-mcp.compat.results.v1
 project: gimp-mcp
 contract: compat.yml
 run_id: TEMPLATE-replace-with-utc-timestamp-or-ci-run-id
-run_started_at: '2026-06-21T18:38:49+00:00'
+run_started_at: '2026-06-21T20:11:10+00:00'
 run_finished_at: null
 tester: replace-me
 environment:
@@ -61,6 +61,10 @@ checks:
   kind: live_smoke
   status: skip
   evidence: not run yet
+- id: C-025-async-transport
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
 - id: C-030-image-basics
   kind: live_smoke
   status: skip
@@ -105,11 +109,15 @@ checks:
   kind: live_smoke
   status: skip
   evidence: not run yet
+- id: C-900-stop-bridge
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
 summary:
   status: unverified
   passed: 0
   failed: 0
-  skipped: 21
+  skipped: 23
   waived: 0
   claim_allowed: false
   notes:

@@ -104,7 +104,7 @@ Keep partial live-smoke files as `summary.status: partial` and `summary.claim_al
 5. In this repository, run:
 
 ```bash
-uv run python tests/live_gimp_324_smoke.py --output compat.results.yml
+uv run python tests/live_gimp_324_smoke.py --spawn --xvfb --include-static-checks --output compat.results.yml
 ```
 
 Optionally record the installed plug-in hash:
@@ -115,23 +115,24 @@ uv run python tests/live_gimp_324_smoke.py \
   --output compat.results.yml
 ```
 
-## What the current live smoke covers
+## What the current compatibility matrix covers
 
 ```yaml
 covered:
-  - bridge transport connection
+  - clean-profile GIMP 3.2.4 spawn under Xvfb
+  - persistent plug-in procedure activation
+  - synchronous bridge transport connection
+  - asyncio-native AsyncGimpBridge transport connection
   - length-prefixed request/response path
   - GIMP/PDB introspection probes
   - plug-in procedure presence probe
-  - image creation via PyGObject
-  - layer creation via PyGObject
-  - metadata retrieval
+  - 75 registered MCP tools
+  - representative image/layer/selection/drawing/export/transform/color/filter/history/PDB/error scenarios
   - bitmap PNG extraction
-  - structured error behavior for invalid commands
-not_yet_complete:
-  - full per-MCP-tool invocation matrix
-  - all filter/color/transform pixel-delta assertions
-  - README claim update
+  - static unit/lint/type/docs claim gate
+remaining_manual_depth:
+  - exhaustive pixel-delta assertions for every filter/color/transform variant
+  - secondary OS/package verification beyond the local Linux clean-profile run
 ```
 
 ## Tool count reconciliation
