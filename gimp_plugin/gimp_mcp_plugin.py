@@ -534,7 +534,10 @@ class MCPProPlugin(Gimp.PlugIn):
             pass
         try:
             if hasattr(Gimp, "resources_loaded"):
-                info["gimp"]["resources_loaded"] = Gimp.resources_loaded()
+                try:
+                    info["gimp"]["resources_loaded"] = Gimp.resources_loaded()
+                except TypeError:
+                    info["gimp"]["resources_loaded"] = "available_requires_callback"
         except Exception:
             pass
         return {"status": "success", "results": info}

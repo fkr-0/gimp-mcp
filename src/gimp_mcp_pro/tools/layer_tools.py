@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.models.common import OperationResult, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP
 
@@ -54,14 +53,16 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         position: int = 0,
         width: int | None = None,
         height: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Create a new layer in the active image.
 
-        WHEN TO USE: Before drawing new elements. Professional workflows use
-        separate layers for background, main subject, details, etc.
+        Notes:
+            Use this tool before drawing new elements. Professional workflows use
+            separate layers for background, main subject, details, etc.
 
-        BEST PRACTICE: Create layers BEFORE drawing. Plan your layer structure:
-        background -> body -> head -> details -> texture.
+        Notes:
+            Best practice: Create layers BEFORE drawing. Plan your layer structure:
+            background -> body -> head -> details -> texture.
 
         Args:
             name: Layer name (e.g., "Background", "Eyes", "Shadow")
@@ -120,11 +121,12 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="create_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def list_layers() -> dict[str, Any]:
+    async def list_layers() -> ToolResult:
         """List all layers in the active image with their properties.
 
-        WHEN TO USE: Before drawing (to find the right layer), when debugging
-        visual issues, or to understand image structure.
+        Notes:
+            Use this tool before drawing (to find the right layer), when debugging
+            visual issues, or to understand image structure.
 
         Returns:
             Layer list with name, visibility, opacity, blend mode, dimensions.
@@ -169,11 +171,12 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
     async def set_active_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Set which layer is active (the one drawing tools operate on).
 
-        WHEN TO USE: Before any drawing or editing operation, switch to the
-        correct layer. Drawing on the wrong layer is the most common mistake.
+        Notes:
+            Use this tool before any drawing or editing operation, switch to the
+            correct layer. Drawing on the wrong layer is the most common mistake.
 
         Args:
             layer_name: Layer name to activate (e.g., "Background")
@@ -211,7 +214,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
     async def delete_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Delete a layer from the active image.
 
         Args:
@@ -245,7 +248,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         opacity: float,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Set a layer's opacity.
 
         Args:
@@ -280,7 +283,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         visible: bool,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Show or hide a layer.
 
         Args:
@@ -311,7 +314,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         layer_name: str | None = None,
         layer_index: int | None = None,
         new_name: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Duplicate a layer.
 
         Args:
@@ -343,11 +346,14 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="duplicate_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def merge_visible_layers() -> dict[str, Any]:
+    async def merge_visible_layers() -> ToolResult:
         """Merge all visible layers into one.
 
-        WHEN TO USE: Consolidate visible work while preserving hidden layers.
-        WARNING: Destructive operation — consider using undo groups.
+        Notes:
+            Use this tool when consolidate visible work while preserving hidden layers.
+
+        Warnings:
+            Destructive operation — consider using undo groups.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -371,11 +377,12 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
     async def add_alpha_channel(
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Add an alpha (transparency) channel to a layer.
 
-        WHEN TO USE: Before using transparent fills or edit_clear on a layer
-        that was created without alpha (e.g., the default Background layer).
+        Notes:
+            Use this tool before using transparent fills or edit_clear on a layer
+            that was created without alpha (e.g., the default Background layer).
 
         Args:
             layer_name: Target layer by name.

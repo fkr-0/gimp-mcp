@@ -16,7 +16,7 @@ Source module: `src/gimp_mcp_pro/tools/image_tools.py`
 Source: `src/gimp_mcp_pro/tools/image_tools.py:33`
 
 ```python
-async def create_image(width: int, height: int, color_mode: str = 'rgb', fill: str = 'white') -> dict[str, Any]
+async def create_image(width: int, height: int, color_mode: str = 'rgb', fill: str = 'white') -> ToolResult
 ```
 
 **Parameters**
@@ -30,7 +30,8 @@ async def create_image(width: int, height: int, color_mode: str = 'rgb', fill: s
 
 Create a new blank image in GIMP.
 
-WHEN TO USE: Starting a new project, creating a canvas for drawing.
+Notes:
+    Use this tool when starting a new project, creating a canvas for drawing.
 
 Args:
     width: Image width in pixels (1-32768)
@@ -43,51 +44,54 @@ Returns:
 
 ## `list_images` {#list-images}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:105`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:106`
 
 ```python
-async def list_images() -> dict[str, Any]
+async def list_images() -> ToolResult
 ```
 
 **Docstring**
 
 List all currently open images in GIMP.
 
-WHEN TO USE: Before operations that need to target a specific image,
-or to verify what images are available.
+Notes:
+    Use this tool before operations that need to target a specific image,
+    or to verify what images are available.
 
 Returns:
     Operation result with list of image info dicts.
 
 ## `get_image_info` {#get-image-info}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:160`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:162`
 
 ```python
-async def get_image_info() -> dict[str, Any]
+async def get_image_info() -> ToolResult
 ```
 
 **Docstring**
 
 Get detailed metadata about the active image (no bitmap data).
 
-WHEN TO USE: Before any operation, to understand the current canvas
-dimensions, layer structure, and file state. Much faster than
-get_image_bitmap since it doesn't export pixel data.
+Notes:
+    Use this tool before any operation, to understand the current canvas
+    dimensions, layer structure, and file state. Much faster than
+    get_image_bitmap since it doesn't export pixel data.
 
-COMBINES WITH: Use before create_layer (to match dimensions),
-before drawing (to verify layer structure), or before export
-(to check if image has unsaved changes).
+Notes:
+    Works well with: Use before create_layer (to match dimensions),
+    before drawing (to verify layer structure), or before export
+    (to check if image has unsaved changes).
 
 Returns:
     Comprehensive image metadata including layers, channels, file info.
 
 ## `export_image` {#export-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:191`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:195`
 
 ```python
-async def export_image(file_path: str, format: str | None = None, quality: int = 85) -> dict[str, Any]
+async def export_image(file_path: str, format: str | None = None, quality: int = 85) -> ToolResult
 ```
 
 **Parameters**
@@ -100,7 +104,8 @@ async def export_image(file_path: str, format: str | None = None, quality: int =
 
 Export the active image to a file.
 
-WHEN TO USE: Saving the final result as PNG, JPEG, etc.
+Notes:
+    Use this tool when saving the final result as PNG, JPEG, etc.
 
 Args:
     file_path: Output path (e.g., "/home/user/output.png")
@@ -113,39 +118,42 @@ Returns:
 
 ## `flatten_image` {#flatten-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:266`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:271`
 
 ```python
-async def flatten_image() -> dict[str, Any]
+async def flatten_image() -> ToolResult
 ```
 
 **Docstring**
 
 Flatten all layers into a single layer.
 
-WHEN TO USE: Before final export when you want to merge all layers,
-or to simplify a complex layer structure.
+Notes:
+    Use this tool before final export when you want to merge all layers,
+    or to simplify a complex layer structure.
 
-WARNING: This is destructive — you lose individual layer editability.
-Consider using undo groups so the user can revert.
+Warnings:
+    This is destructive — you lose individual layer editability.
+    Consider using undo groups so the user can revert.
 
 Returns:
     Operation result.
 
 ## `duplicate_image` {#duplicate-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:293`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:300`
 
 ```python
-async def duplicate_image() -> dict[str, Any]
+async def duplicate_image() -> ToolResult
 ```
 
 **Docstring**
 
 Duplicate the entire active image (all layers, channels, paths).
 
-WHEN TO USE: Creating a copy to experiment on without affecting
-the original. Good before destructive operations.
+Notes:
+    Use this tool when creating a copy to experiment on without affecting
+    the original. Good before destructive operations.
 
 Returns:
     Operation result with info about the new image.

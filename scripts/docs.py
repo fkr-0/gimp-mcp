@@ -38,6 +38,15 @@ MODULE_TITLES: dict[str, str] = {
 }
 
 FORBIDDEN_DOCSTRING_MARKERS = ("TODO", "TBD", "FIXME", "lorem ipsum")
+FORBIDDEN_PSEUDO_SECTIONS = (
+    "WHEN TO USE",
+    "BEST PRACTICE",
+    "PRIMARY USE",
+    "IMPORTANT",
+    "WARNING",
+    "COMBINES WITH",
+    "NOTE",
+)
 GOOGLE_SECTION_NAMES = {"Args", "Arguments", "Returns", "Raises", "Examples", "Notes", "Warnings"}
 
 
@@ -188,6 +197,7 @@ GIMP MCP Pro exposes typed Model Context Protocol tools for operating GIMP from 
 ## Documentation map
 
 - [Tool Reference](tools/index.md): generated from the actual MCP tool handler docstrings.
+- [Docstring Style](docstring-style.md): Google-style policy used by MkDocs and the MCP tool audit.
 - [Compatibility Runbook](gimp-3.2.4-compat.md): clean-profile GIMP 3.2.4 verification workflow.
 - [Python API](api/index.md): mkdocstrings-rendered top-level package API.
 
@@ -286,6 +296,8 @@ Nested MCP tool handlers are documented separately in the generated [Tool Refere
 - [Async Bridge](async-bridge.md)
 - [Server](server.md)
 - [Common Models](models-common.md)
+- [Protocol Types](protocol.md)
+- [Tool Typing Protocols](tools-types.md)
 """
 
 
@@ -334,6 +346,12 @@ def write_generated_docs(output_dir: Path = DOCS_DIR) -> list[Path]:
         api_dir / "server.md": render_mkdocstrings_page("Server", "gimp_mcp_pro.server"),
         api_dir / "models-common.md": render_mkdocstrings_page(
             "Common Models", "gimp_mcp_pro.models.common"
+        ),
+        api_dir / "protocol.md": render_mkdocstrings_page(
+            "Protocol Types", "gimp_mcp_pro.protocol"
+        ),
+        api_dir / "tools-types.md": render_mkdocstrings_page(
+            "Tool Typing Protocols", "gimp_mcp_pro.tools.types"
         ),
     }
     for module, module_tools in grouped.items():
@@ -444,6 +462,24 @@ def audit_tool_docstrings(tools: Sequence[ToolDoc] | None = None) -> list[str]:
         for marker in FORBIDDEN_DOCSTRING_MARKERS:
             if marker.lower() in lowered:
                 failures.append(f"{ref}: contains placeholder marker {marker!r}")
+        for line in tool.docstring.splitlines():
+            stripped = line.strip()
+            if not stripped.endswith(":") and ":" not in stripped:
+                continue
+            prefix = stripped.split(":", 1)[0]
+            legacy_prefix = next(
+                (
+                    section
+                    for section in FORBIDDEN_PSEUDO_SECTIONS
+                    if prefix == section or prefix.startswith(f"{section} ")
+                ),
+                None,
+            )
+            if legacy_prefix is not None:
+                failures.append(
+                    f"{ref}: pseudo-section {prefix!r} should be a Google-style "
+                    "Notes or Warnings section"
+                )
         if tool.return_annotation == "Any":
             failures.append(f"{ref}: missing explicit return annotation")
         if not _has_section(tool.docstring, "Returns"):

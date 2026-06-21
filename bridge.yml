@@ -93,6 +93,11 @@ commands:
     description: Serve the MkDocs Material documentation site locally.
     timeoutMs: 120000
     category: dev
+  build-dist:
+    run: ["uv", "build", "--sdist", "--wheel"]
+    description: Build PyPI-compatible source and wheel distributions into dist/.
+    timeoutMs: 120000
+    category: build
   compat-list-tools:
     run: ["uv", "run", "python", "scripts/compat.py", "list-tools", "--grouped"]
     description: List source-derived MCP tool registry grouped by module.
@@ -124,8 +129,8 @@ commands:
     timeoutMs: 120000
     category: test
   compat-live-spawn:
-    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--output", "compat.results.yml"]
-    description: Spawn a clean-profile GIMP instance, autostart the plug-in bridge, run live smoke checks, then stop GIMP.
+    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--xvfb", "--output", "compat.results.yml"]
+    description: Spawn a clean-profile GIMP instance under xvfb-run -a, autostart the plug-in bridge, run live smoke checks, then stop GIMP.
     timeoutMs: 180000
     category: test
   compat-live-xvfb:

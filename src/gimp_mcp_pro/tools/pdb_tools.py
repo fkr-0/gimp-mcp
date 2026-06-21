@@ -8,11 +8,10 @@ operations that don't have dedicated typed tools yet.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.pdb")
@@ -22,7 +21,7 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register PDB discovery and raw execution tools."""
 
     @mcp.tool()
-    async def search_pdb(query: str, max_results: int = 20) -> dict[str, Any]:
+    async def search_pdb(query: str, max_results: int = 20) -> ToolResult:
         """Search GIMP's Procedure Database for available operations.
 
         GIMP has thousands of procedures (filters, file operations, etc.).
@@ -76,7 +75,7 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     async def execute_python(
         code: list[str],
         timeout_seconds: float = 30.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Execute raw Python code in GIMP's PyGObject console.
 
         This is the ESCAPE HATCH for operations that don't have a dedicated
@@ -88,8 +87,9 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
         - Variables persist between calls
         - Gimp and Gegl modules are pre-imported
 
-        IMPORTANT: Always call Gimp.displays_flush() after drawing operations.
-        Always call Gimp.Selection.none(image) after selection-based operations.
+        Warnings:
+            Important: Always call Gimp.displays_flush() after drawing operations.
+            Always call Gimp.Selection.none(image) after selection-based operations.
 
         Args:
             code: List of Python code strings to execute sequentially.

@@ -16,10 +16,10 @@ Source module: `src/gimp_mcp_pro/tools/layer_tools.py`
 
 ## `create_layer` {#create-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:48`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:47`
 
 ```python
-async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mode: str = 'normal', fill: str = 'transparent', has_alpha: bool = True, position: int = 0, width: int | None = None, height: int | None = None) -> dict[str, Any]
+async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mode: str = 'normal', fill: str = 'transparent', has_alpha: bool = True, position: int = 0, width: int | None = None, height: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -37,11 +37,13 @@ async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mo
 
 Create a new layer in the active image.
 
-WHEN TO USE: Before drawing new elements. Professional workflows use
-separate layers for background, main subject, details, etc.
+Notes:
+    Use this tool before drawing new elements. Professional workflows use
+    separate layers for background, main subject, details, etc.
 
-BEST PRACTICE: Create layers BEFORE drawing. Plan your layer structure:
-background -> body -> head -> details -> texture.
+Notes:
+    Best practice: Create layers BEFORE drawing. Plan your layer structure:
+    background -> body -> head -> details -> texture.
 
 Args:
     name: Layer name (e.g., "Background", "Eyes", "Shadow")
@@ -58,28 +60,29 @@ Returns:
 
 ## `list_layers` {#list-layers}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:123`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:124`
 
 ```python
-async def list_layers() -> dict[str, Any]
+async def list_layers() -> ToolResult
 ```
 
 **Docstring**
 
 List all layers in the active image with their properties.
 
-WHEN TO USE: Before drawing (to find the right layer), when debugging
-visual issues, or to understand image structure.
+Notes:
+    Use this tool before drawing (to find the right layer), when debugging
+    visual issues, or to understand image structure.
 
 Returns:
     Layer list with name, visibility, opacity, blend mode, dimensions.
 
 ## `set_active_layer` {#set-active-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:169`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:171`
 
 ```python
-async def set_active_layer(layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def set_active_layer(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -91,8 +94,9 @@ async def set_active_layer(layer_name: str | None = None, layer_index: int | Non
 
 Set which layer is active (the one drawing tools operate on).
 
-WHEN TO USE: Before any drawing or editing operation, switch to the
-correct layer. Drawing on the wrong layer is the most common mistake.
+Notes:
+    Use this tool before any drawing or editing operation, switch to the
+    correct layer. Drawing on the wrong layer is the most common mistake.
 
 Args:
     layer_name: Layer name to activate (e.g., "Background")
@@ -103,10 +107,10 @@ Returns:
 
 ## `delete_layer` {#delete-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:211`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:214`
 
 ```python
-async def delete_layer(layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def delete_layer(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -127,10 +131,10 @@ Returns:
 
 ## `set_layer_opacity` {#set-layer-opacity}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:244`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:247`
 
 ```python
-async def set_layer_opacity(opacity: float, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def set_layer_opacity(opacity: float, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -153,10 +157,10 @@ Returns:
 
 ## `set_layer_visibility` {#set-layer-visibility}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:279`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:282`
 
 ```python
-async def set_layer_visibility(visible: bool, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def set_layer_visibility(visible: bool, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -179,10 +183,10 @@ Returns:
 
 ## `duplicate_layer` {#duplicate-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:310`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:313`
 
 ```python
-async def duplicate_layer(layer_name: str | None = None, layer_index: int | None = None, new_name: str | None = None) -> dict[str, Any]
+async def duplicate_layer(layer_name: str | None = None, layer_index: int | None = None, new_name: str | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -205,28 +209,31 @@ Returns:
 
 ## `merge_visible_layers` {#merge-visible-layers}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:346`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:349`
 
 ```python
-async def merge_visible_layers() -> dict[str, Any]
+async def merge_visible_layers() -> ToolResult
 ```
 
 **Docstring**
 
 Merge all visible layers into one.
 
-WHEN TO USE: Consolidate visible work while preserving hidden layers.
-WARNING: Destructive operation — consider using undo groups.
+Notes:
+    Use this tool when consolidate visible work while preserving hidden layers.
+
+Warnings:
+    Destructive operation — consider using undo groups.
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
 ## `add_alpha_channel` {#add-alpha-channel}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:371`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:377`
 
 ```python
-async def add_alpha_channel(layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def add_alpha_channel(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -238,8 +245,9 @@ async def add_alpha_channel(layer_name: str | None = None, layer_index: int | No
 
 Add an alpha (transparency) channel to a layer.
 
-WHEN TO USE: Before using transparent fills or edit_clear on a layer
-that was created without alpha (e.g., the default Background layer).
+Notes:
+    Use this tool before using transparent fills or edit_clear on a layer
+    that was created without alpha (e.g., the default Background layer).
 
 Args:
     layer_name: Target layer by name.

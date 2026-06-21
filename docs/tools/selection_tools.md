@@ -15,10 +15,10 @@ Source module: `src/gimp_mcp_pro/tools/selection_tools.py`
 
 ## `select_rectangle` {#select-rectangle}
 
-Source: `src/gimp_mcp_pro/tools/selection_tools.py:25`
+Source: `src/gimp_mcp_pro/tools/selection_tools.py:24`
 
 ```python
-async def select_rectangle(x: float, y: float, width: float, height: float, operation: str = 'replace', feather_radius: float = 0.0) -> dict[str, Any]
+async def select_rectangle(x: float, y: float, width: float, height: float, operation: str = 'replace', feather_radius: float = 0.0) -> ToolResult
 ```
 
 **Parameters**
@@ -34,8 +34,9 @@ async def select_rectangle(x: float, y: float, width: float, height: float, oper
 
 Create a rectangular selection.
 
-WHEN TO USE: Before filling a rectangular area, or to constrain
-operations to a specific region.
+Notes:
+    Use this tool before filling a rectangular area, or to constrain
+    operations to a specific region.
 
 Args:
     x, y: Top-left corner
@@ -51,7 +52,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/selection_tools.py:67`
 
 ```python
-async def select_ellipse(x: float, y: float, width: float, height: float, operation: str = 'replace', feather_radius: float = 0.0) -> dict[str, Any]
+async def select_ellipse(x: float, y: float, width: float, height: float, operation: str = 'replace', feather_radius: float = 0.0) -> ToolResult
 ```
 
 **Parameters**
@@ -83,7 +84,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/selection_tools.py:108`
 
 ```python
-async def select_polygon(points: list[float], operation: str = 'replace', feather_radius: float = 0.0) -> dict[str, Any]
+async def select_polygon(points: list[float], operation: str = 'replace', feather_radius: float = 0.0) -> ToolResult
 ```
 
 **Parameters**
@@ -96,8 +97,9 @@ async def select_polygon(points: list[float], operation: str = 'replace', feathe
 
 Create a polygon (freeform) selection.
 
-BEST PRACTICE: Use polygon selection + fill_selection for solid shapes.
-This is the recommended way to draw filled shapes in GIMP.
+Notes:
+    Best practice: Use polygon selection + fill_selection for solid shapes.
+    This is the recommended way to draw filled shapes in GIMP.
 
 Args:
     points: Flat list [x1,y1, x2,y2, x3,y3, ...]. Min 3 vertices (6 values).
@@ -109,10 +111,10 @@ Returns:
 
 ## `select_all` {#select-all}
 
-Source: `src/gimp_mcp_pro/tools/selection_tools.py:152`
+Source: `src/gimp_mcp_pro/tools/selection_tools.py:153`
 
 ```python
-async def select_all() -> dict[str, Any]
+async def select_all() -> ToolResult
 ```
 
 **Docstring**
@@ -124,28 +126,29 @@ Returns:
 
 ## `select_none` {#select-none}
 
-Source: `src/gimp_mcp_pro/tools/selection_tools.py:171`
+Source: `src/gimp_mcp_pro/tools/selection_tools.py:172`
 
 ```python
-async def select_none() -> dict[str, Any]
+async def select_none() -> ToolResult
 ```
 
 **Docstring**
 
 Clear all selections.
 
-IMPORTANT: Always call this after fill/stroke operations on selections
-to avoid unexpected behavior on subsequent operations.
+Warnings:
+    Important: Always call this after fill/stroke operations on selections
+    to avoid unexpected behavior on subsequent operations.
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
 ## `select_invert` {#select-invert}
 
-Source: `src/gimp_mcp_pro/tools/selection_tools.py:195`
+Source: `src/gimp_mcp_pro/tools/selection_tools.py:197`
 
 ```python
-async def select_invert() -> dict[str, Any]
+async def select_invert() -> ToolResult
 ```
 
 **Docstring**
@@ -157,10 +160,10 @@ Returns:
 
 ## `select_grow` {#select-grow}
 
-Source: `src/gimp_mcp_pro/tools/selection_tools.py:216`
+Source: `src/gimp_mcp_pro/tools/selection_tools.py:218`
 
 ```python
-async def select_grow(radius: int) -> dict[str, Any]
+async def select_grow(radius: int) -> ToolResult
 ```
 
 **Parameters**
@@ -179,10 +182,10 @@ Returns:
 
 ## `select_shrink` {#select-shrink}
 
-Source: `src/gimp_mcp_pro/tools/selection_tools.py:240`
+Source: `src/gimp_mcp_pro/tools/selection_tools.py:242`
 
 ```python
-async def select_shrink(radius: int) -> dict[str, Any]
+async def select_shrink(radius: int) -> ToolResult
 ```
 
 **Parameters**

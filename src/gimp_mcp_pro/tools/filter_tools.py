@@ -8,11 +8,10 @@ All filters use Gimp.DrawableFilter which wraps GEGL safely in plugin context.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.filter")
@@ -89,11 +88,12 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         radius_y: float | None = None,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply Gaussian blur to a layer.
 
-        WHEN TO USE: Softening images, creating depth-of-field effects,
-        blurring backgrounds, smoothing noise.
+        Notes:
+            Use this tool when softening images, creating depth-of-field effects,
+            blurring backgrounds, smoothing noise.
 
         Args:
             radius_x: Horizontal blur radius in pixels (0.0-500.0)
@@ -132,11 +132,12 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         threshold: float = 0.0,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Sharpen a layer using unsharp mask.
 
-        WHEN TO USE: Enhancing image detail, sharpening after resize,
-        recovering slightly out-of-focus images.
+        Notes:
+            Use this tool when enhancing image detail, sharpening after resize,
+            recovering slightly out-of-focus images.
 
         Args:
             amount: Sharpening strength (0.0-5.0, typical 0.3-1.0)
@@ -173,10 +174,11 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         block_height: int | None = None,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply pixelization (mosaic) effect to a layer.
 
-        WHEN TO USE: Censoring faces/text, retro pixel art effect, privacy masking.
+        Notes:
+            Use this tool when censoring faces/text, retro pixel art effect, privacy masking.
 
         Args:
             block_width: Pixel block width (1-1024)
@@ -214,11 +216,12 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         amount: float = 1.0,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply edge detection to a layer.
 
-        WHEN TO USE: Artistic outlines, finding contours, image analysis,
-        creating line-art effects.
+        Notes:
+            Use this tool when artistic outlines, finding contours, image analysis,
+            creating line-art effects.
 
         Args:
             method: Detection algorithm — "sobel", "prewitt", "laplace"
@@ -256,7 +259,7 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         depth: int = 2,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply emboss effect to a layer.
 
         Creates a raised/carved appearance.
@@ -294,10 +297,11 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         amount: float = 0.2,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Add random noise to a layer.
 
-        WHEN TO USE: Adding film grain, texture, or breaking up smooth gradients.
+        Notes:
+            Use this tool when adding film grain, texture, or breaking up smooth gradients.
 
         Args:
             amount: Noise intensity (0.0-1.0)
@@ -330,7 +334,7 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         radius: int = 3,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply median filter (denoise) to a layer.
 
         Good for removing salt-and-pepper noise while preserving edges.
@@ -369,7 +373,7 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         opacity: float = 60.0,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply a drop shadow effect to a layer.
 
         Creates a shadow behind the layer content.

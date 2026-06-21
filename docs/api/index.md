@@ -8,3 +8,5 @@ Nested MCP tool handlers are documented separately in the generated [Tool Refere
 - [Async Bridge](async-bridge.md)
 - [Server](server.md)
 - [Common Models](models-common.md)
+- [Protocol Types](protocol.md)
+- [Tool Typing Protocols](tools-types.md)

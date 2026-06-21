@@ -18,10 +18,10 @@ Source module: `src/gimp_mcp_pro/tools/transform_tools.py`
 
 ## `scale_image` {#scale-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:57`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:56`
 
 ```python
-async def scale_image(new_width: int, new_height: int, interpolation: str = 'cubic') -> dict[str, Any]
+async def scale_image(new_width: int, new_height: int, interpolation: str = 'cubic') -> ToolResult
 ```
 
 **Parameters**
@@ -34,8 +34,9 @@ async def scale_image(new_width: int, new_height: int, interpolation: str = 'cub
 
 Scale the entire image (all layers) to new dimensions.
 
-WHEN TO USE: Resizing the final image for output, or changing
-overall canvas dimensions while scaling content.
+Notes:
+    Use this tool when resizing the final image for output, or changing
+    overall canvas dimensions while scaling content.
 
 Args:
     new_width: Target width in pixels (1-32768)
@@ -51,7 +52,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/transform_tools.py:107`
 
 ```python
-async def scale_layer(new_width: int, new_height: int, interpolation: str = 'cubic', layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def scale_layer(new_width: int, new_height: int, interpolation: str = 'cubic', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -66,8 +67,9 @@ async def scale_layer(new_width: int, new_height: int, interpolation: str = 'cub
 
 Scale a single layer to new dimensions.
 
-NOTE: This changes the layer's pixel content, not the canvas.
-The layer may become larger or smaller than the image canvas.
+Notes:
+    This changes the layer's pixel content, not the canvas.
+    The layer may become larger or smaller than the image canvas.
 
 Args:
     new_width: Target width in pixels
@@ -81,10 +83,10 @@ Returns:
 
 ## `rotate_image` {#rotate-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:158`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:159`
 
 ```python
-async def rotate_image(angle: int) -> dict[str, Any]
+async def rotate_image(angle: int) -> ToolResult
 ```
 
 **Parameters**
@@ -103,10 +105,10 @@ Returns:
 
 ## `rotate_layer` {#rotate-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:193`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:194`
 
 ```python
-async def rotate_layer(angle_degrees: float, auto_resize: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def rotate_layer(angle_degrees: float, auto_resize: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -131,10 +133,10 @@ Returns:
 
 ## `flip_image` {#flip-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:238`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:239`
 
 ```python
-async def flip_image(direction: str = 'horizontal') -> dict[str, Any]
+async def flip_image(direction: str = 'horizontal') -> ToolResult
 ```
 
 **Parameters**
@@ -153,10 +155,10 @@ Returns:
 
 ## `flip_layer` {#flip-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:274`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:275`
 
 ```python
-async def flip_layer(direction: str = 'horizontal', layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def flip_layer(direction: str = 'horizontal', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -179,28 +181,29 @@ Returns:
 
 ## `crop_to_selection` {#crop-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:319`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:320`
 
 ```python
-async def crop_to_selection() -> dict[str, Any]
+async def crop_to_selection() -> ToolResult
 ```
 
 **Docstring**
 
 Crop the image to the current selection bounds.
 
-WHEN TO USE: After making a selection around the area you want to keep.
-The image canvas will be resized to fit the selection.
+Notes:
+    Use this tool after making a selection around the area you want to keep.
+    The image canvas will be resized to fit the selection.
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
 ## `crop_image` {#crop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:343`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:345`
 
 ```python
-async def crop_image(x: int, y: int, width: int, height: int) -> dict[str, Any]
+async def crop_image(x: int, y: int, width: int, height: int) -> ToolResult
 ```
 
 **Parameters**
@@ -225,27 +228,28 @@ Returns:
 
 ## `autocrop_image` {#autocrop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:380`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:382`
 
 ```python
-async def autocrop_image() -> dict[str, Any]
+async def autocrop_image() -> ToolResult
 ```
 
 **Docstring**
 
 Automatically crop the image to remove border whitespace/transparency.
 
-WHEN TO USE: After drawing, to trim unused canvas around the content.
+Notes:
+    Use this tool after drawing, to trim unused canvas around the content.
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
 ## `resize_canvas` {#resize-canvas}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:407`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:410`
 
 ```python
-async def resize_canvas(new_width: int, new_height: int, offset_x: int = 0, offset_y: int = 0) -> dict[str, Any]
+async def resize_canvas(new_width: int, new_height: int, offset_x: int = 0, offset_y: int = 0) -> ToolResult
 ```
 
 **Parameters**
@@ -273,10 +277,10 @@ Returns:
 
 ## `offset_layer` {#offset-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:449`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:452`
 
 ```python
-async def offset_layer(offset_x: int, offset_y: int, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def offset_layer(offset_x: int, offset_y: int, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**

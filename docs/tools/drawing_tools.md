@@ -17,10 +17,10 @@ Source module: `src/gimp_mcp_pro/tools/drawing_tools.py`
 
 ## `set_foreground_color` {#set-foreground-color}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:51`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:50`
 
 ```python
-async def set_foreground_color(color: str) -> dict[str, Any]
+async def set_foreground_color(color: str) -> ToolResult
 ```
 
 **Parameters**
@@ -31,8 +31,9 @@ async def set_foreground_color(color: str) -> dict[str, Any]
 
 Set the foreground color used for drawing operations.
 
-WHEN TO USE: Before any drawing, fill, or stroke operation that
-uses the foreground color.
+Notes:
+    Use this tool before any drawing, fill, or stroke operation that
+    uses the foreground color.
 
 Args:
     color: Color as name ("red"), hex ("#FF0000"), or rgb("rgb(255,0,0)")
@@ -45,7 +46,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/drawing_tools.py:80`
 
 ```python
-async def set_background_color(color: str) -> dict[str, Any]
+async def set_background_color(color: str) -> ToolResult
 ```
 
 **Parameters**
@@ -67,7 +68,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/drawing_tools.py:106`
 
 ```python
-async def fill_selection(fill_type: str = 'foreground', color: str | None = None) -> dict[str, Any]
+async def fill_selection(fill_type: str = 'foreground', color: str | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -79,13 +80,14 @@ async def fill_selection(fill_type: str = 'foreground', color: str | None = None
 
 Fill the current selection (or entire layer if no selection) with color.
 
-WHEN TO USE: After creating a selection (rectangle, ellipse, polygon),
-fill it with a color to create shapes.
+Notes:
+    Use this tool after creating a selection (rectangle, ellipse, polygon),
+    fill it with a color to create shapes.
 
-BEST PRACTICE (from maorcc):
-- Use polygon selection + fill for solid shapes (NOT paintbrush)
-- Always clear selection after filling: select_none is called for you
-- Avoid feathering unless you specifically want soft edges
+    Best practice guidance:
+    - Use polygon selection plus fill for solid shapes instead of paintbrush strokes.
+    - Clear the selection after filling; this tool calls select_none automatically.
+    - Avoid feathering unless soft edges are intentional.
 
 Args:
     fill_type: "foreground", "background", "white", "transparent", or "pattern"
@@ -97,10 +99,10 @@ Returns:
 
 ## `draw_line` {#draw-line}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:152`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:153`
 
 ```python
-async def draw_line(x1: float, y1: float, x2: float, y2: float, color: str | None = None, brush_size: float = 2.0) -> dict[str, Any]
+async def draw_line(x1: float, y1: float, x2: float, y2: float, color: str | None = None, brush_size: float = 2.0) -> ToolResult
 ```
 
 **Parameters**
@@ -127,10 +129,10 @@ Returns:
 
 ## `draw_brush_stroke` {#draw-brush-stroke}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:191`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:192`
 
 ```python
-async def draw_brush_stroke(points: list[float], tool: str = 'pencil', color: str | None = None, brush_size: float = 2.0) -> dict[str, Any]
+async def draw_brush_stroke(points: list[float], tool: str = 'pencil', color: str | None = None, brush_size: float = 2.0) -> ToolResult
 ```
 
 **Parameters**
@@ -146,8 +148,9 @@ Draw a stroke along a series of points.
 
 Use 'pencil' for hard-edged lines, 'paintbrush' for soft brush strokes.
 
-NOTE: For filling shapes, do NOT use brush strokes — use polygon
-selection + fill_selection instead. Brush strokes create outlines only.
+Notes:
+    For filling shapes, do NOT use brush strokes — use polygon
+    selection + fill_selection instead. Brush strokes create outlines only.
 
 Args:
     points: Flat list of coordinates [x1, y1, x2, y2, x3, y3, ...]
@@ -160,10 +163,10 @@ Returns:
 
 ## `draw_rectangle` {#draw-rectangle}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:246`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:248`
 
 ```python
-async def draw_rectangle(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> dict[str, Any]
+async def draw_rectangle(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
 ```
 
 **Parameters**
@@ -180,8 +183,9 @@ async def draw_rectangle(x: float, y: float, width: float, height: float, filled
 
 Draw a rectangle (filled or outline only).
 
-BEST PRACTICE: Uses selection + fill for filled rectangles (not brush).
-This produces clean, solid shapes.
+Notes:
+    Best practice: Uses selection + fill for filled rectangles (not brush).
+    This produces clean, solid shapes.
 
 Args:
     x, y: Top-left corner coordinates
@@ -195,10 +199,10 @@ Returns:
 
 ## `draw_ellipse` {#draw-ellipse}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:304`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:307`
 
 ```python
-async def draw_ellipse(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> dict[str, Any]
+async def draw_ellipse(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
 ```
 
 **Parameters**
@@ -229,10 +233,10 @@ Returns:
 
 ## `draw_polygon` {#draw-polygon}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:359`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:362`
 
 ```python
-async def draw_polygon(points: list[float], filled: bool = True, color: str | None = None, line_width: float = 2.0) -> dict[str, Any]
+async def draw_polygon(points: list[float], filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
 ```
 
 **Parameters**
@@ -246,8 +250,9 @@ async def draw_polygon(points: list[float], filled: bool = True, color: str | No
 
 Draw a polygon (filled or outline).
 
-BEST PRACTICE: This is THE correct way to draw filled shapes in GIMP.
-Uses polygon selection + fill, producing clean solid shapes.
+Notes:
+    Best practice: This is THE correct way to draw filled shapes in GIMP.
+    Uses polygon selection + fill, producing clean solid shapes.
 
 Args:
     points: Flat list of vertex coordinates [x1,y1, x2,y2, x3,y3, ...]
@@ -261,10 +266,10 @@ Returns:
 
 ## `add_text` {#add-text}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:419`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:423`
 
 ```python
-async def add_text(text: str, x: float = 0.0, y: float = 0.0, font_name: str = 'Sans', font_size: float = 24.0, color: str | None = None, layer_name: str = 'Text') -> dict[str, Any]
+async def add_text(text: str, x: float = 0.0, y: float = 0.0, font_name: str = 'Sans', font_size: float = 24.0, color: str | None = None, layer_name: str = 'Text') -> ToolResult
 ```
 
 **Parameters**
@@ -297,18 +302,19 @@ Returns:
 
 ## `edit_clear` {#edit-clear}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:489`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:493`
 
 ```python
-async def edit_clear() -> dict[str, Any]
+async def edit_clear() -> ToolResult
 ```
 
 **Docstring**
 
 Clear the current selection area (make it transparent).
 
-WHEN TO USE: To erase part of a layer. The cleared area becomes
-transparent if the layer has an alpha channel.
+Notes:
+    Use this tool to erase part of a layer. The cleared area becomes
+    transparent if the layer has an alpha channel.
 
 Requires: Active layer must have an alpha channel. Use
 add_alpha_channel first if needed.

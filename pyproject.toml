@@ -42,7 +42,9 @@ dev = [
     "types-PyYAML>=6.0",
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
-    "mkdocstrings[python]>=0.26",
+    "mkdocstrings[python]>=0.25",
+    "build>=1.2",
+    "twine>=5.0",
 ]
 
 [project.scripts]
@@ -64,7 +66,7 @@ exclude = [
     ".venv",
     "build",
     "dist",
-    "gimp_plugin",
+    "site",
 ]
 
 [tool.ruff.format]
@@ -73,7 +75,7 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "ARG", "PT"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "ARG"]
 ignore = [
     "E501",   # line length is enforced by formatter where practical
     "ARG001", # MCP/register callback signatures intentionally accept injected args
@@ -85,22 +87,21 @@ ignore = [
     "UP007",  # Optional-to-union migration can happen in a later compatibility pass
     "UP045",  # Optional-to-| migration can happen in a later compatibility pass
     "PT011",  # existing tests sometimes use broad validation exceptions intentionally
-    "PT018",  # grouped asserts in compact protocol tests are acceptable for now
+]
+
+[tool.ruff.lint.per-file-ignores]
+"gimp_plugin/gimp_mcp_plugin.py" = [
+    "E402",  # gi.require_version must run before gi.repository imports
+    "E722",  # GIMP cleanup paths deliberately catch broad PyGObject failures
+    "I001",  # import ordering is constrained by gi.require_version
+    "N802",  # gettext-style N_ helper is conventional in GIMP plug-ins
+    "SIM105", # keep explicit try/except cleanup blocks in the plug-in
+    "UP009", # keep encoding declaration for direct GIMP plug-in execution
+    "UP041", # keep socket.timeout explicit in socket protocol code
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gimp_mcp_pro", "scripts"]
-
-[tool.ruff.lint.per-file-ignores]
-"gimp_plugin/*.py" = [
-    "E402",   # PyGObject plug-ins must call gi.require_version before gi.repository imports
-    "E722",   # legacy plug-in guard code keeps broad fallback handlers for GIMP runtime variance
-    "I001",   # keep GIMP plug-in import order close to upstream examples
-    "N802",   # GIMP translation helper name N_ is conventional
-    "SIM105", # broad fallback handlers remain explicit in plug-in code for now
-    "UP009",  # keep plug-in header compatible with GIMP plug-in conventions
-    "UP041",  # socket.timeout spelling is clearer for socket server code
-]
+known-first-party = ["gimp_mcp_pro", "scripts", "tests"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -124,18 +125,7 @@ module = [
     "gimp_mcp_pro.tools.*",
     "gimp_mcp_pro.server",
 ]
-disable_error_code = [
-    "no-untyped-def",
-    "no-any-return",
-    "attr-defined",
-    "operator",
-    "union-attr",
-    "arg-type",
-    "assignment",
-    "return-value",
-    "valid-type",
-    "misc",
-]
+disable_error_code = ["no-untyped-def", "no-any-return", "attr-defined", "operator", "union-attr", "arg-type", "assignment", "return-value", "valid-type", "misc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

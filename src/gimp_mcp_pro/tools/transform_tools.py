@@ -7,11 +7,10 @@ for both images and individual layers.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult, py_literal
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.transform")
@@ -58,11 +57,12 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         new_width: int,
         new_height: int,
         interpolation: str = "cubic",
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Scale the entire image (all layers) to new dimensions.
 
-        WHEN TO USE: Resizing the final image for output, or changing
-        overall canvas dimensions while scaling content.
+        Notes:
+            Use this tool when resizing the final image for output, or changing
+            overall canvas dimensions while scaling content.
 
         Args:
             new_width: Target width in pixels (1-32768)
@@ -110,11 +110,12 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         interpolation: str = "cubic",
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Scale a single layer to new dimensions.
 
-        NOTE: This changes the layer's pixel content, not the canvas.
-        The layer may become larger or smaller than the image canvas.
+        Notes:
+            This changes the layer's pixel content, not the canvas.
+            The layer may become larger or smaller than the image canvas.
 
         Args:
             new_width: Target width in pixels
@@ -155,7 +156,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="scale_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def rotate_image(angle: int) -> dict[str, Any]:
+    async def rotate_image(angle: int) -> ToolResult:
         """Rotate the entire image by 90, 180, or 270 degrees.
 
         Args:
@@ -195,7 +196,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         auto_resize: bool = True,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Rotate a layer by an arbitrary angle.
 
         Args:
@@ -235,7 +236,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="rotate_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def flip_image(direction: str = "horizontal") -> dict[str, Any]:
+    async def flip_image(direction: str = "horizontal") -> ToolResult:
         """Flip the entire image.
 
         Args:
@@ -275,7 +276,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         direction: str = "horizontal",
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Flip a single layer.
 
         Args:
@@ -316,11 +317,12 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="flip_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def crop_to_selection() -> dict[str, Any]:
+    async def crop_to_selection() -> ToolResult:
         """Crop the image to the current selection bounds.
 
-        WHEN TO USE: After making a selection around the area you want to keep.
-        The image canvas will be resized to fit the selection.
+        Notes:
+            Use this tool after making a selection around the area you want to keep.
+            The image canvas will be resized to fit the selection.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -345,7 +347,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         y: int,
         width: int,
         height: int,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Crop the image to a specific rectangle.
 
         Args:
@@ -377,10 +379,11 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="crop_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def autocrop_image() -> dict[str, Any]:
+    async def autocrop_image() -> ToolResult:
         """Automatically crop the image to remove border whitespace/transparency.
 
-        WHEN TO USE: After drawing, to trim unused canvas around the content.
+        Notes:
+            Use this tool after drawing, to trim unused canvas around the content.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -409,7 +412,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         new_height: int,
         offset_x: int = 0,
         offset_y: int = 0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Resize the image canvas without scaling content.
 
         Content stays the same size; canvas grows or shrinks around it.
@@ -451,7 +454,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         offset_y: int,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Move a layer by an offset (reposition within the canvas).
 
         Args:

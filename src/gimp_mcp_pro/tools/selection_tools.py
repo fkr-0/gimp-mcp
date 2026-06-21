@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.models.common import OperationResult, SelectionOp
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import SELECTION_OP_MAP
 
@@ -29,11 +28,12 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         height: float,
         operation: str = "replace",
         feather_radius: float = 0.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Create a rectangular selection.
 
-        WHEN TO USE: Before filling a rectangular area, or to constrain
-        operations to a specific region.
+        Notes:
+            Use this tool before filling a rectangular area, or to constrain
+            operations to a specific region.
 
         Args:
             x, y: Top-left corner
@@ -71,7 +71,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         height: float,
         operation: str = "replace",
         feather_radius: float = 0.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Create an elliptical selection.
 
         For a circular selection, set width == height.
@@ -109,11 +109,12 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         points: list[float],
         operation: str = "replace",
         feather_radius: float = 0.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Create a polygon (freeform) selection.
 
-        BEST PRACTICE: Use polygon selection + fill_selection for solid shapes.
-        This is the recommended way to draw filled shapes in GIMP.
+        Notes:
+            Best practice: Use polygon selection + fill_selection for solid shapes.
+            This is the recommended way to draw filled shapes in GIMP.
 
         Args:
             points: Flat list [x1,y1, x2,y2, x3,y3, ...]. Min 3 vertices (6 values).
@@ -149,7 +150,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="select_polygon", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def select_all() -> dict[str, Any]:
+    async def select_all() -> ToolResult:
         """Select the entire image.
 
         Returns:
@@ -168,11 +169,12 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="select_all", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def select_none() -> dict[str, Any]:
+    async def select_none() -> ToolResult:
         """Clear all selections.
 
-        IMPORTANT: Always call this after fill/stroke operations on selections
-        to avoid unexpected behavior on subsequent operations.
+        Warnings:
+            Important: Always call this after fill/stroke operations on selections
+            to avoid unexpected behavior on subsequent operations.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -192,7 +194,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="select_none", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def select_invert() -> dict[str, Any]:
+    async def select_invert() -> ToolResult:
         """Invert the current selection (select everything NOT currently selected).
 
         Returns:
@@ -213,7 +215,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="select_invert", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def select_grow(radius: int) -> dict[str, Any]:
+    async def select_grow(radius: int) -> ToolResult:
         """Grow the current selection by a number of pixels.
 
         Args:
@@ -237,7 +239,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="select_grow", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def select_shrink(radius: int) -> dict[str, Any]:
+    async def select_shrink(radius: int) -> ToolResult:
         """Shrink the current selection by a number of pixels.
 
         Args:

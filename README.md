@@ -107,16 +107,16 @@ Or manually copy the plugin:
 
 ```bash
 # Linux
-PLUG_DIR="$HOME/.config/GIMP/3.0/plug-ins/gimp-mcp-pro"
+PLUG_DIR="$HOME/.config/GIMP/3.0/plug-ins/gimp_mcp_plugin"
 mkdir -p "$PLUG_DIR"
-cp gimp_plugin/gimp_mcp_plugin.py "$PLUG_DIR/gimp-mcp-pro"
-chmod +x "$PLUG_DIR/gimp-mcp-pro"
+cp gimp_plugin/gimp_mcp_plugin.py "$PLUG_DIR/gimp_mcp_plugin.py"
+chmod +x "$PLUG_DIR/gimp_mcp_plugin.py"
 
 # macOS
-PLUG_DIR="$HOME/Library/Application Support/GIMP/3.0/plug-ins/gimp-mcp-pro"
+PLUG_DIR="$HOME/Library/Application Support/GIMP/3.0/plug-ins/gimp_mcp_plugin"
 mkdir -p "$PLUG_DIR"
-cp gimp_plugin/gimp_mcp_plugin.py "$PLUG_DIR/gimp-mcp-pro"
-chmod +x "$PLUG_DIR/gimp-mcp-pro"
+cp gimp_plugin/gimp_mcp_plugin.py "$PLUG_DIR/gimp_mcp_plugin.py"
+chmod +x "$PLUG_DIR/gimp_mcp_plugin.py"
 ```
 
 ### 3. Start the plugin in GIMP

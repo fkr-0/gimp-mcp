@@ -8,9 +8,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.models.common import FillType, OperationResult
+from gimp_mcp_pro.models.common import FillType, OperationResult, py_literal
 from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, IMAGE_BASE_TYPE_MAP
 
@@ -35,10 +35,11 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         height: int,
         color_mode: str = "rgb",
         fill: str = "white",
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Create a new blank image in GIMP.
 
-        WHEN TO USE: Starting a new project, creating a canvas for drawing.
+        Notes:
+            Use this tool when starting a new project, creating a canvas for drawing.
 
         Args:
             width: Image width in pixels (1-32768)
@@ -78,7 +79,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             f"{img_type}, 100, Gimp.LayerMode.NORMAL)",
             "image.insert_layer(layer, None, 0)",
             f"Gimp.Drawable.edit_fill(layer, {fill_type})",
-            "Gimp.Display.new(image)",
+            "try:\n    Gimp.Display.new(image)\nexcept Exception:\n    pass",
             "Gimp.displays_flush()",
             "print(image.get_id() if hasattr(image, 'get_id') else 0)",
         ]
@@ -102,11 +103,12 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
 
     @mcp.tool()
-    async def list_images() -> dict[str, Any]:
+    async def list_images() -> ToolResult:
         """List all currently open images in GIMP.
 
-        WHEN TO USE: Before operations that need to target a specific image,
-        or to verify what images are available.
+        Notes:
+            Use this tool before operations that need to target a specific image,
+            or to verify what images are available.
 
         Returns:
             Operation result with list of image info dicts.
@@ -135,11 +137,11 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
 
         try:
             result = await bridge.async_execute_python(code)
-            outputs = result.get("results", [])
+            outputs: list[str] = result.get("results", [])
             # Parse the JSON output from the last print statement
             import json as _json
 
-            images_data = []
+            images_data: list[dict[str, Any]] = []
             for out in outputs:
                 if out and out.strip():
                     try:
@@ -157,16 +159,18 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="list_images", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def get_image_info() -> dict[str, Any]:
+    async def get_image_info() -> ToolResult:
         """Get detailed metadata about the active image (no bitmap data).
 
-        WHEN TO USE: Before any operation, to understand the current canvas
-        dimensions, layer structure, and file state. Much faster than
-        get_image_bitmap since it doesn't export pixel data.
+        Notes:
+            Use this tool before any operation, to understand the current canvas
+            dimensions, layer structure, and file state. Much faster than
+            get_image_bitmap since it doesn't export pixel data.
 
-        COMBINES WITH: Use before create_layer (to match dimensions),
-        before drawing (to verify layer structure), or before export
-        (to check if image has unsaved changes).
+        Notes:
+            Works well with: Use before create_layer (to match dimensions),
+            before drawing (to verify layer structure), or before export
+            (to check if image has unsaved changes).
 
         Returns:
             Comprehensive image metadata including layers, channels, file info.
@@ -192,10 +196,11 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         file_path: str,
         format: str | None = None,
         quality: int = 85,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Export the active image to a file.
 
-        WHEN TO USE: Saving the final result as PNG, JPEG, etc.
+        Notes:
+            Use this tool when saving the final result as PNG, JPEG, etc.
 
         Args:
             file_path: Output path (e.g., "/home/user/output.png")
@@ -220,7 +225,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
 
         code = _get_active_image_code() + [
             "from gi.repository import Gio",
-            f"file_obj = Gio.File.new_for_path('{params.file_path}')",
+            f"file_obj = Gio.File.new_for_path({py_literal(params.file_path)})",
         ]
 
         if fmt == "png":
@@ -250,7 +255,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 "Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, image, file_obj)",
             ]
 
-        code.append(f"print('Exported to {params.file_path}')")
+        code.append(f"print({py_literal(f'Exported to {params.file_path}')})")
 
         try:
             await bridge.async_execute_python(code, timeout=60.0)
@@ -263,14 +268,16 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="export_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def flatten_image() -> dict[str, Any]:
+    async def flatten_image() -> ToolResult:
         """Flatten all layers into a single layer.
 
-        WHEN TO USE: Before final export when you want to merge all layers,
-        or to simplify a complex layer structure.
+        Notes:
+            Use this tool before final export when you want to merge all layers,
+            or to simplify a complex layer structure.
 
-        WARNING: This is destructive — you lose individual layer editability.
-        Consider using undo groups so the user can revert.
+        Warnings:
+            This is destructive — you lose individual layer editability.
+            Consider using undo groups so the user can revert.
 
         Returns:
             Operation result.
@@ -290,18 +297,19 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="flatten_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def duplicate_image() -> dict[str, Any]:
+    async def duplicate_image() -> ToolResult:
         """Duplicate the entire active image (all layers, channels, paths).
 
-        WHEN TO USE: Creating a copy to experiment on without affecting
-        the original. Good before destructive operations.
+        Notes:
+            Use this tool when creating a copy to experiment on without affecting
+            the original. Good before destructive operations.
 
         Returns:
             Operation result with info about the new image.
         """
         code = _get_active_image_code() + [
             "new_image = image.duplicate()",
-            "Gimp.Display.new(new_image)",
+            "try:\n    Gimp.Display.new(new_image)\nexcept Exception:\n    pass",
             "Gimp.displays_flush()",
             "print(f'{new_image.get_width()}x{new_image.get_height()}')",
         ]

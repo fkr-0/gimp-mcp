@@ -9,10 +9,10 @@ Source module: `src/gimp_mcp_pro/tools/pdb_tools.py`
 
 ## `search_pdb` {#search-pdb}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:25`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:24`
 
 ```python
-async def search_pdb(query: str, max_results: int = 20) -> dict[str, Any]
+async def search_pdb(query: str, max_results: int = 20) -> ToolResult
 ```
 
 **Parameters**
@@ -36,10 +36,10 @@ Returns:
 
 ## `execute_python` {#execute-python}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:76`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:75`
 
 ```python
-async def execute_python(code: list[str], timeout_seconds: float = 30.0) -> dict[str, Any]
+async def execute_python(code: list[str], timeout_seconds: float = 30.0) -> ToolResult
 ```
 
 **Parameters**
@@ -60,8 +60,9 @@ The code runs in GIMP's persistent Python context:
 - Variables persist between calls
 - Gimp and Gegl modules are pre-imported
 
-IMPORTANT: Always call Gimp.displays_flush() after drawing operations.
-Always call Gimp.Selection.none(image) after selection-based operations.
+Warnings:
+    Important: Always call Gimp.displays_flush() after drawing operations.
+    Always call Gimp.Selection.none(image) after selection-based operations.
 
 Args:
     code: List of Python code strings to execute sequentially.

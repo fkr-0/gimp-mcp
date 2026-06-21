@@ -20,10 +20,10 @@ Source module: `src/gimp_mcp_pro/tools/color_tools.py`
 
 ## `adjust_brightness_contrast` {#adjust-brightness-contrast}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:53`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:52`
 
 ```python
-async def adjust_brightness_contrast(brightness: int = 0, contrast: int = 0, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def adjust_brightness_contrast(brightness: int = 0, contrast: int = 0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -48,10 +48,10 @@ Returns:
 
 ## `adjust_hue_saturation` {#adjust-hue-saturation}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:90`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:89`
 
 ```python
-async def adjust_hue_saturation(hue: float = 0.0, saturation: float = 0.0, lightness: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def adjust_hue_saturation(hue: float = 0.0, saturation: float = 0.0, lightness: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -78,10 +78,10 @@ Returns:
 
 ## `adjust_levels` {#adjust-levels}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:131`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:130`
 
 ```python
-async def adjust_levels(input_low: int = 0, input_high: int = 255, gamma: float = 1.0, output_low: int = 0, output_high: int = 255, channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def adjust_levels(input_low: int = 0, input_high: int = 255, gamma: float = 1.0, output_low: int = 0, output_high: int = 255, channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -99,8 +99,9 @@ async def adjust_levels(input_low: int = 0, input_high: int = 255, gamma: float 
 
 Adjust levels for a layer.
 
-WHEN TO USE: Fine-tuning tonal range, fixing underexposed/overexposed
-images, adjusting individual color channels.
+Notes:
+    Use this tool when fine-tuning tonal range, fixing underexposed/overexposed
+    images, adjusting individual color channels.
 
 Args:
     input_low: Input black point (0-255)
@@ -120,7 +121,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/color_tools.py:193`
 
 ```python
-async def adjust_curves(control_points: list[float], channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def adjust_curves(control_points: list[float], channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -134,8 +135,9 @@ async def adjust_curves(control_points: list[float], channel: str = 'value', lay
 
 Adjust curves for a layer.
 
-WHEN TO USE: Fine-grained tonal control, creating custom contrast curves,
-cross-processing effects.
+Notes:
+    Use this tool when fine-grained tonal control, creating custom contrast curves,
+    cross-processing effects.
 
 Args:
     control_points: Flat list of input/output pairs [in1,out1, in2,out2, ...].
@@ -150,10 +152,10 @@ Returns:
 
 ## `desaturate` {#desaturate}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:246`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:247`
 
 ```python
-async def desaturate(method: str = 'luminosity', layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def desaturate(method: str = 'luminosity', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -180,10 +182,10 @@ Returns:
 
 ## `invert_colors` {#invert-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:290`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:291`
 
 ```python
-async def invert_colors(layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def invert_colors(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -206,10 +208,10 @@ Returns:
 
 ## `apply_threshold` {#apply-threshold}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:318`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:319`
 
 ```python
-async def apply_threshold(low: int = 128, high: int = 255, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_threshold(low: int = 128, high: int = 255, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -236,10 +238,10 @@ Returns:
 
 ## `posterize` {#posterize}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:353`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:354`
 
 ```python
-async def posterize(levels: int = 4, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def posterize(levels: int = 4, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -262,10 +264,10 @@ Returns:
 
 ## `color_to_alpha` {#color-to-alpha}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:385`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:386`
 
 ```python
-async def color_to_alpha(color: str = 'white', layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def color_to_alpha(color: str = 'white', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -278,8 +280,9 @@ async def color_to_alpha(color: str = 'white', layer_name: str | None = None, la
 
 Make a specific color transparent (color to alpha).
 
-WHEN TO USE: Removing backgrounds, making white/black transparent
-for compositing, creating cutouts.
+Notes:
+    Use this tool when removing backgrounds, making white/black transparent
+    for compositing, creating cutouts.
 
 Args:
     color: Color to make transparent — name, hex, or rgb.
@@ -291,10 +294,10 @@ Returns:
 
 ## `auto_white_balance` {#auto-white-balance}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:427`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:429`
 
 ```python
-async def auto_white_balance(layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def auto_white_balance(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -317,28 +320,29 @@ Returns:
 
 ## `get_colors` {#get-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:456`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:458`
 
 ```python
-async def get_colors() -> dict[str, Any]
+async def get_colors() -> ToolResult
 ```
 
 **Docstring**
 
 Get the current foreground and background colors.
 
-WHEN TO USE: Before drawing to verify colors are set correctly,
-especially since the user can change them in GIMP's UI at any time.
+Notes:
+    Use this tool before drawing to verify colors are set correctly,
+    especially since the user can change them in GIMP's UI at any time.
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
 ## `swap_colors` {#swap-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:502`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:505`
 
 ```python
-async def swap_colors() -> dict[str, Any]
+async def swap_colors() -> ToolResult
 ```
 
 **Docstring**
@@ -350,10 +354,10 @@ Returns:
 
 ## `sample_color` {#sample-color}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:522`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:525`
 
 ```python
-async def sample_color(x: int, y: int, sample_merged: bool = False) -> dict[str, Any]
+async def sample_color(x: int, y: int, sample_merged: bool = False) -> ToolResult
 ```
 
 **Parameters**

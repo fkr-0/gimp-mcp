@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.history")
@@ -16,7 +15,7 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
     """Register history/undo tools with the MCP server."""
 
     @mcp.tool()
-    async def undo(steps: int = 1) -> dict[str, Any]:
+    async def undo(steps: int = 1) -> ToolResult:
         """Undo the last operation(s).
 
         Args:
@@ -50,7 +49,7 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="undo", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def redo(steps: int = 1) -> dict[str, Any]:
+    async def redo(steps: int = 1) -> ToolResult:
         """Redo previously undone operation(s).
 
         Args:
@@ -84,14 +83,16 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="redo", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def begin_undo_group(name: str = "AI Operation") -> dict[str, Any]:
+    async def begin_undo_group(name: str = "AI Operation") -> ToolResult:
         """Start an undo group — all subsequent operations will be grouped
         as a single undo step.
 
-        WHEN TO USE: Before multi-step workflows. This lets the user
-        undo the entire AI operation with a single Ctrl+Z.
+        Notes:
+            Use this tool before multi-step workflows. This lets the user
+            undo the entire AI operation with a single Ctrl+Z.
 
-        IMPORTANT: Always call end_undo_group when done.
+        Warnings:
+            Important: Always call end_undo_group when done.
 
         Args:
             name: Name for the undo group (shown in GIMP's undo history)
@@ -116,7 +117,7 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="begin_undo_group", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def end_undo_group() -> dict[str, Any]:
+    async def end_undo_group() -> ToolResult:
         """End the current undo group.
 
         Must be called after begin_undo_group. All operations between

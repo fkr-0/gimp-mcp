@@ -21,6 +21,7 @@ import time
 from contextlib import suppress
 from typing import Any, cast
 
+from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse
 from gimp_mcp_pro.utils.errors import (
     GimpCommandError,
     GimpConnectionError,
@@ -38,20 +39,29 @@ RECONNECT_DELAYS = [0.5, 1.0, 2.0, 4.0, 8.0]  # Exponential backoff
 
 
 class GimpBridge:
-    """Manages TCP socket communication with the GIMP plugin.
+    """Synchronous TCP bridge for the GIMP MCP Pro plug-in.
 
-    Usage:
-        bridge = GimpBridge(host='localhost', port=9877)
-        bridge.connect()
+    The bridge owns one socket connection, serializes commands with a lock, and
+    preserves the length-prefixed JSON protocol used by the GIMP plug-in. Async
+    MCP tools should prefer ``AsyncGimpBridge``; this class remains the stable
+    synchronous adapter for CLI utilities, diagnostics, and legacy callers.
 
-        # Send a typed command
-        result = bridge.send_command("get_image_metadata")
+    Args:
+        host: Hostname or IP address where the GIMP plug-in listens.
+        port: TCP port exposed by the GIMP plug-in.
+        timeout: Default command and connection timeout in seconds.
+        use_length_prefix: Whether to use the four-byte length-prefixed JSON
+            framing protocol.
+        long_timeout: Timeout in seconds for heavy operations such as bitmap
+            export or filters.
+        max_message_size: Maximum accepted response size in bytes.
+        reconnect_delays: Retry backoff values used before the final connection
+            attempt.
 
-        # Execute raw Python in GIMP
-        result = bridge.execute_python([
-            "images = Gimp.get_images()",
-            "print(len(images))"
-        ])
+    Examples:
+        >>> bridge = GimpBridge(host="localhost", port=9877)
+        >>> bridge.connect()
+        >>> bridge.get_image_metadata()
     """
 
     def __init__(
@@ -83,6 +93,12 @@ class GimpBridge:
 
     @property
     def connected(self) -> bool:
+        """Whether the bridge currently owns an open socket.
+
+        Returns:
+            True when the bridge is marked connected and a socket object is
+            present, otherwise False.
+        """
         return self._connected and self._sock is not None
 
     def connect(self) -> None:
@@ -142,9 +158,9 @@ class GimpBridge:
     def send_command(
         self,
         command_type: str,
-        params: dict[str, Any] | None = None,
+        params: CommandParams | None = None,
         timeout: float | None = None,
-    ) -> dict[str, Any]:
+    ) -> PluginResponse:
         """Send a command to GIMP and wait for the response.
 
         Args:
@@ -210,7 +226,7 @@ class GimpBridge:
         self,
         code_lines: list[str],
         timeout: float | None = None,
-    ) -> dict[str, Any]:
+    ) -> PluginResponse:
         """Execute Python code in GIMP's PyGObject console.
 
         This is the escape hatch for operations that don't have a
@@ -238,9 +254,9 @@ class GimpBridge:
     async def async_send_command(
         self,
         command_type: str,
-        params: dict[str, Any] | None = None,
+        params: CommandParams | None = None,
         timeout: float | None = None,
-    ) -> dict[str, Any]:
+    ) -> PluginResponse:
         """Async adapter for send_command.
 
         This is the low-risk first migration step: it preserves the proven
@@ -253,7 +269,7 @@ class GimpBridge:
         self,
         code_lines: list[str],
         timeout: float | None = None,
-    ) -> dict[str, Any]:
+    ) -> PluginResponse:
         """Async adapter for execute_python."""
         return await asyncio.to_thread(self.execute_python, code_lines, timeout)
 
@@ -261,7 +277,7 @@ class GimpBridge:
         self,
         expressions: list[str],
         timeout: float | None = None,
-    ) -> dict[str, Any]:
+    ) -> PluginResponse:
         """Async adapter for evaluate_python."""
         return await asyncio.to_thread(self.evaluate_python, expressions, timeout)
 
@@ -269,20 +285,20 @@ class GimpBridge:
         self,
         max_width: int | None = None,
         max_height: int | None = None,
-        region: dict[str, int] | None = None,
-    ) -> dict[str, Any]:
+        region: BitmapRegion | None = None,
+    ) -> PluginResponse:
         """Async adapter for get_image_bitmap."""
         return await asyncio.to_thread(self.get_image_bitmap, max_width, max_height, region)
 
-    async def async_get_image_metadata(self) -> dict[str, Any]:
+    async def async_get_image_metadata(self) -> PluginResponse:
         """Async adapter for get_image_metadata."""
         return await asyncio.to_thread(self.get_image_metadata)
 
-    async def async_get_context_state(self) -> dict[str, Any]:
+    async def async_get_context_state(self) -> PluginResponse:
         """Async adapter for get_context_state."""
         return await asyncio.to_thread(self.get_context_state)
 
-    async def async_get_gimp_info(self) -> dict[str, Any]:
+    async def async_get_gimp_info(self) -> PluginResponse:
         """Async adapter for get_gimp_info."""
         return await asyncio.to_thread(self.get_gimp_info)
 
@@ -290,7 +306,7 @@ class GimpBridge:
         self,
         expressions: list[str],
         timeout: float | None = None,
-    ) -> dict[str, Any]:
+    ) -> PluginResponse:
         """Evaluate Python expressions in GIMP and return their values.
 
         Unlike execute_python, this returns the actual values of expressions
@@ -306,14 +322,14 @@ class GimpBridge:
         self,
         max_width: int | None = None,
         max_height: int | None = None,
-        region: dict[str, int] | None = None,
-    ) -> dict[str, Any]:
+        region: BitmapRegion | None = None,
+    ) -> PluginResponse:
         """Get the current image as base64 PNG data.
 
         This is a high-level convenience for the get_image_bitmap
         command, which has native handling in the GIMP plugin.
         """
-        params: dict[str, Any] = {}
+        params: CommandParams = {}
         if max_width is not None:
             params["max_width"] = max_width
         if max_height is not None:
@@ -326,15 +342,15 @@ class GimpBridge:
             timeout=self.long_timeout,
         )
 
-    def get_image_metadata(self) -> dict[str, Any]:
+    def get_image_metadata(self) -> PluginResponse:
         """Get metadata about the current image (no bitmap transfer)."""
         return self.send_command("get_image_metadata")
 
-    def get_context_state(self) -> dict[str, Any]:
+    def get_context_state(self) -> PluginResponse:
         """Get GIMP's current context (colors, brush, opacity, etc.)."""
         return self.send_command("get_context_state")
 
-    def get_gimp_info(self) -> dict[str, Any]:
+    def get_gimp_info(self) -> PluginResponse:
         """Get GIMP environment information."""
         return self.send_command("get_gimp_info")
 
@@ -354,7 +370,7 @@ class GimpBridge:
             # Fallback: raw JSON (backward compat with maorcc plugin)
             self._sock.sendall(data)
 
-    def _receive(self) -> dict[str, Any]:
+    def _receive(self) -> PluginResponse:
         """Receive a JSON response."""
         assert self._sock is not None
 
@@ -363,7 +379,7 @@ class GimpBridge:
         else:
             return self._receive_json_boundary()
 
-    def _receive_length_prefixed(self) -> dict[str, Any]:
+    def _receive_length_prefixed(self) -> PluginResponse:
         """Receive using 4-byte length prefix."""
         assert self._sock is not None
 
@@ -378,9 +394,9 @@ class GimpBridge:
 
         # Read payload
         data = self._recv_exact(length)
-        return cast(dict[str, Any], json.loads(data.decode("utf-8")))
+        return cast(PluginResponse, json.loads(data.decode("utf-8")))
 
-    def _receive_json_boundary(self) -> dict[str, Any]:
+    def _receive_json_boundary(self) -> PluginResponse:
         """Receive by detecting JSON boundaries (fallback mode).
 
         This replicates the approach used by maorcc's implementation
@@ -394,7 +410,7 @@ class GimpBridge:
             if not chunk:
                 if buffer:
                     try:
-                        return cast(dict[str, Any], json.loads(buffer.decode("utf-8")))
+                        return cast(PluginResponse, json.loads(buffer.decode("utf-8")))
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         pass
                 raise GimpConnectionError("Connection closed by GIMP plugin")
@@ -403,7 +419,7 @@ class GimpBridge:
 
             # Try to parse as complete JSON
             try:
-                return cast(dict[str, Any], json.loads(buffer.decode("utf-8")))
+                return cast(PluginResponse, json.loads(buffer.decode("utf-8")))
             except (json.JSONDecodeError, UnicodeDecodeError):
                 continue  # Need more data
 

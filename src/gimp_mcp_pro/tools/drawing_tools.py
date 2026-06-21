@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.models.common import Color, FillType, OperationResult, py_literal
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP
 
@@ -48,11 +47,12 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
     """Register all drawing tools with the MCP server."""
 
     @mcp.tool()
-    async def set_foreground_color(color: str) -> dict[str, Any]:
+    async def set_foreground_color(color: str) -> ToolResult:
         """Set the foreground color used for drawing operations.
 
-        WHEN TO USE: Before any drawing, fill, or stroke operation that
-        uses the foreground color.
+        Notes:
+            Use this tool before any drawing, fill, or stroke operation that
+            uses the foreground color.
 
         Args:
             color: Color as name ("red"), hex ("#FF0000"), or rgb("rgb(255,0,0)")
@@ -77,7 +77,7 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="set_foreground_color", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def set_background_color(color: str) -> dict[str, Any]:
+    async def set_background_color(color: str) -> ToolResult:
         """Set the background color.
 
         Args:
@@ -106,16 +106,17 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
     async def fill_selection(
         fill_type: str = "foreground",
         color: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Fill the current selection (or entire layer if no selection) with color.
 
-        WHEN TO USE: After creating a selection (rectangle, ellipse, polygon),
-        fill it with a color to create shapes.
+        Notes:
+            Use this tool after creating a selection (rectangle, ellipse, polygon),
+            fill it with a color to create shapes.
 
-        BEST PRACTICE (from maorcc):
-        - Use polygon selection + fill for solid shapes (NOT paintbrush)
-        - Always clear selection after filling: select_none is called for you
-        - Avoid feathering unless you specifically want soft edges
+            Best practice guidance:
+            - Use polygon selection plus fill for solid shapes instead of paintbrush strokes.
+            - Clear the selection after filling; this tool calls select_none automatically.
+            - Avoid feathering unless soft edges are intentional.
 
         Args:
             fill_type: "foreground", "background", "white", "transparent", or "pattern"
@@ -156,7 +157,7 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         y2: float,
         color: str | None = None,
         brush_size: float = 2.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Draw a straight line between two points.
 
         Args:
@@ -193,13 +194,14 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         tool: str = "pencil",
         color: str | None = None,
         brush_size: float = 2.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Draw a stroke along a series of points.
 
         Use 'pencil' for hard-edged lines, 'paintbrush' for soft brush strokes.
 
-        NOTE: For filling shapes, do NOT use brush strokes — use polygon
-        selection + fill_selection instead. Brush strokes create outlines only.
+        Notes:
+            For filling shapes, do NOT use brush strokes — use polygon
+            selection + fill_selection instead. Brush strokes create outlines only.
 
         Args:
             points: Flat list of coordinates [x1, y1, x2, y2, x3, y3, ...]
@@ -251,11 +253,12 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         filled: bool = True,
         color: str | None = None,
         line_width: float = 2.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Draw a rectangle (filled or outline only).
 
-        BEST PRACTICE: Uses selection + fill for filled rectangles (not brush).
-        This produces clean, solid shapes.
+        Notes:
+            Best practice: Uses selection + fill for filled rectangles (not brush).
+            This produces clean, solid shapes.
 
         Args:
             x, y: Top-left corner coordinates
@@ -309,7 +312,7 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         filled: bool = True,
         color: str | None = None,
         line_width: float = 2.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Draw an ellipse/circle (filled or outline only).
 
         For a circle, set width == height.
@@ -361,11 +364,12 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         filled: bool = True,
         color: str | None = None,
         line_width: float = 2.0,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Draw a polygon (filled or outline).
 
-        BEST PRACTICE: This is THE correct way to draw filled shapes in GIMP.
-        Uses polygon selection + fill, producing clean solid shapes.
+        Notes:
+            Best practice: This is THE correct way to draw filled shapes in GIMP.
+            Uses polygon selection + fill, producing clean solid shapes.
 
         Args:
             points: Flat list of vertex coordinates [x1,y1, x2,y2, x3,y3, ...]
@@ -424,7 +428,7 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         font_size: float = 24.0,
         color: str | None = None,
         layer_name: str = "Text",
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Add a text layer to the image.
 
         Creates a new floating text layer at the specified position.
@@ -486,11 +490,12 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="add_text", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def edit_clear() -> dict[str, Any]:
+    async def edit_clear() -> ToolResult:
         """Clear the current selection area (make it transparent).
 
-        WHEN TO USE: To erase part of a layer. The cleared area becomes
-        transparent if the layer has an alpha channel.
+        Notes:
+            Use this tool to erase part of a layer. The cleared area becomes
+            transparent if the layer has an alpha channel.
 
         Requires: Active layer must have an alpha channel. Use
         add_alpha_channel first if needed.

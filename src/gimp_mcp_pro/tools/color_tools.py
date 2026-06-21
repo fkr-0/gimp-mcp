@@ -7,11 +7,10 @@ color inversion, threshold, posterize, and color-to-alpha.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.color")
@@ -55,7 +54,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         contrast: int = 0,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Adjust brightness and contrast of a layer.
 
         Args:
@@ -93,7 +92,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         lightness: float = 0.0,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Adjust hue, saturation, and lightness of a layer.
 
         Args:
@@ -137,11 +136,12 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         channel: str = "value",
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Adjust levels for a layer.
 
-        WHEN TO USE: Fine-tuning tonal range, fixing underexposed/overexposed
-        images, adjusting individual color channels.
+        Notes:
+            Use this tool when fine-tuning tonal range, fixing underexposed/overexposed
+            images, adjusting individual color channels.
 
         Args:
             input_low: Input black point (0-255)
@@ -195,11 +195,12 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         channel: str = "value",
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Adjust curves for a layer.
 
-        WHEN TO USE: Fine-grained tonal control, creating custom contrast curves,
-        cross-processing effects.
+        Notes:
+            Use this tool when fine-grained tonal control, creating custom contrast curves,
+            cross-processing effects.
 
         Args:
             control_points: Flat list of input/output pairs [in1,out1, in2,out2, ...].
@@ -247,7 +248,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         method: str = "luminosity",
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Convert a layer to grayscale while keeping it in RGB mode.
 
         Args:
@@ -290,7 +291,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
     async def invert_colors(
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Invert all colors in a layer (negative effect).
 
         Each pixel's color is replaced with its complement.
@@ -320,7 +321,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         high: int = 255,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Apply threshold — convert to pure black and white.
 
         Pixels darker than `low` become black, lighter than `high` become white.
@@ -354,7 +355,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         levels: int = 4,
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Reduce the number of color levels (posterization effect).
 
         Args:
@@ -386,11 +387,12 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         color: str = "white",
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Make a specific color transparent (color to alpha).
 
-        WHEN TO USE: Removing backgrounds, making white/black transparent
-        for compositing, creating cutouts.
+        Notes:
+            Use this tool when removing backgrounds, making white/black transparent
+            for compositing, creating cutouts.
 
         Args:
             color: Color to make transparent — name, hex, or rgb.
@@ -427,7 +429,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
     async def auto_white_balance(
         layer_name: str | None = None,
         layer_index: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Automatically adjust white balance (stretch colors).
 
         Performs automatic levels adjustment to normalize color distribution.
@@ -453,11 +455,12 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="auto_white_balance", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def get_colors() -> dict[str, Any]:
+    async def get_colors() -> ToolResult:
         """Get the current foreground and background colors.
 
-        WHEN TO USE: Before drawing to verify colors are set correctly,
-        especially since the user can change them in GIMP's UI at any time.
+        Notes:
+            Use this tool before drawing to verify colors are set correctly,
+            especially since the user can change them in GIMP's UI at any time.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -499,7 +502,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="get_colors", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def swap_colors() -> dict[str, Any]:
+    async def swap_colors() -> ToolResult:
         """Swap foreground and background colors.
 
         Returns:
@@ -523,7 +526,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         x: int,
         y: int,
         sample_merged: bool = False,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Pick/sample a color from a pixel in the image.
 
         Args:

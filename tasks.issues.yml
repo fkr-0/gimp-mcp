@@ -4,112 +4,127 @@ fork: fkr-0/gimp-mcp
 branch: 3.2.4
 created_at: 2026-06-21
 status: planning
-
 issues:
-  - id: GIMP-MCP-001
-    title: Verify compatibility with GIMP 3.2.4
-    type: verification
-    priority: high
-    labels:
-      - gimp-3.2.4
-      - compatibility
-      - plugin
-      - contract
-    status: fanned-out
-    spec: compat.yml
-    goal: >-
-      Verify and certify support for GIMP 3.2.4 through the dedicated
-      compatibility contract in compat.yml. The contract is now the normative
-      source for API/interface checks, smoke scenarios, evidence requirements,
-      result schema, README claim gate, and acceptance criteria.
-    checklist:
-      - Maintain compat.yml as the detailed GIMP 3.2.4 verification contract.
-      - Run the static checks from compat.yml and record results in compat.results.yml.
-      - Run the required live clean-profile GIMP 3.2.4 smoke scenarios and record exact evidence.
-      - Reconcile runtime MCP tool count with README/tool-reference claims.
-      - Update README/setup compatibility statements only after the claim gate passes.
-    acceptance:
-      - compat.yml is committed and remains YAML-parseable.
-      - compat.results.yml contains at least one clean-profile GIMP 3.2.4 verification run.
-      - All required compat.yml checks pass or have explicit waivers with linked follow-up issues.
-      - README and setup instructions state only the actually verified compatibility status.
-
-  - id: GIMP-MCP-002
-    title: Add asynchronous bridge and tool execution path
-    type: feature
-    priority: high
-    labels:
-      - async
-      - bridge
-      - mcp
-      - typing
-    status: implemented-static
-    docs:
-      - docs/async-tool-architecture.md
-    goal: >-
-      Add an asyncio-native bridge implementation while keeping the synchronous
-      bridge stable for existing callers, and make all MCP tool handlers async
-      coroutine functions.
-    checklist:
-      - Design AsyncGimpBridge around asyncio.open_connection, StreamReader, and StreamWriter.
-      - Preserve length-prefixed framing semantics and maximum-message-size checks.
-      - Add async send_command, execute_python, evaluate_python, get_image_bitmap, and context helpers.
-      - Provide cancellation-safe timeout handling and clean connection teardown.
-      - Convert all @mcp.tool handlers to async def.
-      - Route all MCP tool bridge calls through async bridge methods.
-      - Type tool modules against AsyncToolBridge and MCPToolRegistrar protocols rather than concrete implementations.
-      - Add tests for concurrent commands, timeout cancellation, oversized responses, server disconnects, reconnect behavior, and async tool registration.
-      - Use AsyncGimpBridge for MCP server tool execution while keeping GimpBridge for CLI/legacy callers.
-    acceptance:
-      - Async bridge tests pass without requiring GIMP.
-      - Sync bridge behavior remains covered and unchanged.
-      - All 75 registered MCP tools are coroutine functions.
-      - Static tests reject direct sync bridge calls inside tool modules.
-      - Public API documentation shows sync and async usage patterns.
-      - Full uv-backed project quality gate passes.
-
-  - id: GIMP-MCP-003
-    title: Introduce Pydantic settings and environment loading
-    type: feature
-    priority: medium
-    labels:
-      - configuration
-      - pydantic-settings
-      - env
-    goal: >-
-      Replace hard-coded runtime defaults with typed settings loaded from
-      environment variables and optional project/user configuration.
-    checklist:
-      - Add pydantic-settings dependency.
-      - Define settings for host, port, timeout, long_timeout, max_message_size, reconnect delays, log level, and optional plugin path.
-      - Support GIMP_MCP_PRO_* environment variables.
-      - Keep safe defaults matching current behavior.
-      - Add tests for default settings, env overrides, invalid env values, and explicit constructor overrides.
-      - Document settings in README and a dedicated configuration section.
-    acceptance:
-      - Runtime configuration is typed, validated, documented, and test-covered.
-      - Existing constructors continue to work unless callers opt into settings loading.
-
-  - id: GIMP-MCP-004
-    title: Operate gimp.dev Projects async REPL workflow
-    type: integration
-    priority: medium
-    labels:
-      - gimp.dev
-      - repl
-      - projects
-      - workflow
-    goal: >-
-      Wire this fork into the local gimp.dev Projects workflow so async bridge
-      work can be driven from an interactive project REPL and validated through
-      repeatable project commands.
-    checklist:
-      - Inspect the gimp.dev project conventions and available project commands.
-      - Add bridge/project commands for uv sync, tests, linting, async bridge tests, and GIMP smoke tests.
-      - Create or document an async REPL workflow for manually driving AsyncGimpBridge commands.
-      - Ensure commands work from /home/user/code/gimp-mcp and can be discovered by the project manager.
-      - Add notes for how to run the REPL against a live GIMP 3.2.4 plugin instance.
-    acceptance:
-      - Project commands are discoverable and runnable through the workspace/project manager.
-      - Async REPL workflow is documented and can connect to a live plugin instance.
-      - gimp.dev integration notes are captured without relying on undocumented local assumptions.
+- id: GIMP-MCP-001
+  title: Verify compatibility with GIMP 3.2.4
+  type: verification
+  priority: high
+  labels:
+  - gimp-3.2.4
+  - compatibility
+  - plugin
+  - contract
+  status: fanned-out
+  spec: compat.yml
+  goal: Verify and certify support for GIMP 3.2.4 through the dedicated compatibility
+    contract in compat.yml. The contract is now the normative source for API/interface
+    checks, smoke scenarios, evidence requirements, result schema, README claim gate,
+    and acceptance criteria.
+  checklist:
+  - Maintain compat.yml as the detailed GIMP 3.2.4 verification contract.
+  - Run the static checks from compat.yml and record results in compat.results.yml.
+  - Run the required live clean-profile GIMP 3.2.4 smoke scenarios and record exact
+    evidence.
+  - Reconcile runtime MCP tool count with README/tool-reference claims.
+  - Update README/setup compatibility statements only after the claim gate passes.
+  acceptance:
+  - compat.yml is committed and remains YAML-parseable.
+  - compat.results.yml contains at least one clean-profile GIMP 3.2.4 verification
+    run.
+  - All required compat.yml checks pass or have explicit waivers with linked follow-up
+    issues.
+  - README and setup instructions state only the actually verified compatibility status.
+- id: GIMP-MCP-002
+  title: Add asynchronous bridge and tool execution path
+  type: feature
+  priority: high
+  labels:
+  - async
+  - bridge
+  - mcp
+  - typing
+  status: implemented-static-typed
+  docs:
+  - docs/async-tool-architecture.md
+  - src/gimp_mcp_pro/protocol.py
+  goal: Add an asyncio-native bridge implementation while keeping the synchronous
+    bridge stable for existing callers, and make all MCP tool handlers async coroutine
+    functions.
+  checklist:
+  - Design AsyncGimpBridge around asyncio.open_connection, StreamReader, and StreamWriter.
+  - Preserve length-prefixed framing semantics and maximum-message-size checks.
+  - Add async send_command, execute_python, evaluate_python, get_image_bitmap, and
+    context helpers.
+  - Provide cancellation-safe timeout handling and clean connection teardown.
+  - Convert all @mcp.tool handlers to async def.
+  - Route all MCP tool bridge calls through async bridge methods.
+  - Type tool modules against AsyncToolBridge and MCPToolRegistrar protocols rather
+    than concrete implementations.
+  - Add tests for concurrent commands, timeout cancellation, oversized responses,
+    server disconnects, reconnect behavior, and async tool registration.
+  - Use AsyncGimpBridge for MCP server tool execution while keeping GimpBridge for
+    CLI/legacy callers.
+  - Split shared command/result envelopes into gimp_mcp_pro.protocol.
+  - Annotate public MCP tool handlers with ToolResult rather than anonymous dict[str,
+    Any].
+  - Annotate raw bridge transport responses with PluginResponse.
+  - Add representative runtime invocation tests proving tools await async bridge methods.
+  - Add static tests rejecting non-ToolResult tool return annotations.
+  acceptance:
+  - Async bridge tests pass without requiring GIMP.
+  - Sync bridge behavior remains covered and unchanged.
+  - All 75 registered MCP tools are coroutine functions.
+  - Static tests reject direct sync bridge calls inside tool modules.
+  - Public API documentation shows sync and async usage patterns.
+  - Full uv-backed project quality gate passes.
+  - Every @mcp.tool handler is annotated as returning ToolResult.
+  - Both GimpBridge and AsyncGimpBridge satisfy the AsyncToolBridge protocol surface.
+  - Representative registered tools invoke async bridge methods under pytest.
+- id: GIMP-MCP-003
+  title: Introduce Pydantic settings and environment loading
+  type: feature
+  priority: medium
+  labels:
+  - configuration
+  - pydantic-settings
+  - env
+  goal: Replace hard-coded runtime defaults with typed settings loaded from environment
+    variables and optional project/user configuration.
+  checklist:
+  - Add pydantic-settings dependency.
+  - Define settings for host, port, timeout, long_timeout, max_message_size, reconnect
+    delays, log level, and optional plugin path.
+  - Support GIMP_MCP_PRO_* environment variables.
+  - Keep safe defaults matching current behavior.
+  - Add tests for default settings, env overrides, invalid env values, and explicit
+    constructor overrides.
+  - Document settings in README and a dedicated configuration section.
+  acceptance:
+  - Runtime configuration is typed, validated, documented, and test-covered.
+  - Existing constructors continue to work unless callers opt into settings loading.
+- id: GIMP-MCP-004
+  title: Operate gimp.dev Projects async REPL workflow
+  type: integration
+  priority: medium
+  labels:
+  - gimp.dev
+  - repl
+  - projects
+  - workflow
+  goal: Wire this fork into the local gimp.dev Projects workflow so async bridge work
+    can be driven from an interactive project REPL and validated through repeatable
+    project commands.
+  checklist:
+  - Inspect the gimp.dev project conventions and available project commands.
+  - Add bridge/project commands for uv sync, tests, linting, async bridge tests, and
+    GIMP smoke tests.
+  - Create or document an async REPL workflow for manually driving AsyncGimpBridge
+    commands.
+  - Ensure commands work from /home/user/code/gimp-mcp and can be discovered by the
+    project manager.
+  - Add notes for how to run the REPL against a live GIMP 3.2.4 plugin instance.
+  acceptance:
+  - Project commands are discoverable and runnable through the workspace/project manager.
+  - Async REPL workflow is documented and can connect to a live plugin instance.
+  - gimp.dev integration notes are captured without relying on undocumented local
+    assumptions.

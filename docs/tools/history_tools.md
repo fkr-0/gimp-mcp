@@ -11,10 +11,10 @@ Source module: `src/gimp_mcp_pro/tools/history_tools.py`
 
 ## `undo` {#undo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:19`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:18`
 
 ```python
-async def undo(steps: int = 1) -> dict[str, Any]
+async def undo(steps: int = 1) -> ToolResult
 ```
 
 **Parameters**
@@ -33,10 +33,10 @@ Returns:
 
 ## `redo` {#redo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:53`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:52`
 
 ```python
-async def redo(steps: int = 1) -> dict[str, Any]
+async def redo(steps: int = 1) -> ToolResult
 ```
 
 **Parameters**
@@ -55,10 +55,10 @@ Returns:
 
 ## `begin_undo_group` {#begin-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:87`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:86`
 
 ```python
-async def begin_undo_group(name: str = 'AI Operation') -> dict[str, Any]
+async def begin_undo_group(name: str = 'AI Operation') -> ToolResult
 ```
 
 **Parameters**
@@ -70,10 +70,12 @@ async def begin_undo_group(name: str = 'AI Operation') -> dict[str, Any]
 Start an undo group — all subsequent operations will be grouped
 as a single undo step.
 
-WHEN TO USE: Before multi-step workflows. This lets the user
-undo the entire AI operation with a single Ctrl+Z.
+Notes:
+    Use this tool before multi-step workflows. This lets the user
+    undo the entire AI operation with a single Ctrl+Z.
 
-IMPORTANT: Always call end_undo_group when done.
+Warnings:
+    Important: Always call end_undo_group when done.
 
 Args:
     name: Name for the undo group (shown in GIMP's undo history)
@@ -83,10 +85,10 @@ Returns:
 
 ## `end_undo_group` {#end-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:119`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:120`
 
 ```python
-async def end_undo_group() -> dict[str, Any]
+async def end_undo_group() -> ToolResult
 ```
 
 **Docstring**

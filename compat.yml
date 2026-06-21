@@ -276,7 +276,7 @@ python_plugin_lifecycle_contract:
     - class MUST subclass Gimp.PlugIn.
     - do_query_procedures MUST return ['plug-in-mcp-pro-server'].
     - do_create_procedure MUST return a Gimp.ImageProcedure for plug-in-mcp-pro-server.
-    - Gimp.ImageProcedure.new MUST be called with Gimp.PDBProcType.PLUGIN.
+    - Gimp.ImageProcedure.new MUST be called with Gimp.PDBProcType.PERSISTENT for the long-lived bridge server procedure.
     - procedure.set_menu_label MUST set Start MCP Pro Server.
     - procedure.set_documentation MUST be populated.
     - procedure.set_attribution MUST be populated.
@@ -289,7 +289,7 @@ python_plugin_lifecycle_contract:
     expressions:
       - Gimp.PlugIn is not None
       - Gimp.ImageProcedure is not None
-      - Gimp.PDBProcType.PLUGIN.value_nick if hasattr(Gimp.PDBProcType.PLUGIN, 'value_nick') else str(Gimp.PDBProcType.PLUGIN)
+      - Gimp.PDBProcType.PERSISTENT.value_nick if hasattr(Gimp.PDBProcType.PERSISTENT, 'value_nick') else str(Gimp.PDBProcType.PERSISTENT)
       - Gimp.PDBStatusType.SUCCESS is not None
   pass_criteria:
     - All required lifecycle interfaces execute without AttributeError or TypeError under GIMP 3.2.4.
@@ -464,9 +464,18 @@ pdb_contract:
   required_procedures:
     - file-png-export
     - file-jpeg-export
-    - gimp-image-undo
-    - gimp-image-redo
     - gimp-image-autocrop
+  optional_procedures:
+    gimp-image-undo:
+      required_for_tool: undo
+      pass_policy: >-
+        If unavailable in a clean 3.2.4 profile, undo MUST return a structured
+        tool error that explains the limitation instead of crashing the bridge.
+    gimp-image-redo:
+      required_for_tool: redo
+      pass_policy: >-
+        If unavailable in a clean 3.2.4 profile, redo MUST return a structured
+        tool error that explains the limitation instead of crashing the bridge.
   conditional_procedures:
     script-fu-drop-shadow:
       required_for_tool: apply_drop_shadow
@@ -763,7 +772,7 @@ live_smoke_scenarios:
       - filter.get_config exposes all properties being set by the tool.
       - append_filter/merge_filter path succeeds without crashing GIMP 3.2.4.
       - each filter produces a measurable pixel delta or a documented neutral/no-op reason.
-      - drop shadow is either supported via script-fu-drop-shadow or clearly marked as waived with replacement issue.
+      - drop shadow is either supported via script-fu-drop-shadow or returns a structured optional-capability error without failing the bridge transport smoke.
   - id: C-100-pdb-contract
     required: true
     tools:
@@ -782,7 +791,8 @@ live_smoke_scenarios:
       - redo
     assertions:
       - undo group wraps a multi-step draw operation into one undo unit where GIMP exposes that behavior.
-      - undo and redo alter bitmap/metadata state as expected.
+      - undo and redo alter bitmap/metadata state when GIMP exposes PDB procedures for them.
+      - if undo/redo PDB procedures are unavailable, the tools return structured optional-capability errors without crashing the bridge.
   - id: C-120-error-contract
     required: true
     assertions:

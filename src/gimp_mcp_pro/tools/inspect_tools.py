@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
+from gimp_mcp_pro.tools.types import AsyncToolBridge, CommandParams, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.inspect")
@@ -23,15 +23,16 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         region_y: int | None = None,
         region_width: int | None = None,
         region_height: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> ToolResult:
         """Get the current image as a viewable bitmap (PNG).
 
-        PRIMARY USE: Verification tool for checking work mid-workflow.
+        Notes:
+            Primary use: Verification tool for checking work mid-workflow.
 
-        BEST PRACTICE (from iterative workflow):
-        - Check after every 3-5 drawing operations
-        - Use region extraction to verify specific areas at higher quality
-        - Don't wait until the end to check — catch issues early
+            Best practice guidance:
+            - Check after every three to five drawing operations.
+            - Use region extraction to verify specific areas at higher quality.
+            - Check before the final step so mistakes are caught early.
 
         Args:
             max_width: Maximum width for scaling (default 1024). Use None for full size.
@@ -44,7 +45,7 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         Returns:
             MCP Image object containing PNG data that the AI can view directly.
         """
-        params: dict[str, Any] = {}
+        params: CommandParams = {}
         if max_width is not None:
             params["max_width"] = max_width
         if max_height is not None:
@@ -73,7 +74,7 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             )
 
             if result.get("status") == "success":
-                image_info = result.get("results", {})
+                image_info: dict[str, Any] = result.get("results", {})
                 # Return the base64 data and metadata
                 return OperationResult.ok(
                     operation="get_image_bitmap",
@@ -101,14 +102,16 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="get_image_bitmap", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def get_image_metadata() -> dict[str, Any]:
+    async def get_image_metadata() -> ToolResult:
         """Get detailed metadata about the active image without bitmap data.
 
-        WHEN TO USE: Before any operation — understand canvas dimensions,
-        layer structure, and file state. Much faster than get_image_bitmap.
+        Notes:
+            Use this tool before any operation — understand canvas dimensions,
+            layer structure, and file state. Much faster than get_image_bitmap.
 
-        Returns comprehensive info: dimensions, color mode, layers (name,
-        visibility, opacity, blend mode), channels, paths, file info.
+        Notes:
+            Returned data includes dimensions, color mode, layers, channels,
+            paths, and file information.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -130,14 +133,16 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="get_image_metadata", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def get_context_state() -> dict[str, Any]:
+    async def get_context_state() -> ToolResult:
         """Get current GIMP context state (colors, brush, opacity, settings).
 
-        IMPORTANT: Context can be changed by the user in GIMP's UI at any time.
-        Check before operations that depend on specific settings.
+        Warnings:
+            Important: Context can be changed by the user in GIMP's UI at any time.
+            Check before operations that depend on specific settings.
 
-        Returns: foreground/background colors, brush info, opacity, paint mode,
-        feather state, antialiasing state.
+        Notes:
+            Returned data includes foreground and background colors, brush info,
+            opacity, paint mode, feather state, and antialiasing state.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -159,14 +164,16 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(operation="get_context_state", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def get_gimp_info() -> dict[str, Any]:
+    async def get_gimp_info() -> ToolResult:
         """Get GIMP environment info (version, paths, capabilities).
 
-        WHEN TO USE: For troubleshooting, environment discovery, or
-        understanding what features are available.
+        Notes:
+            Use this tool for troubleshooting, environment discovery, or
+            understanding what features are available.
 
-        Returns: GIMP version, directories, open images, PDB availability,
-        current context, system capabilities, platform info.
+        Notes:
+            Returned data includes the GIMP version, directories, open images,
+            PDB availability, current context, system capabilities, and platform info.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.

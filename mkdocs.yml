@@ -52,6 +52,7 @@ nav:
   - README: readme.md
   - Compatibility:
       - GIMP 3.2.4 Runbook: gimp-3.2.4-compat.md
+      - Docstring Style: docstring-style.md
       - Tool Docstring Audit: tool-docstring-audit.md
   - Tool Reference:
       - Overview: tools/index.md
@@ -74,3 +75,5 @@ nav:
       - Async Bridge: api/async-bridge.md
       - Server: api/server.md
       - Common Models: api/models-common.md
+      - Protocol Types: api/protocol.md
+      - Tool Typing Protocols: api/tools-types.md

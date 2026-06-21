@@ -8,6 +8,7 @@ GIMP MCP Pro exposes typed Model Context Protocol tools for operating GIMP from 
 ## Documentation map
 
 - [Tool Reference](tools/index.md): generated from the actual MCP tool handler docstrings.
+- [Docstring Style](docstring-style.md): Google-style policy used by MkDocs and the MCP tool audit.
 - [Compatibility Runbook](gimp-3.2.4-compat.md): clean-profile GIMP 3.2.4 verification workflow.
 - [Python API](api/index.md): mkdocstrings-rendered top-level package API.
 

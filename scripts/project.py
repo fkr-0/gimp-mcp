@@ -71,6 +71,7 @@ COMMANDS: dict[str, Command] = {
         "python",
         "tests/live_gimp_324_smoke.py",
         "--spawn",
+        "--xvfb",
         "--output",
         "compat.results.yml",
     ],
@@ -85,6 +86,7 @@ COMMANDS: dict[str, Command] = {
         "compat.results.yml",
     ],
     "async-repl": ["uv", "run", "gimp-mcp-pro", "async-repl"],
+    "build-dist": ["uv", "build", "--sdist", "--wheel"],
 }
 
 CHECK_COMMANDS = ("docs-audit", "format-check", "lint", "typecheck", "test")

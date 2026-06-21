@@ -15,10 +15,10 @@ Source module: `src/gimp_mcp_pro/tools/filter_tools.py`
 
 ## `apply_gaussian_blur` {#apply-gaussian-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:87`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:86`
 
 ```python
-async def apply_gaussian_blur(radius_x: float = 5.0, radius_y: float | None = None, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_gaussian_blur(radius_x: float = 5.0, radius_y: float | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -32,8 +32,9 @@ async def apply_gaussian_blur(radius_x: float = 5.0, radius_y: float | None = No
 
 Apply Gaussian blur to a layer.
 
-WHEN TO USE: Softening images, creating depth-of-field effects,
-blurring backgrounds, smoothing noise.
+Notes:
+    Use this tool when softening images, creating depth-of-field effects,
+    blurring backgrounds, smoothing noise.
 
 Args:
     radius_x: Horizontal blur radius in pixels (0.0-500.0)
@@ -49,7 +50,7 @@ Returns:
 Source: `src/gimp_mcp_pro/tools/filter_tools.py:129`
 
 ```python
-async def apply_unsharp_mask(amount: float = 0.5, radius: float = 3.0, threshold: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_unsharp_mask(amount: float = 0.5, radius: float = 3.0, threshold: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -64,8 +65,9 @@ async def apply_unsharp_mask(amount: float = 0.5, radius: float = 3.0, threshold
 
 Sharpen a layer using unsharp mask.
 
-WHEN TO USE: Enhancing image detail, sharpening after resize,
-recovering slightly out-of-focus images.
+Notes:
+    Use this tool when enhancing image detail, sharpening after resize,
+    recovering slightly out-of-focus images.
 
 Args:
     amount: Sharpening strength (0.0-5.0, typical 0.3-1.0)
@@ -79,10 +81,10 @@ Returns:
 
 ## `apply_pixelize` {#apply-pixelize}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:171`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:172`
 
 ```python
-async def apply_pixelize(block_width: int = 10, block_height: int | None = None, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_pixelize(block_width: int = 10, block_height: int | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -96,7 +98,8 @@ async def apply_pixelize(block_width: int = 10, block_height: int | None = None,
 
 Apply pixelization (mosaic) effect to a layer.
 
-WHEN TO USE: Censoring faces/text, retro pixel art effect, privacy masking.
+Notes:
+    Use this tool when censoring faces/text, retro pixel art effect, privacy masking.
 
 Args:
     block_width: Pixel block width (1-1024)
@@ -109,10 +112,10 @@ Returns:
 
 ## `apply_edge_detect` {#apply-edge-detect}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:212`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:214`
 
 ```python
-async def apply_edge_detect(method: str = 'sobel', amount: float = 1.0, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_edge_detect(method: str = 'sobel', amount: float = 1.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -126,8 +129,9 @@ async def apply_edge_detect(method: str = 'sobel', amount: float = 1.0, layer_na
 
 Apply edge detection to a layer.
 
-WHEN TO USE: Artistic outlines, finding contours, image analysis,
-creating line-art effects.
+Notes:
+    Use this tool when artistic outlines, finding contours, image analysis,
+    creating line-art effects.
 
 Args:
     method: Detection algorithm — "sobel", "prewitt", "laplace"
@@ -140,10 +144,10 @@ Returns:
 
 ## `apply_emboss` {#apply-emboss}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:253`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:256`
 
 ```python
-async def apply_emboss(azimuth: float = 315.0, elevation: float = 45.0, depth: int = 2, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_emboss(azimuth: float = 315.0, elevation: float = 45.0, depth: int = 2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -172,10 +176,10 @@ Returns:
 
 ## `apply_noise` {#apply-noise}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:293`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:296`
 
 ```python
-async def apply_noise(amount: float = 0.2, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_noise(amount: float = 0.2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -188,7 +192,8 @@ async def apply_noise(amount: float = 0.2, layer_name: str | None = None, layer_
 
 Add random noise to a layer.
 
-WHEN TO USE: Adding film grain, texture, or breaking up smooth gradients.
+Notes:
+    Use this tool when adding film grain, texture, or breaking up smooth gradients.
 
 Args:
     amount: Noise intensity (0.0-1.0)
@@ -200,10 +205,10 @@ Returns:
 
 ## `apply_median` {#apply-median}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:329`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:333`
 
 ```python
-async def apply_median(radius: int = 3, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_median(radius: int = 3, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**
@@ -228,10 +233,10 @@ Returns:
 
 ## `apply_drop_shadow` {#apply-drop-shadow}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:364`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:368`
 
 ```python
-async def apply_drop_shadow(offset_x: float = 4.0, offset_y: float = 4.0, blur_radius: float = 8.0, color: str = 'black', opacity: float = 60.0, layer_name: str | None = None, layer_index: int | None = None) -> dict[str, Any]
+async def apply_drop_shadow(offset_x: float = 4.0, offset_y: float = 4.0, blur_radius: float = 8.0, color: str = 'black', opacity: float = 60.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
 **Parameters**

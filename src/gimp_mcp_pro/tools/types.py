@@ -11,8 +11,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any, Protocol, TypeVar
 
-ToolResult = dict[str, Any]
-"""JSON-serializable result shape returned by public MCP tool handlers."""
+from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse, ToolResult
 
 AsyncToolCallable = Callable[..., Awaitable[ToolResult]]
 """Callable shape expected for public async MCP tool handlers."""
@@ -44,9 +43,9 @@ class AsyncToolBridge(Protocol):
     async def async_send_command(
         self,
         command_type: str,
-        params: dict[str, Any] | None = None,
+        params: CommandParams | None = None,
         timeout: float | None = None,
-    ) -> ToolResult:
+    ) -> PluginResponse:
         """Send a typed plug-in command.
 
         Args:
@@ -63,7 +62,7 @@ class AsyncToolBridge(Protocol):
         self,
         code_lines: list[str],
         timeout: float | None = None,
-    ) -> ToolResult:
+    ) -> PluginResponse:
         """Execute Python code in GIMP's plug-in context.
 
         Args:
@@ -79,7 +78,7 @@ class AsyncToolBridge(Protocol):
         self,
         expressions: list[str],
         timeout: float | None = None,
-    ) -> ToolResult:
+    ) -> PluginResponse:
         """Evaluate Python expressions in GIMP's plug-in context.
 
         Args:
@@ -95,8 +94,8 @@ class AsyncToolBridge(Protocol):
         self,
         max_width: int | None = None,
         max_height: int | None = None,
-        region: dict[str, int] | None = None,
-    ) -> ToolResult:
+        region: BitmapRegion | None = None,
+    ) -> PluginResponse:
         """Get the active image as base64-encoded PNG metadata.
 
         Args:
@@ -109,7 +108,7 @@ class AsyncToolBridge(Protocol):
         """
         ...
 
-    async def async_get_image_metadata(self) -> ToolResult:
+    async def async_get_image_metadata(self) -> PluginResponse:
         """Get active image metadata.
 
         Returns:
@@ -117,7 +116,7 @@ class AsyncToolBridge(Protocol):
         """
         ...
 
-    async def async_get_context_state(self) -> ToolResult:
+    async def async_get_context_state(self) -> PluginResponse:
         """Get GIMP context state.
 
         Returns:
@@ -125,7 +124,7 @@ class AsyncToolBridge(Protocol):
         """
         ...
 
-    async def async_get_gimp_info(self) -> ToolResult:
+    async def async_get_gimp_info(self) -> PluginResponse:
         """Get GIMP environment info.
 
         Returns:
