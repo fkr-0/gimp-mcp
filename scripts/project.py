@@ -35,6 +35,14 @@ COMMANDS: dict[str, Command] = {
     "compat-list-tools": ["uv", "run", "python", "scripts/compat.py", "list-tools", "--grouped"],
     "compat-validate": ["uv", "run", "python", "scripts/compat.py", "validate"],
     "compat-audit": ["uv", "run", "python", "scripts/compat.py", "audit"],
+    "compat-validate-results": [
+        "uv",
+        "run",
+        "python",
+        "scripts/compat.py",
+        "validate-results",
+        "compat.results.yml",
+    ],
     "compat-template": [
         "uv",
         "run",
@@ -45,6 +53,15 @@ COMMANDS: dict[str, Command] = {
         "compat.results.template.yml",
         "--force",
     ],
+    "compat-live-smoke": [
+        "uv",
+        "run",
+        "python",
+        "tests/live_gimp_324_smoke.py",
+        "--output",
+        "compat.results.yml",
+    ],
+    "async-repl": ["uv", "run", "gimp-mcp-pro", "async-repl"],
 }
 
 CHECK_COMMANDS = ("format-check", "lint", "typecheck", "test")

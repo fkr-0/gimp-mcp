@@ -44,3 +44,67 @@ def test_claim_gate_fails_until_live_results_exist(tmp_path: Path) -> None:
 
     assert failures
     assert any("compat.results.yml" in failure for failure in failures)
+
+
+def test_results_template_validates_against_contract() -> None:
+    contract = compat.load_contract()
+    template = compat.build_results_template(contract)
+
+    failures = compat.validate_results_payload(contract, template, require_all_checks=True)
+
+    assert failures == []
+
+
+def test_partial_live_smoke_result_validates_but_does_not_complete_matrix() -> None:
+    contract = compat.load_contract()
+    result = compat.build_results_template(contract)
+    result["run_id"] = "partial-test"
+    result["checks"] = [
+        {
+            "id": "C-020-transport",
+            "kind": "live_smoke",
+            "status": "pass",
+            "evidence": {"socket": "ok"},
+        }
+    ]
+    result["summary"] = {
+        "status": "partial",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "waived": 0,
+        "claim_allowed": False,
+        "notes": ["partial schema test"],
+    }
+
+    partial_failures = compat.validate_results_payload(contract, result)
+    complete_failures = compat.validate_results_payload(contract, result, require_all_checks=True)
+
+    assert partial_failures == []
+    assert any("results missing declared checks" in failure for failure in complete_failures)
+
+
+def test_results_validator_rejects_unknown_ids_statuses_and_bad_waivers() -> None:
+    contract = compat.load_contract()
+    result = compat.build_results_template(contract)
+    result["checks"] = [
+        {"id": "C-DOES-NOT-EXIST", "status": "pass", "evidence": {}},
+        {"id": "C-020-transport", "status": "maybe", "evidence": {}},
+        {"id": "C-001-env-introspection", "status": "waived", "evidence": {}},
+    ]
+
+    failures = compat.validate_results_payload(contract, result)
+
+    assert any("not declared" in failure for failure in failures)
+    assert any("invalid status" in failure for failure in failures)
+    assert any("must include waiver mapping" in failure for failure in failures)
+
+
+def test_results_file_command_accepts_template(tmp_path: Path) -> None:
+    contract = compat.load_contract()
+    output = tmp_path / "compat.results.yml"
+    compat.write_yaml(output, compat.build_results_template(contract), force=True)
+
+    status = compat.main(["validate-results", str(output), "--require-all-checks"])
+
+    assert status == 0

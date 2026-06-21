@@ -53,6 +53,10 @@ def _(message):
     return GLib.dgettext(None, message)
 
 
+def _env_flag(name, default="0"):
+    return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def exec_and_capture(command, context):
     """Execute Python code and capture stdout."""
     buf = io.StringIO()
@@ -74,6 +78,8 @@ class MCPProPlugin(Gimp.PlugIn):
         self.port = int(os.environ.get("GIMP_MCP_PORT", "9877"))
         self.running = False
         self.server_socket = None
+        self.server_thread = None
+        self.auto_start_done = False
         # Persistent Python execution context
         self.exec_context = {}
         exec("from gi.repository import Gimp, Gegl", self.exec_context)
@@ -81,6 +87,13 @@ class MCPProPlugin(Gimp.PlugIn):
     # ------------------------------------------------------------------
     # GIMP Plugin registration
     # ------------------------------------------------------------------
+
+    def do_init_procedures(self):
+        if self.auto_start_done:
+            return
+        self.auto_start_done = True
+        if _env_flag("GIMP_MCP_AUTO_START") or _env_flag("GIMP_MCP_PRO_AUTOSTART"):
+            self._start_server_thread(reason="environment autostart")
 
     def do_query_procedures(self):
         return ["plug-in-mcp-pro-server"]
@@ -98,13 +111,21 @@ class MCPProPlugin(Gimp.PlugIn):
         return procedure
 
     def run(self, procedure, run_mode, image, drawables, config, run_data):
+        self._start_server_thread(reason="procedure invocation")
+        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
+    def _start_server_thread(self, reason="manual"):
         if self.running:
             print("MCP Pro Server is already running")
-            return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+            return
 
         self.running = True
-        signal.signal(signal.SIGTERM, self._shutdown)
-        signal.signal(signal.SIGINT, self._shutdown)
+        try:
+            signal.signal(signal.SIGTERM, self._shutdown)
+            signal.signal(signal.SIGINT, self._shutdown)
+        except ValueError:
+            # Signal handlers can only be installed from the main thread.
+            pass
 
         try:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -112,26 +133,32 @@ class MCPProPlugin(Gimp.PlugIn):
             self.server_socket.settimeout(1.0)
             self.server_socket.bind((self.host, self.port))
             self.server_socket.listen(1)
-
-            print(f"GIMP MCP Pro server started on {self.host}:{self.port}")
-
-            while self.running:
-                try:
-                    client, address = self.server_socket.accept()
-                    print(f"Client connected: {address}")
-                    t = threading.Thread(target=self._handle_client, args=(client,), daemon=True)
-                    t.start()
-                except socket.timeout:
-                    continue
-                except OSError:
-                    break
-
-            print("MCP Pro server stopped")
-            return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
         except Exception as e:
             print(f"Server error: {e}")
             self.running = False
-            return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+            self.server_socket = None
+            return
+
+        self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
+        self.server_thread.start()
+        print(f"GIMP MCP Pro server started on {self.host}:{self.port} ({reason})")
+
+    def _server_loop(self):
+        while self.running and self.server_socket is not None:
+            try:
+                client, address = self.server_socket.accept()
+                print(f"Client connected: {address}")
+                t = threading.Thread(target=self._handle_client, args=(client,), daemon=True)
+                t.start()
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            except Exception as e:
+                print(f"Server loop error: {e}")
+                break
+
+        print("MCP Pro server stopped")
 
     def _shutdown(self, signum=None, frame=None):
         print("Shutting down MCP Pro server...")
@@ -141,6 +168,10 @@ class MCPProPlugin(Gimp.PlugIn):
                 self.server_socket.close()
             except:
                 pass
+            self.server_socket = None
+
+    def do_quit(self):
+        self._shutdown()
 
     # ------------------------------------------------------------------
     # Client handling with length-prefixed framing
@@ -485,7 +516,7 @@ class MCPProPlugin(Gimp.PlugIn):
         except Exception:
             pass
         try:
-            if hasattr(Gimp, 'resources_loaded'):
+            if hasattr(Gimp, "resources_loaded"):
                 info["gimp"]["resources_loaded"] = Gimp.resources_loaded()
         except Exception:
             pass

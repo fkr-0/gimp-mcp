@@ -19,7 +19,7 @@ import sys
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, TypedDict
 
 try:
     import yaml
@@ -35,6 +35,64 @@ TOOLS_DIR = PROJECT_ROOT / "src" / "gimp_mcp_pro" / "tools"
 RESULTS_TEMPLATE_PATH = PROJECT_ROOT / "compat.results.template.yml"
 
 ToolRegistry = dict[str, list[str]]
+CheckStatus = Literal["pass", "fail", "skip", "waived"]
+SummaryStatus = Literal["unverified", "partial", "failed", "verified"]
+
+
+class CheckResult(TypedDict, total=False):
+    """One static/live compatibility check result."""
+
+    id: str
+    kind: str
+    status: CheckStatus
+    evidence: Any
+    waiver: dict[str, str]
+
+
+class EnvironmentResult(TypedDict, total=False):
+    """Environment evidence captured for a compatibility run."""
+
+    os: str
+    desktop_session: str
+    gimp_executable: str
+    gimp_version: str
+    gimp_verbose_version: str
+    python_version_inside_gimp: str
+    pygobject_version_inside_gimp: str
+    libgimp_api_version: str
+    libgimp_library_version: str
+    gegl_version: str
+    plugin_install_path: str
+    plugin_sha256: str
+    mcp_server_revision: str
+    mcp_server_command: str
+
+
+class SummaryResult(TypedDict, total=False):
+    """Summary counters and claim state for a compatibility run."""
+
+    status: SummaryStatus
+    passed: int
+    failed: int
+    skipped: int
+    waived: int
+    claim_allowed: bool
+    notes: list[str]
+
+
+class CompatibilityResult(TypedDict, total=False):
+    """compat.results.yml payload shape."""
+
+    schema: str
+    project: str
+    contract: str
+    run_id: str
+    run_started_at: str
+    run_finished_at: str | None
+    tester: str
+    environment: EnvironmentResult
+    checks: list[CheckResult]
+    summary: SummaryResult
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -185,11 +243,163 @@ def audit_claim_gate(contract: Mapping[str, Any]) -> list[str]:
     )
     if not results_path.exists():
         failures.append(f"missing live verification result file: {results_path.name}")
+        return failures
+
+    result = load_yaml(results_path)
+    for failure in validate_results_payload(contract, result, require_all_checks=True):
+        failures.append(f"{results_path.name}: {failure}")
+
+    summary = result.get("summary")
+    if not isinstance(summary, Mapping):
+        failures.append(f"{results_path.name}: summary must be a mapping")
+        return failures
+
+    if summary.get("status") != "verified" or summary.get("claim_allowed") is not True:
+        failures.append(
+            f"{results_path.name}: result is not a verified, claim-allowed compatibility run"
+        )
+
+    failed_ids = [
+        str(check.get("id", "unknown"))
+        for check in result.get("checks", [])
+        if isinstance(check, Mapping) and check.get("status") == "fail"
+    ]
+    if failed_ids:
+        failures.append(f"{results_path.name}: failed checks present: {', '.join(failed_ids)}")
 
     return failures
 
 
-def build_results_template(contract: Mapping[str, Any]) -> dict[str, Any]:
+def known_check_ids(contract: Mapping[str, Any]) -> set[str]:
+    """Return all check IDs declared by compat.yml."""
+    ids: set[str] = set()
+    for section in ("static_checks", "live_smoke_scenarios"):
+        for item in contract.get(section, []):
+            if isinstance(item, Mapping) and "id" in item:
+                ids.add(str(item["id"]))
+    return ids
+
+
+def _required_values(contract: Mapping[str, Any], path: Sequence[str]) -> list[str]:
+    """Read a list of required field names from compat.yml."""
+    current: Any = contract
+    for key in path:
+        if not isinstance(current, Mapping):
+            return []
+        current = current.get(key, {})
+    return [str(value) for value in current] if isinstance(current, list) else []
+
+
+def validate_results_payload(
+    contract: Mapping[str, Any], result: Mapping[str, Any], *, require_all_checks: bool = False
+) -> list[str]:
+    """Validate compat.results.yml structure against compat.yml.
+
+    This validates evidence shape only.  It does not allow a verified public
+    compatibility claim; that remains the job of the audit/claim gate.
+    """
+    failures: list[str] = []
+
+    required_top = _required_values(
+        contract, ("result_schema", "compat.results.yml", "required_top_level_fields")
+    )
+    required_env = _required_values(
+        contract, ("result_schema", "compat.results.yml", "environment_required_fields")
+    )
+    required_check = _required_values(
+        contract, ("result_schema", "compat.results.yml", "check_required_fields")
+    )
+    allowed_statuses = set(
+        _required_values(contract, ("result_schema", "compat.results.yml", "status_values"))
+    )
+    known_ids = known_check_ids(contract)
+
+    for field in required_top:
+        if field not in result:
+            failures.append(f"results missing top-level field: {field}")
+
+    if result.get("schema") != "gimp-mcp.compat.results.v1":
+        failures.append("results schema must be gimp-mcp.compat.results.v1")
+    if result.get("project") != contract.get("project"):
+        failures.append("results project must match compat.yml project")
+    if result.get("contract") != "compat.yml":
+        failures.append("results contract must be compat.yml")
+
+    environment = result.get("environment")
+    if not isinstance(environment, Mapping):
+        failures.append("results environment must be a mapping")
+    else:
+        for field in required_env:
+            if field not in environment:
+                failures.append(f"results environment missing field: {field}")
+
+    checks = result.get("checks")
+    seen_ids: set[str] = set()
+    if not isinstance(checks, list):
+        failures.append("results checks must be a list")
+    else:
+        for index, check in enumerate(checks):
+            if not isinstance(check, Mapping):
+                failures.append(f"results check at index {index} must be a mapping")
+                continue
+            for field in required_check:
+                if field not in check:
+                    failures.append(f"results check {index} missing field: {field}")
+            check_id = str(check.get("id", ""))
+            if check_id:
+                if check_id in seen_ids:
+                    failures.append(f"duplicate results check id: {check_id}")
+                seen_ids.add(check_id)
+                if check_id not in known_ids:
+                    failures.append(f"results check id is not declared in compat.yml: {check_id}")
+            status = check.get("status")
+            if status not in allowed_statuses:
+                failures.append(f"results check {check_id or index} has invalid status: {status!r}")
+            if status == "waived":
+                waiver = check.get("waiver")
+                if not isinstance(waiver, Mapping):
+                    failures.append(
+                        f"waived results check {check_id or index} must include waiver mapping"
+                    )
+                else:
+                    for field in (
+                        contract.get("result_schema", {})
+                        .get("compat.results.yml", {})
+                        .get("waiver_required_fields", [])
+                    ):
+                        if field not in waiver:
+                            failures.append(
+                                f"waived results check {check_id or index} missing waiver field: {field}"
+                            )
+
+    if require_all_checks:
+        missing_ids = sorted(known_ids - seen_ids)
+        if missing_ids:
+            failures.append(f"results missing declared checks: {', '.join(missing_ids)}")
+
+    summary = result.get("summary")
+    if not isinstance(summary, Mapping):
+        failures.append("results summary must be a mapping")
+    else:
+        claim_allowed = summary.get("claim_allowed")
+        if not isinstance(claim_allowed, bool):
+            failures.append("results summary.claim_allowed must be boolean")
+        if summary.get("status") == "verified" and claim_allowed is not True:
+            failures.append("verified results must set summary.claim_allowed=true")
+
+    return failures
+
+
+def validate_results_file(
+    path: Path, contract: Mapping[str, Any], *, require_all_checks: bool = False
+) -> list[str]:
+    """Load and validate a compat results YAML file."""
+    return validate_results_payload(
+        contract, load_yaml(path), require_all_checks=require_all_checks
+    )
+
+
+def build_results_template(contract: Mapping[str, Any]) -> CompatibilityResult:
     """Build a non-claiming compat.results.yml template."""
     now = datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat()
     checks = []
@@ -305,6 +515,23 @@ def cmd_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_validate_results(args: argparse.Namespace) -> int:
+    """Validate a compat.results.yml file."""
+    output = Path(args.results)
+    if not output.is_absolute():
+        output = PROJECT_ROOT / output
+    failures = validate_results_file(
+        output, load_contract(args.contract), require_all_checks=args.require_all_checks
+    )
+    if failures:
+        print(f"{output.name} validation failed:", file=sys.stderr)
+        for failure in failures:
+            print(f"- {failure}", file=sys.stderr)
+        return 1
+    print(f"{output.name} validation ok")
+    return 0
+
+
 def cmd_init_results(args: argparse.Namespace) -> int:
     """Create a compat results template."""
     contract = load_contract(args.contract)
@@ -335,6 +562,17 @@ def build_parser() -> argparse.ArgumentParser:
         "audit", help="Check whether the README compatibility claim gate is satisfied."
     )
     audit.set_defaults(func=cmd_audit)
+
+    validate_results = subparsers.add_parser(
+        "validate-results", help="Validate a compat.results.yml evidence file."
+    )
+    validate_results.add_argument("results", nargs="?", default="compat.results.yml")
+    validate_results.add_argument(
+        "--require-all-checks",
+        action="store_true",
+        help="Require every static/live check declared in compat.yml to be present.",
+    )
+    validate_results.set_defaults(func=cmd_validate_results)
 
     init_results = subparsers.add_parser(
         "init-results", help="Create a compat.results.yml template."

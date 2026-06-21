@@ -26,4 +26,5 @@ def test_project_script_exposes_compat_commands() -> None:
     assert "compat-list-tools" in project.COMMANDS
     assert "compat-validate" in project.COMMANDS
     assert "compat-audit" in project.COMMANDS
+    assert "compat-validate-results" in project.COMMANDS
     assert "compat-template" in project.COMMANDS

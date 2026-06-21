@@ -86,6 +86,11 @@ commands:
     description: Audit the GIMP 3.2.4 public compatibility claim gate.
     timeoutMs: 30000
     category: test
+  compat-validate-results:
+    run: ["uv", "run", "python", "scripts/compat.py", "validate-results", "compat.results.yml"]
+    description: Validate a compat.results.yml evidence file without granting the public claim gate.
+    timeoutMs: 30000
+    category: test
   compat-template:
     run: ["uv", "run", "python", "scripts/compat.py", "init-results", "--output", "compat.results.template.yml", "--force"]
     description: Generate a non-claiming compat.results.yml template.

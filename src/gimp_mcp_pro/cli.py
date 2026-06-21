@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
 from collections.abc import Callable, Sequence
@@ -181,6 +182,55 @@ def cmd_repl(args: argparse.Namespace, config: ServerConfig) -> int:
                 print(f"error: {exc}", file=sys.stderr)
     finally:
         bridge.disconnect()
+
+
+def cmd_async_repl(args: argparse.Namespace, config: ServerConfig) -> int:
+    """Run the asyncio-native bridge REPL."""
+    return asyncio.run(_run_async_repl(args, config))
+
+
+async def _run_async_repl(args: argparse.Namespace, config: ServerConfig) -> int:
+    """Async line-oriented REPL backed by AsyncGimpBridge."""
+    setup_logging(level=config.log_level_value, debug=config.debug)
+    from gimp_mcp_pro.async_bridge import AsyncGimpBridge
+
+    bridge = AsyncGimpBridge(**config.bridge_kwargs())
+    await bridge.connect()
+    print("Connected with AsyncGimpBridge. Type :quit to exit.")
+
+    try:
+        while True:
+            try:
+                line = await asyncio.to_thread(input, "gimp-mcp-async> ")
+            except EOFError:
+                print()
+                return 0
+
+            line = line.strip()
+            if not line:
+                continue
+            if line in {":quit", ":exit"}:
+                return 0
+            if line == ":metadata":
+                print(json.dumps(await bridge.get_image_metadata(), indent=2, sort_keys=True))
+                continue
+            if line == ":context":
+                print(json.dumps(await bridge.get_context_state(), indent=2, sort_keys=True))
+                continue
+
+            try:
+                if line.startswith("{"):
+                    payload = json.loads(line)
+                    command = payload["type"]
+                    params = payload.get("params", {})
+                    result = await bridge.send_command(command, params)
+                else:
+                    result = await bridge.execute_python([line])
+                print(json.dumps(result, indent=2, sort_keys=True))
+            except (GimpMCPError, KeyError, json.JSONDecodeError) as exc:
+                print(f"error: {exc}", file=sys.stderr)
+    finally:
+        await bridge.disconnect()
 
 
 def cmd_serve(args: argparse.Namespace, config: ServerConfig) -> int:

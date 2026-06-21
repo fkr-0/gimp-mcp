@@ -19,6 +19,7 @@ Do not publish a verified GIMP 3.2.4 support claim until `compat.results.yml` re
 uv run python scripts/compat.py validate
 uv run python scripts/compat.py list-tools --grouped
 uv run python scripts/compat.py audit
+uv run python scripts/compat.py validate-results compat.results.yml
 ```
 
 Expected right now:
@@ -39,6 +40,36 @@ cp compat.results.template.yml compat.results.yml
 ```
 
 Only fill `compat.results.yml` with real values after a run. The template is intentionally non-claiming.
+
+## Result schema validation
+
+`validate-results` checks whether an evidence file is structurally usable. It does not grant the public compatibility claim by itself.
+
+```bash
+uv run python scripts/compat.py validate-results compat.results.yml
+uv run python scripts/compat.py validate-results compat.results.yml --require-all-checks
+```
+
+```yaml
+validate_results:
+  purpose: verify schema, required environment fields, check IDs, statuses, and waiver shape
+  accepts_partial_live_smoke: true
+  claim_gate: false
+require_all_checks:
+  purpose: ensure every static and live check declared in compat.yml has a result entry
+  useful_for: final verification pass or CI-style completeness checks
+status_values:
+  - pass
+  - fail
+  - skip
+  - waived
+waived_checks_require:
+  - reason
+  - linked_issue
+  - user_visible_caveat
+```
+
+Keep partial live-smoke files as `summary.status: partial` and `summary.claim_allowed: false`. A structurally valid partial result is useful debugging evidence, not a release claim.
 
 ## Clean-profile live run
 
