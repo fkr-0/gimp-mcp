@@ -1,0 +1,2091 @@
+testcoverage_async_3_2_4_percent: 0
+schema_version: 1
+project: gimp-mcp-pro
+project_path: /home/user/code/gimp-mcp
+review_date: 2026-06-21
+scope: first-pass implemented MCP tool inventory and compatibility review
+
+current_test_status:
+  command: uv run pytest --no-cov -q
+  result: failed
+  passed: 78
+  failed: 7
+  failures_summary:
+    - 'tests/test_cli.py::test_invalid_config_returns_error_status expects gimp_port but pydantic reports env alias GIMP_MCP_PRO_PORT'
+    - 'tests/test_config.py reconnect_delays env and dotenv comma-list parsing fails under pydantic-settings JSON decoding'
+    - 'tests/test_config.py bridge_kwargs init aliases are ignored/overridden by defaults'
+    - 'tests/test_models/test_common.py OperationResult is not fully rebuilt; Optional forward ref unresolved under current Python/Pydantic'
+
+coverage_baseline:
+  direct_tool_unit_tests_percent: 0
+  live_gimp_integration_tests_percent: 0
+  async_tests_percent: 0
+  gimp_3_2_4_tests_percent: 0
+  note: Existing tests cover bridge/config/models/prompts/constant maps, but I found no per-tool live GIMP 3.2.4 or async execution suite yet.
+
+gimp_3_2_4_context:
+  release_date: 2026-04-19
+  relevant_release_notes:
+    - '3.2.4 is the second update of the 3.2 series with bugfixes and UX updates.'
+    - 'Release notes mention fixes preventing accidental rasterization of link, text, and vector layers in several operations.'
+    - 'The GimpUnit API pixel-unit issue was fixed; tools touching font size or line width should be verified.'
+    - 'Official Script-Fu functions such as gimp-drawable-brightness-contrast and gimp-drawable-threshold were converted toward GEGL/new-filter APIs.'
+  references:
+    - https://www.gimp.org/news/2026/04/19/gimp-3-2-4-released/
+    - https://developer.gimp.org/resource/writing-a-plug-in/tutorial-python/
+
+common_findings:
+  - 'All registered MCP tool callbacks are synchronous def functions; none are async def.'
+  - 'Most tools generate Python source strings and execute them inside GIMP via bridge.execute_python; this is powerful but brittle for quoting, static checking, and API drift.'
+  - 'Layer-name/text/font string interpolation should be replaced with repr/json escaping before any live 3.2.4 push.'
+  - 'The plugin handles each client on a background thread and calls GIMP APIs from that thread; this should be checked for main-thread safety under GIMP/GTK.'
+  - 'The bridge serializes commands with a threading.Lock and persistent socket; first async path can be anyio.to_thread, followed by a real AsyncGimpBridge using asyncio streams.'
+
+modules:
+  - module: src/gimp_mcp_pro/tools/color_tools.py
+    implemented_tools_count: 13
+    implementation_summary: 'Color tools are feature-rich but several use direct Drawable calls that are likely deprecated or at least 3.2.4-sensitive.'
+    async_path: 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+  - module: src/gimp_mcp_pro/tools/drawing_tools.py
+    implemented_tools_count: 10
+    implementation_summary: 'Drawing tools are broad and useful but rely on generated Python, selected active layer, and legacy-ish paint/stroke calls.'
+    async_path: 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+  - module: src/gimp_mcp_pro/tools/filter_tools.py
+    implemented_tools_count: 8
+    implementation_summary: 'Filter tools are the strongest module because they mostly use Gimp.DrawableFilter with GEGL ops.'
+    async_path: 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+  - module: src/gimp_mcp_pro/tools/history_tools.py
+    implemented_tools_count: 4
+    implementation_summary: 'Undo group tools are solid; undo/redo via PDB names need confirmation.'
+    async_path: 'Make undo group an async context manager so end_undo_group runs in finally after tool failures.'
+  - module: src/gimp_mcp_pro/tools/image_tools.py
+    implemented_tools_count: 6
+    implementation_summary: 'Image lifecycle tools are useful; export is the highest-risk item due per-format PDB configs.'
+    async_path: 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+  - module: src/gimp_mcp_pro/tools/inspect_tools.py
+    implemented_tools_count: 4
+    implementation_summary: 'Inspection tools are safest because they delegate to native plugin handlers and are read-only.'
+    async_path: 'Native handlers are good async candidates: async read calls, bounded bitmap transfer, cancellable export.'
+  - module: src/gimp_mcp_pro/tools/layer_tools.py
+    implemented_tools_count: 9
+    implementation_summary: 'Layer tools are functional for ordinary raster layers but need 3.2.4 non-raster/text/vector behavior tests.'
+    async_path: 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+  - module: src/gimp_mcp_pro/tools/pdb_tools.py
+    implemented_tools_count: 2
+    implementation_summary: 'PDB tools are useful for discovery/escape hatch but should not mask missing typed tools.'
+    async_path: 'Make PDB discovery/execution awaitable and add timeout/cancellation; use search_pdb as a 3.2.4 compatibility probe.'
+  - module: src/gimp_mcp_pro/tools/selection_tools.py
+    implemented_tools_count: 8
+    implementation_summary: 'Selection tools are straightforward but lack live mask tests and bounds validation.'
+    async_path: 'Use typed selection param models, async bridge calls, and live mask assertions.'
+  - module: src/gimp_mcp_pro/tools/transform_tools.py
+    implemented_tools_count: 11
+    implementation_summary: 'Image transforms are moderate risk; arbitrary layer/item transforms and autocrop are the risky pieces.'
+    async_path: 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+
+tools:
+  - name: adjust_brightness_contrast
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 50
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - brightness
+        - contrast
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Port to DrawableFilter/GEGL or PDB gimp-drawable-merge-new-filter pattern; add live sample-image assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses direct Gimp.Drawable.brightness_contrast from generated exec code; GIMP 3.2.4 release notes mention official Script-Fu migration away from deprecated gimp-drawable-brightness-contrast toward GEGL filter APIs.'
+      - 'Layer-name interpolation is not escaped; names containing quotes can break generated Python.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: adjust_hue_saturation
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 84
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - hue
+        - saturation
+        - lightness
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Move generated code behind typed command builder; verify enum names under GIMP 3.2.4.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct Gimp.Drawable.hue_saturation signature/enum handling needs 3.2.4 verification.'
+      - 'Layer-name interpolation is not escaped.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: adjust_levels
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 122
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - input_low
+        - input_high
+        - gamma
+        - output_low
+        - output_high
+        - channel
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Use GEGL levels filter when possible; add parameter validation and live histogram smoke test.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct Gimp.Drawable.levels and HistogramChannel mapping need live 3.2.4 verification.'
+      - 'No clamping/order validation for low/high/gamma beyond defaults.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: adjust_curves
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 181
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - control_points
+        - channel
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Validate points with model; move to async command helper and live curve smoke test.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct curves_spline API and control-point value ranges are not validated against 3.2.4.'
+      - 'Generated list is injected raw into exec code.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: desaturate
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 231
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - method
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Prefer GEGL saturation/desaturate path; add raster/layer-type check.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct Gimp.Drawable.desaturate enum names may differ or be deprecated under 3.2.x.'
+      - 'No non-raster layer guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: invert_colors
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 272
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Wrap as async bridge call; test against RGB and grayscale sample images.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct Gimp.Drawable.invert likely simple but still unverified on 3.2.4.'
+      - 'No non-raster layer guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_threshold
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 293
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - low
+        - high
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Use GEGL threshold filter/new-filter merge API; add bounds validation.'
+    gimp_3_2_4_potential_problems:
+      - 'GIMP 3.2.4 release notes mention official Script-Fu migration away from deprecated gimp-drawable-threshold toward GEGL filter APIs.'
+      - 'Low/high are not clamped.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: posterize
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 325
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - levels
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Prefer GEGL posterize when available; add live before/after pixel assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct Gimp.Drawable.posterize needs 3.2.4 verification.'
+      - 'No non-raster layer guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: color_to_alpha
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 354
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - color
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Keep filter path; add async bridge plus live transparent-pixel assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses DrawableFilter/GEGL pattern, which fits the 3.x direction.'
+      - 'Layer-name interpolation remains unescaped.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: auto_white_balance
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 393
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Migrate to supported auto-levels/new-filter path if exposed; add live smoke test.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct Gimp.Drawable.levels_stretch needs 3.2.4 verification/deprecation check.'
+      - 'No typed parameter model.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: get_colors
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 415
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Return native plugin handler for context state or evaluate expression instead of stdout JSON.'
+    gimp_3_2_4_potential_problems:
+      - 'RGBA extraction assumes get_rgba result object has .red/.green/.blue/.alpha; verify on 3.2.4 PyGObject.'
+      - 'Exec-output parsing is brittle if other prints leak into context.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: swap_colors
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 458
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Use async bridge; verify foreground/background inversion via get_context_state.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple context operation but no 3.2.4 live verification.'
+      - 'No state assertion after call.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: sample_color
+    module: src/gimp_mcp_pro/tools/color_tools.py
+    line: 474
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: incomplete
+    signature:
+      args:
+        - x
+        - y
+        - sample_merged
+    path_to_async:
+      - 'Replace generated exec strings with typed async command builders; centralize target drawable resolution; run synchronous bridge via anyio.to_thread first, then asyncio.open_connection AsyncGimpBridge.'
+      - 'Implement merged sampling via projection/temp copy or documented limitation; add pixel fixture tests.'
+    gimp_3_2_4_potential_problems:
+      - 'sample_merged parameter is ignored; implementation always samples active layer.'
+      - 'drawable.get_pixel return type/coordinates need 3.2.4 verification and bounds handling.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: set_foreground_color
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 51
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - color
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Async wrapper + postcondition via get_context_state.'
+    gimp_3_2_4_potential_problems:
+      - 'Color conversion relies on local Color.to_gegl_code and Gimp.context_set_foreground compatibility.'
+      - 'No read-back assertion.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: set_background_color
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 77
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - color
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Async wrapper + postcondition via get_context_state.'
+    gimp_3_2_4_potential_problems:
+      - 'Same color-conversion risk as foreground.'
+      - 'No read-back assertion.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: fill_selection
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 100
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - fill_type
+        - color
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Add target-drawable guard; async bridge; live selection fill test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses selected drawable and Gimp.Drawable.edit_fill; needs 3.2.4 signature check.'
+      - 'May rasterize or fail on vector/text/link layers; no drawable-type guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: draw_line
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 143
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - x1
+        - y1
+        - x2
+        - y2
+        - color
+        - brush_size
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Prefer path/stroke or paint core procedure verified under 3.2.4; add live pixel-line assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses Gimp.pencil with flat coordinate list; tool API may be legacy/deprecated in 3.x bindings.'
+      - 'No active-layer or brush restoration hygiene.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: draw_brush_stroke
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 179
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - points
+        - tool
+        - color
+        - brush_size
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Use typed BrushStrokeParams inside tool; async bridge; live stroke image diff.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses Gimp.pencil/Gimp.paintbrush_default; needs 3.2.4 verification.'
+      - 'Points list validation exists in models but is not used by the tool itself.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: draw_rectangle
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 231
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - x
+        - y
+        - width
+        - height
+        - filled
+        - color
+        - line_width
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Use undo group, preserve prior selection/context, live rectangle fixture.'
+    gimp_3_2_4_potential_problems:
+      - 'Filled path uses selection+edit_fill and outline path uses context_set_line_width/edit_stroke; line-width unit behavior changed/fixed in 3.2.4 and should be verified.'
+      - 'Leaves no explicit layer-type guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: draw_ellipse
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 286
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - x
+        - y
+        - width
+        - height
+        - filled
+        - color
+        - line_width
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Use shared shape helper with context restoration and live tests.'
+    gimp_3_2_4_potential_problems:
+      - 'Same selection/stroke risks as rectangle; GIMP 3.2.4 unit fixes make line width worth testing.'
+      - 'Potential non-raster target behavior.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: draw_polygon
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 338
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - points
+        - filled
+        - color
+        - line_width
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Use model validation; add live polygon fill/stroke smoke test.'
+    gimp_3_2_4_potential_problems:
+      - 'Selection polygon implementation likely works but should be verified for coordinate ordering and closed shape behavior.'
+      - 'No bounds validation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: add_text
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 395
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - text
+        - x
+        - y
+        - font_name
+        - font_size
+        - color
+        - layer_name
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Use repr/JSON for string injection; verify text layer remains editable in 3.2.4.'
+    gimp_3_2_4_potential_problems:
+      - 'Text/vector layer handling changed in 3.2.x; text creation and font/unit calls need live verification.'
+      - 'Generated text/font/layer_name values are not escaped safely.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: edit_clear
+    module: src/gimp_mcp_pro/tools/drawing_tools.py
+    line: 461
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Add async drawing command helper with context save/restore and undo-group boundaries; live tests should assert pixel/selection outcomes.'
+      - 'Add guard and live clear-selection test.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple selected drawable clear but may rasterize/fail on non-raster layers.'
+      - 'No selection-state assertion.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_gaussian_blur
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 79
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - radius_x
+        - radius_y
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Async bridge + live blur on fixture; optionally expose non-destructive append-only mode.'
+    gimp_3_2_4_potential_problems:
+      - 'GEGL DrawableFilter path aligns with 3.x non-destructive/filter direction but is merged destructively.'
+      - 'No property-existence check for GEGL op.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_unsharp_mask
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 118
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - amount
+        - radius
+        - threshold
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Add GEGL property probe and live fixture.'
+    gimp_3_2_4_potential_problems:
+      - 'GEGL op/property names still need 3.2.4 live check.'
+      - 'No parameter clamping.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_pixelize
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 157
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - block_width
+        - block_height
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Validate min/max; add image-diff fixture.'
+    gimp_3_2_4_potential_problems:
+      - 'GEGL op/property names need 3.2.4 live check.'
+      - 'No clamp on block size.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_edge_detect
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 195
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: partial
+    signature:
+      args:
+        - method
+        - amount
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Map method to real GEGL properties/procedures or narrow accepted values.'
+    gimp_3_2_4_potential_problems:
+      - 'method accepts sobel/prewitt/laplace, but sobel/prewitt are not actually distinguished; non-laplace maps to gegl:edge.'
+      - 'GEGL property names need 3.2.4 check.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_emboss
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 233
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - azimuth
+        - elevation
+        - depth
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Validate range and add fixture test.'
+    gimp_3_2_4_potential_problems:
+      - 'GEGL op/property names need 3.2.4 live check.'
+      - 'No value clamping for depth/elevation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_noise
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 270
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - amount
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Expose seed if GEGL supports it; use tolerance-based image test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses gegl:noise-hsv with limited properties; output not deterministic for tests unless seed exposed.'
+      - 'No seed or deterministic mode.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_median
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 303
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - radius
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Add property probe and denoise fixture.'
+    gimp_3_2_4_potential_problems:
+      - 'GEGL op/property names need 3.2.4 live check.'
+      - 'No radius bounds validation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: apply_drop_shadow
+    module: src/gimp_mcp_pro/tools/filter_tools.py
+    line: 335
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - offset_x
+        - offset_y
+        - blur_radius
+        - color
+        - opacity
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Keep DrawableFilter helpers but make bridge awaitable; add async long-timeout/cancellation path for expensive GEGL filters.'
+      - 'Implement via GEGL drop-shadow DrawableFilter or verified PDB config introspection; fix color property.'
+    gimp_3_2_4_potential_problems:
+      - 'Looks up script-fu-drop-shadow and sets best-effort properties; Script-Fu/PDB signatures changed in 3.x and need live verification.'
+      - 'color argument is parsed but not used in generated code.'
+      - 'May duplicate rasterize behavior with text/vector layers.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: undo
+    module: src/gimp_mcp_pro/tools/history_tools.py
+    line: 19
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - steps
+    path_to_async:
+      - 'Make undo group an async context manager so end_undo_group runs in finally after tool failures.'
+      - 'Use image.undo() method if available or typed native plugin handler; live state counter test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses PDB lookup gimp-image-undo; verify procedure name/config in 3.2.4.'
+      - 'Looped undo without checking availability.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: redo
+    module: src/gimp_mcp_pro/tools/history_tools.py
+    line: 50
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - steps
+    path_to_async:
+      - 'Make undo group an async context manager so end_undo_group runs in finally after tool failures.'
+      - 'Use image.redo() method if available or typed native plugin handler; live state counter test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses PDB lookup gimp-image-redo; verify procedure name/config in 3.2.4.'
+      - 'Looped redo without checking availability.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: begin_undo_group
+    module: src/gimp_mcp_pro/tools/history_tools.py
+    line: 81
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - name
+    path_to_async:
+      - 'Make undo group an async context manager so end_undo_group runs in finally after tool failures.'
+      - 'Move group management into async context manager; add nested/failed-command tests.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.undo_group_start is canonical in GIMP 3 plug-in examples.'
+      - 'No nesting/state tracking.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: end_undo_group
+    module: src/gimp_mcp_pro/tools/history_tools.py
+    line: 110
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Make undo group an async context manager so end_undo_group runs in finally after tool failures.'
+      - 'Pair with begin in async context manager/finally.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.undo_group_end is canonical in GIMP 3 plug-in examples.'
+      - 'No check that a group is open.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: create_image
+    module: src/gimp_mcp_pro/tools/image_tools.py
+    line: 33
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - width
+        - height
+        - color_mode
+        - fill
+    path_to_async:
+      - 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+      - 'Add typed params + live create/open metadata assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Basic Gimp.Image/Layer/Display calls align with GIMP 3 API style but not live-tested on 3.2.4.'
+      - 'No async and no negative/huge dimension guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: list_images
+    module: src/gimp_mcp_pro/tools/image_tools.py
+    line: 104
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+      - 'Make native plugin handler and async bridge read.'
+    gimp_3_2_4_potential_problems:
+      - 'Read-only metadata likely safe, but base-type enum conversion should be verified.'
+      - 'Assumes all image properties callable in background plugin thread.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: get_image_info
+    module: src/gimp_mcp_pro/tools/image_tools.py
+    line: 159
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+      - 'Async bridge wrapper; expand plugin response with active image selection.'
+    gimp_3_2_4_potential_problems:
+      - 'Delegates to native plugin metadata handler; safest of image tools.'
+      - 'Still synchronous bridge and single-image-first semantics in plugin.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: export_image
+    module: src/gimp_mcp_pro/tools/image_tools.py
+    line: 190
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - file_path
+        - format
+        - quality
+    path_to_async:
+      - 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+      - 'Use PDB introspection per format; add live temp-file export tests for PNG/JPEG/WebP.'
+    gimp_3_2_4_potential_problems:
+      - 'PDB export config differs by file format and GIMP version; current best-effort properties are fragile.'
+      - 'File path/format/quality validation is shallow and no sandbox/path policy is enforced.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: flatten_image
+    module: src/gimp_mcp_pro/tools/image_tools.py
+    line: 263
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+      - 'Wrap in undo group and live layer-count assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.flatten should work on raster images but must be checked with 3.2.4 layer types.'
+      - 'Destructive operation without undo group wrapper.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: duplicate_image
+    module: src/gimp_mcp_pro/tools/image_tools.py
+    line: 290
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Move image commands to native plugin handlers where possible; expose awaitable bridge calls and active-image selection.'
+      - 'Live duplicate metadata test; async bridge.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.duplicate + Display likely works, but background-thread display creation should be tested.'
+      - 'No way to select duplicate as active image.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: get_image_bitmap
+    module: src/gimp_mcp_pro/tools/inspect_tools.py
+    line: 19
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - max_width
+        - max_height
+        - region_x
+        - region_y
+        - region_width
+        - region_height
+    path_to_async:
+      - 'Native handlers are good async candidates: async read calls, bounded bitmap transfer, cancellable export.'
+      - 'Async native handler; add region/full-image fixture tests and active-image selection.'
+    gimp_3_2_4_potential_problems:
+      - 'Native plugin handler exports temp PNG; region extraction copies only first original layer, not merged projection.'
+      - 'Single active image is always images[0], not necessarily UI-active image.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: get_image_metadata
+    module: src/gimp_mcp_pro/tools/inspect_tools.py
+    line: 104
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Native handlers are good async candidates: async read calls, bounded bitmap transfer, cancellable export.'
+      - 'Expand metadata schema and async bridge read.'
+    gimp_3_2_4_potential_problems:
+      - 'Native plugin handler; read-only and low risk.'
+      - 'Layer info omits groups/children/masks/link/vector/text type details relevant to 3.2.x.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: get_context_state
+    module: src/gimp_mcp_pro/tools/inspect_tools.py
+    line: 130
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Native handlers are good async candidates: async read calls, bounded bitmap transfer, cancellable export.'
+      - 'Add read-back tests after set color/swap color.'
+    gimp_3_2_4_potential_problems:
+      - 'Native plugin handler; read-only and low risk.'
+      - 'RGBA extraction may vary by PyGObject type.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: get_gimp_info
+    module: src/gimp_mcp_pro/tools/inspect_tools.py
+    line: 156
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Native handlers are good async candidates: async read calls, bounded bitmap transfer, cancellable export.'
+      - 'Add GIMP.version/resource capability fields; use to skip/mark compat tests.'
+    gimp_3_2_4_potential_problems:
+      - 'Native plugin handler; useful for gating 3.2.4 tests.'
+      - 'Does not currently return GIMP version string, libgimp version, or resource-loaded state.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: create_layer
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 48
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - name
+        - opacity
+        - blend_mode
+        - fill
+        - has_alpha
+        - position
+        - width
+        - height
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Use repr for strings, typed model validation, live layer metadata test.'
+    gimp_3_2_4_potential_problems:
+      - 'Layer/ImageType/LayerMode maps need 3.2.4 verification.'
+      - 'Layer name is not escaped; no group/text/vector awareness.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: list_layers
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 122
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Recursive layer tree with type info; async read.'
+    gimp_3_2_4_potential_problems:
+      - 'Read-only and simple but omits nested groups/masks/non-raster layer kinds.'
+      - 'Assumes image.get_layers top-level only is enough.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: set_active_layer
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 168
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Use stable IDs when available; add test for duplicate names.'
+    gimp_3_2_4_potential_problems:
+      - 'image.set_selected_layers should work but needs 3.2.4 confirmation.'
+      - 'Layer lookup by name is unescaped and ambiguous for duplicate names.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: delete_layer
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 207
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Add guard + undo group + live delete test.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct remove_layer likely works for normal layers; verify behavior for groups/text/vector layers.'
+      - 'No undo group or last-layer guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: set_layer_opacity
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 237
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - opacity
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Clamp 0..100 and live metadata assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple property set but opacity bounds are not clamped.'
+      - 'No vector/text layer verification.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: set_layer_visibility
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 269
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - visible
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Live metadata assertion and ID support.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple property set but no verification after call.'
+      - 'Layer-name ambiguity/unescaped string.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: duplicate_layer
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 297
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - layer_name
+        - layer_index
+        - new_name
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Test duplicate for raster, group, text/vector where supported.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct duplicate/insert likely works for raster layers; 3.2.4 layer-type behavior must be checked.'
+      - 'No group/text/vector behavior tested.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: merge_visible_layers
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 330
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args: []
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Add explicit rasterize policy and undo group; live layer-count test.'
+    gimp_3_2_4_potential_problems:
+      - 'Destructive merge may rasterize/flatten non-raster layers; 3.2.4 explicitly fixed accidental rasterization cases elsewhere.'
+      - 'No undo group or preview.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: add_alpha_channel
+    module: src/gimp_mcp_pro/tools/layer_tools.py
+    line: 352
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args:
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Introduce async layer resolver by id/name/index and reuse in all layer tools; add undo wrappers for destructive operations.'
+      - 'Add idempotency test and type guard.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple raster-layer operation, likely stable.'
+      - 'Needs behavior check for already-alpha and non-raster layers.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: search_pdb
+    module: src/gimp_mcp_pro/tools/pdb_tools.py
+    line: 24
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - query
+        - max_results
+    path_to_async:
+      - 'Make PDB discovery/execution awaitable and add timeout/cancellation; use search_pdb as a 3.2.4 compatibility probe.'
+      - 'Use it as compatibility probe in live suite; async read.'
+    gimp_3_2_4_potential_problems:
+      - 'Read-only PDB discovery is useful but procedure listing API needs 3.2.4 verification.'
+      - 'No result schema normalization beyond strings.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: execute_python
+    module: src/gimp_mcp_pro/tools/pdb_tools.py
+    line: 75
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: powerful_escape_hatch
+    signature:
+      args:
+        - code
+        - timeout_seconds
+    path_to_async:
+      - 'Make PDB discovery/execution awaitable and add timeout/cancellation; use search_pdb as a 3.2.4 compatibility probe.'
+      - 'Add async timeout/cancellation, audit logging, optional safe helper snippets, live smoke tests.'
+    gimp_3_2_4_potential_problems:
+      - 'Exec is intentionally broad and version-sensitive; can hide missing dedicated tools.'
+      - 'Synchronous long-running arbitrary code blocks MCP server thread.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_rectangle
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 25
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - x
+        - y
+        - width
+        - height
+        - operation
+        - feather_radius
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Use model validation and live selection bounds test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses image.select_rectangle and Gimp.Selection.feather; verify signatures/operation enums in 3.2.4.'
+      - 'No bounds validation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_ellipse
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 64
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - x
+        - y
+        - width
+        - height
+        - operation
+        - feather_radius
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Model validation + live mask test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses image.select_ellipse; verify signatures/operation enums in 3.2.4.'
+      - 'No bounds validation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_polygon
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 102
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - points
+        - operation
+        - feather_radius
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Use model validation + live polygon mask test.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses image.select_polygon; coordinate list shape needs live check.'
+      - 'No validation for odd/too-short point lists in tool.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_all
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 143
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Async wrapper + selection bounds assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple selection operation, likely stable.'
+      - 'No live check.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_none
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 158
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Async wrapper + empty-selection assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple selection operation, likely stable.'
+      - 'No live check.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_invert
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 179
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 4
+      label: solid
+    signature:
+      args: []
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Async wrapper + mask inversion assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple selection operation, likely stable.'
+      - 'No live check.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_grow
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 196
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - radius
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Clamp/validate radius and live mask-area assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Selection grow procedure needs live check under 3.2.4.'
+      - 'No radius bounds validation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: select_shrink
+    module: src/gimp_mcp_pro/tools/selection_tools.py
+    line: 217
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - radius
+    path_to_async:
+      - 'Use typed selection param models, async bridge calls, and live mask assertions.'
+      - 'Clamp/validate radius and live mask-area assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Selection shrink procedure needs live check under 3.2.4.'
+      - 'No radius bounds validation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: scale_image
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 54
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - new_width
+        - new_height
+        - interpolation
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Validate dimensions and live metadata assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.scale and interpolation mapping likely OK but unverified in 3.2.4.'
+      - 'No dimension guard.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: scale_layer
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 101
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - new_width
+        - new_height
+        - interpolation
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Validate dimensions and test metadata.'
+    gimp_3_2_4_potential_problems:
+      - 'Layer scale signature needs 3.2.4 verification.'
+      - 'No dimension guard or aspect helpers.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: rotate_image
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 149
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - angle
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Either restrict enum in schema or add arbitrary rotate path.'
+    gimp_3_2_4_potential_problems:
+      - 'Only 90/180/270 mapped; arbitrary angles unsupported.'
+      - 'No explicit limitation in result schema.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: rotate_layer
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 181
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - angle_degrees
+        - auto_resize
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Verify with 3.2.4; prefer PDB/config introspection if necessary.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses item transform path/signature likely version-sensitive.'
+      - 'Arbitrary-angle behavior/resize semantics untested.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: flip_image
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 223
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - direction
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Live asymmetric fixture.'
+    gimp_3_2_4_potential_problems:
+      - 'Simple image.flip path likely works; verify enum names.'
+      - 'No live state check.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: flip_layer
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 256
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - direction
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Verify under 3.2.4 with asymmetric fixture.'
+    gimp_3_2_4_potential_problems:
+      - 'Layer/item flip signature likely version-sensitive.'
+      - 'No offset/origin behavior check.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: crop_to_selection
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 302
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args: []
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Add metadata assertion and vector/text layer scenario.'
+    gimp_3_2_4_potential_problems:
+      - 'Uses Gimp.Selection.bounds and image.crop; GIMP 3.2.4 notes mention Crop Tool vector-layer behavior, so non-raster/vector cases need testing.'
+      - 'No empty-selection friendly result beyond error.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: crop_image
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 323
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - x
+        - y
+        - width
+        - height
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Validate/clamp bounds and live metadata assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.crop likely works; no bounds clamp.'
+      - 'Potential off-canvas errors not normalized.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: autocrop_image
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 357
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args: []
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Use PDB introspection or implement alpha/bounds scan helper.'
+    gimp_3_2_4_potential_problems:
+      - 'PDB lookup plug-in-autocrop-image may differ/require config in 3.x.'
+      - 'No fallback/manual bounds computation.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: resize_canvas
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 381
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 3
+      label: usable
+    signature:
+      args:
+        - new_width
+        - new_height
+        - offset_x
+        - offset_y
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Add anchor params and live metadata/layer-offset assertion.'
+    gimp_3_2_4_potential_problems:
+      - 'Direct image.resize and layer.resize_to_image_size likely work but need non-raster layer checks.'
+      - 'No anchor presets; may surprise layer offsets.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+
+  - name: offset_layer
+    module: src/gimp_mcp_pro/tools/transform_tools.py
+    line: 420
+    testcoverage_async_3_2_4_percent: 0
+    implemented: true
+    async_def: false
+    rating:
+      score_1_to_5: 2
+      label: risky
+    signature:
+      args:
+        - offset_x
+        - offset_y
+        - layer_name
+        - layer_index
+    path_to_async:
+      - 'Separate simple image transforms from version-sensitive item transforms; async bridge with long timeout for heavy transforms.'
+      - 'Verify API under 3.2.4; expose fill/wrap semantics.'
+    gimp_3_2_4_potential_problems:
+      - 'Layer offset signature/boolean params are version-sensitive.'
+      - 'No wrap/fill mode control.'
+    test_coverage:
+      direct_unit: none_found
+      live_gimp: none_found
+      async: none_found
+      gimp_3_2_4: none_found
+      existing_related: model/constant/bridge tests only unless noted in current_test_status
+

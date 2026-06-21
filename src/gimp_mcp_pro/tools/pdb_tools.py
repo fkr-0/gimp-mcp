@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge, LONG_TIMEOUT
+from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
 from gimp_mcp_pro.models.common import OperationResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
@@ -53,6 +53,7 @@ def register_pdb_tools(mcp: Any, bridge: GimpBridge) -> None:
         try:
             result = bridge.execute_python(code)
             import json as _json
+
             procedures = []
             for out in result.get("results", []):
                 if out and out.strip():

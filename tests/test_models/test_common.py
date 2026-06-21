@@ -3,8 +3,8 @@
 import pytest
 from pydantic import ValidationError
 
-from gimp_mcp_pro.models.common import Color, OperationResult, Point, Region, BlendMode, SelectionOp
-from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
+from gimp_mcp_pro.models.common import BlendMode, Color, OperationResult, Region
+from gimp_mcp_pro.models.image import CreateImageParams
 from gimp_mcp_pro.models.layer import CreateLayerParams
 from gimp_mcp_pro.models.selection import SelectPolygonParams
 

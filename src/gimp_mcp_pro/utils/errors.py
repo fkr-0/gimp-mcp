@@ -14,7 +14,12 @@ class GimpConnectionError(GimpMCPError):
 class GimpCommandError(GimpMCPError):
     """A command sent to GIMP returned an error."""
 
-    def __init__(self, message: str, command: str | None = None, traceback: str | None = None):
+    def __init__(
+        self,
+        message: str,
+        command: str | None = None,
+        traceback: str | None = None,
+    ):
         super().__init__(message)
         self.command = command
         self.gimp_traceback = traceback

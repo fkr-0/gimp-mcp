@@ -81,21 +81,11 @@ class SetLayerPropertyParams(BaseModel):
     )
 
     # Only one of these should be set per call
-    opacity: Optional[float] = Field(
-        None, ge=0.0, le=100.0, description="New opacity (0-100)"
-    )
-    blend_mode: Optional[BlendMode] = Field(
-        None, description="New blend mode"
-    )
-    visible: Optional[bool] = Field(
-        None, description="New visibility state"
-    )
-    name: Optional[str] = Field(
-        None, min_length=1, max_length=256, description="New layer name"
-    )
-    position: Optional[int] = Field(
-        None, ge=0, description="New position in layer stack"
-    )
+    opacity: Optional[float] = Field(None, ge=0.0, le=100.0, description="New opacity (0-100)")
+    blend_mode: Optional[BlendMode] = Field(None, description="New blend mode")
+    visible: Optional[bool] = Field(None, description="New visibility state")
+    name: Optional[str] = Field(None, min_length=1, max_length=256, description="New layer name")
+    position: Optional[int] = Field(None, ge=0, description="New position in layer stack")
 
 
 class LayerInfo(BaseModel):

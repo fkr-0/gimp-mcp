@@ -4,16 +4,18 @@ import json
 import socket
 import struct
 import threading
+from contextlib import suppress
+
 import pytest
 
-from gimp_mcp_pro.bridge import GimpBridge, HEADER_SIZE
+from gimp_mcp_pro.bridge import HEADER_SIZE, GimpBridge
 from gimp_mcp_pro.utils.errors import GimpCommandError, GimpConnectionError
 
 
 class MockGimpServer:
     """A mock GIMP plugin socket server for testing."""
 
-    def __init__(self, host='localhost', port=0, use_length_prefix=True):
+    def __init__(self, host="localhost", port=0, use_length_prefix=True):
         self.host = host
         self.use_length_prefix = use_length_prefix
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,21 +34,20 @@ class MockGimpServer:
 
     def stop(self):
         self.running = False
-        try:
+        with suppress(Exception):
             self.sock.close()
-        except Exception:
-            pass
 
     def queue_response(self, response: dict):
         self.response_queue.append(response)
 
     def _serve(self):
-        self.sock.settimeout(1.0)
+        with suppress(OSError):
+            self.sock.settimeout(1.0)
         while self.running:
             try:
                 client, _ = self.sock.accept()
                 self._handle(client)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 break
@@ -58,22 +59,22 @@ class MockGimpServer:
                     header = self._recv_exact(client, HEADER_SIZE)
                     if not header:
                         break
-                    length = struct.unpack('>I', header)[0]
+                    length = struct.unpack(">I", header)[0]
                     data = self._recv_exact(client, length)
                     if not data:
                         break
-                    self.received_requests.append(json.loads(data.decode('utf-8')))
+                    self.received_requests.append(json.loads(data.decode("utf-8")))
                 else:
                     data = client.recv(65536)
                     if not data:
                         break
-                    self.received_requests.append(json.loads(data.decode('utf-8')))
+                    self.received_requests.append(json.loads(data.decode("utf-8")))
 
                 if self.response_queue:
                     response = self.response_queue.pop(0)
-                    payload = json.dumps(response).encode('utf-8')
+                    payload = json.dumps(response).encode("utf-8")
                     if self.use_length_prefix:
-                        client.sendall(struct.pack('>I', len(payload)) + payload)
+                        client.sendall(struct.pack(">I", len(payload)) + payload)
                     else:
                         client.sendall(payload)
         finally:
@@ -94,7 +95,7 @@ class TestGimpBridgeConnection:
         server = MockGimpServer()
         server.start()
         try:
-            bridge = GimpBridge(host='localhost', port=server.port)
+            bridge = GimpBridge(host="localhost", port=server.port)
             bridge.connect()
             assert bridge.connected
             bridge.disconnect()
@@ -103,7 +104,7 @@ class TestGimpBridgeConnection:
             server.stop()
 
     def test_connect_failure_raises(self):
-        bridge = GimpBridge(host='localhost', port=1, timeout=0.5)
+        bridge = GimpBridge(host="localhost", port=1, timeout=0.5)
         with pytest.raises(GimpConnectionError):
             bridge.connect()
 
@@ -111,7 +112,7 @@ class TestGimpBridgeConnection:
         server = MockGimpServer()
         server.start()
         try:
-            with GimpBridge(host='localhost', port=server.port) as bridge:
+            with GimpBridge(host="localhost", port=server.port) as bridge:
                 assert bridge.connected
             assert not bridge.connected
         finally:
@@ -129,7 +130,7 @@ class TestGimpBridgeCommunication:
         server.queue_response({"status": "success", "results": {"key": "value"}})
         server.start()
         try:
-            bridge = GimpBridge(host='localhost', port=server.port, use_length_prefix=True)
+            bridge = GimpBridge(host="localhost", port=server.port, use_length_prefix=True)
             bridge.connect()
             result = bridge.send_command("test_command", {"arg": 1})
             assert result["status"] == "success"
@@ -142,7 +143,7 @@ class TestGimpBridgeCommunication:
         server.queue_response({"status": "success", "results": "ok"})
         server.start()
         try:
-            bridge = GimpBridge(host='localhost', port=server.port, use_length_prefix=False)
+            bridge = GimpBridge(host="localhost", port=server.port, use_length_prefix=False)
             bridge.connect()
             result = bridge.send_command("test", {})
             assert result["status"] == "success"
@@ -154,7 +155,7 @@ class TestGimpBridgeCommunication:
         server.queue_response({"status": "error", "error": "something broke"})
         server.start()
         try:
-            bridge = GimpBridge(host='localhost', port=server.port)
+            bridge = GimpBridge(host="localhost", port=server.port)
             bridge.connect()
             with pytest.raises(GimpCommandError, match="something broke"):
                 bridge.send_command("bad_cmd")
@@ -167,7 +168,7 @@ class TestGimpBridgeCommunication:
         server.queue_response({"status": "success", "results": {}})
         server.start()
         try:
-            bridge = GimpBridge(host='localhost', port=server.port)
+            bridge = GimpBridge(host="localhost", port=server.port)
             bridge.connect()
             bridge.send_command("cmd1")
             bridge.send_command("cmd2")
@@ -183,7 +184,7 @@ class TestGimpBridgeCommunication:
         server.queue_response({"status": "success", "results": ["6\n"]})
         server.start()
         try:
-            bridge = GimpBridge(host='localhost', port=server.port)
+            bridge = GimpBridge(host="localhost", port=server.port)
             bridge.connect()
             result = bridge.execute_python(["print(2+4)"])
             assert result["results"] == ["6\n"]

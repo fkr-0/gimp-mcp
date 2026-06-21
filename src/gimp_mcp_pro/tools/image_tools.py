@@ -10,7 +10,7 @@ from typing import Any
 
 from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.models.common import FillType, OperationResult
-from gimp_mcp_pro.models.image import CreateImageParams, ExportFormat, ExportImageParams, ImageInfo
+from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, IMAGE_BASE_TYPE_MAP
 
@@ -54,6 +54,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             height=height,
             color_mode=color_mode,
             fill=fill,
+            fill_color=None,
         )
 
         base_type = IMAGE_BASE_TYPE_MAP.get(params.color_mode, "Gimp.ImageBaseType.RGB")
@@ -66,7 +67,9 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
         elif params.color_mode.value == "grayscale":
             img_type = "Gimp.ImageType.GRAYA_IMAGE" if has_alpha else "Gimp.ImageType.GRAY_IMAGE"
         else:
-            img_type = "Gimp.ImageType.INDEXEDA_IMAGE" if has_alpha else "Gimp.ImageType.INDEXED_IMAGE"
+            img_type = (
+                "Gimp.ImageType.INDEXEDA_IMAGE" if has_alpha else "Gimp.ImageType.INDEXED_IMAGE"
+            )
 
         code = [
             "from gi.repository import Gimp, Gegl",
@@ -77,11 +80,11 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             f"Gimp.Drawable.edit_fill(layer, {fill_type})",
             "Gimp.Display.new(image)",
             "Gimp.displays_flush()",
-            f"print(image.get_id() if hasattr(image, 'get_id') else 0)",
+            "print(image.get_id() if hasattr(image, 'get_id') else 0)",
         ]
 
         try:
-            result = bridge.execute_python(code)
+            bridge.execute_python(code)
             return OperationResult.ok(
                 operation="create_image",
                 message=f"Created {params.width}x{params.height} {params.color_mode.value} image",
@@ -151,9 +154,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
                 data={"images": images_data, "count": len(images_data)},
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="list_images", error=str(e)
-            ).model_dump()
+            return OperationResult.fail(operation="list_images", error=str(e)).model_dump()
 
     @mcp.tool()
     def get_image_info() -> dict[str, Any]:
@@ -184,9 +185,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
                     error=result.get("error", "Failed to get image metadata"),
                 ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="get_image_info", error=str(e)
-            ).model_dump()
+            return OperationResult.fail(operation="get_image_info", error=str(e)).model_dump()
 
     @mcp.tool()
     def export_image(
@@ -210,7 +209,9 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
         params = ExportImageParams(
             file_path=file_path,
             format=format,
+            image_id=None,
             quality=quality,
+            compression=9,
         )
 
         # Build export code based on format
@@ -259,9 +260,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
                 data={"file_path": params.file_path, "format": fmt},
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="export_image", error=str(e)
-            ).model_dump()
+            return OperationResult.fail(operation="export_image", error=str(e)).model_dump()
 
     @mcp.tool()
     def flatten_image() -> dict[str, Any]:
@@ -288,9 +287,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
                 message="All layers flattened into one",
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="flatten_image", error=str(e)
-            ).model_dump()
+            return OperationResult.fail(operation="flatten_image", error=str(e)).model_dump()
 
     @mcp.tool()
     def duplicate_image() -> dict[str, Any]:
@@ -309,12 +306,10 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(f'{new_image.get_width()}x{new_image.get_height()}')",
         ]
         try:
-            result = bridge.execute_python(code)
+            bridge.execute_python(code)
             return OperationResult.ok(
                 operation="duplicate_image",
                 message="Image duplicated",
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="duplicate_image", error=str(e)
-            ).model_dump()
+            return OperationResult.fail(operation="duplicate_image", error=str(e)).model_dump()

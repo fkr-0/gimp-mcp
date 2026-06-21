@@ -2,22 +2,35 @@
 
 **Production-grade Model Context Protocol server for GIMP 3.0+**
 
-> 67 typed tools • reliable communication • AI-friendly workflows
+> 75 typed tools • reliable communication • AI-friendly workflows
 
 GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structured, typed MCP tools — creating images, managing layers, drawing shapes, applying filters, adjusting colors, and more.
 
 ## Features
 
-- **67 typed MCP tools** across 11 modules — image management, layers, selections, drawing, text, transforms, colors, filters, inspection, history, PDB access
+- **75 typed MCP tools** across 10 tool modules — image management, layers, selections, drawing/text, transforms, colors, filters, inspection, history, PDB access
 - **Reliable communication** — length-prefixed socket framing (no more JSON boundary guessing)
 - **Persistent connections** — one TCP connection, kept alive, with automatic reconnection
-- **GIMP 3.0.8 compatible** — tested against current GIMP release using stable APIs (DrawableFilter, PDB procedures)
+- **GIMP 3.2.4 verification in progress** — compatibility is gated by `compat.yml` and must not be claimed as verified until `compat.results.yml` contains a passing clean-profile live run
 - **Undo groups** — multi-step AI workflows as a single undo step
 - **Pydantic validation** — inputs validated before reaching GIMP
 - **AI guidance prompts** — best practices and iterative workflow documentation
 - **Visual verification** — `get_image_bitmap` lets AI see what it's drawing
 - **PDB discovery** — search GIMP's thousands of procedures
 - **Escape hatch** — `execute_python` for anything without a dedicated tool
+
+## Compatibility status
+
+```yaml
+gimp_3_2_4:
+  status: verification-in-progress
+  contract: compat.yml
+  evidence_template: compat.results.template.yml
+  required_live_results: compat.results.yml
+  claim_allowed: false
+```
+
+This branch keeps the public compatibility claim deliberately conservative. Static contract validation passes, but verified GIMP 3.2.4 support requires a clean-profile live run recorded in `compat.results.yml`. See `docs/gimp-3.2.4-compat.md` for the runbook.
 
 ## Architecture
 
@@ -29,6 +42,39 @@ AI Assistant  ←→  MCP Server (gimp-mcp-pro)  ←→  GIMP Plugin
 ```
 
 Two processes: the MCP server runs outside GIMP and communicates with a plugin running inside GIMP's Python process via TCP with length-prefixed framing.
+
+## Project tooling
+
+This fork uses **uv** as the only Python dependency and command runner.
+
+```bash
+uv sync --extra dev
+uv run python scripts/project.py list
+uv run python scripts/project.py check
+```
+
+Common commands:
+
+```bash
+uv run pytest                 # full test suite with coverage
+uv run pytest --no-cov        # fast local test loop
+uv run ruff check .           # lint
+uv run ruff format .          # format
+uv run mypy                   # type-check package
+uv run gimp-mcp-pro config --json
+uv run gimp-mcp-pro doctor
+```
+
+Runtime configuration is loaded with `pydantic-settings` from environment variables and a local `.env` file. Copy `.env.example` to `.env` for local overrides. New variable names use the `GIMP_MCP_PRO_` prefix; legacy `GIMP_MCP_` names are still accepted where possible.
+
+Useful CLI commands:
+
+```bash
+gimp-mcp-pro serve            # run the MCP server
+gimp-mcp-pro config --json    # inspect resolved settings
+gimp-mcp-pro doctor --connect # verify socket connectivity to the GIMP plugin
+gimp-mcp-pro repl             # interactive bridge REPL for a live plugin
+```
 
 ## Quick Start
 
@@ -121,7 +167,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `merge_visible_layers` | Merge all visible layers |
 | `add_alpha_channel` | Add transparency support to a layer |
 
-### Drawing (9 tools)
+### Drawing (10 tools)
 | Tool | Description |
 |------|-------------|
 | `set_foreground_color` | Set drawing color |
@@ -133,6 +179,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `draw_ellipse` | Ellipse/circle (filled or outline) |
 | `draw_polygon` | Polygon (filled or outline) |
 | `add_text` | Add a text layer with font/size/color |
+| `edit_clear` | Clear the current selection area to transparency |
 
 ### Selections (8 tools)
 | Tool | Description |
@@ -198,12 +245,13 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `get_context_state` | Current colors, brush, opacity settings |
 | `get_gimp_info` | GIMP version, environment, capabilities |
 
-### History (3 tools)
+### History (4 tools)
 | Tool | Description |
 |------|-------------|
+| `undo` | Undo previous operation(s) where GIMP exposes the operation |
+| `redo` | Redo previously undone operation(s) where GIMP exposes the operation |
 | `begin_undo_group` | Group operations as a single undo step |
 | `end_undo_group` | End current undo group |
-| `edit_clear` | Clear selection to transparent |
 
 ### Advanced (2 tools)
 | Tool | Description |
@@ -213,7 +261,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 
 ## Known Limitations
 
-- **Undo/Redo**: GIMP 3.0's plugin API does not expose programmatic undo/redo. Use `Ctrl+Z`/`Ctrl+Y` in GIMP directly. Undo *groups* work for grouping AI operations.
+- **Undo/Redo**: Undo/redo behavior must be confirmed during live GIMP 3.2.4 compatibility verification. Undo *groups* work for grouping AI operations when supported by the active image context.
 - **Drop Shadow**: Uses Script-Fu internally; may cause connection issues on some setups.
 - **Font Names**: GIMP 3.0 uses names like `Sans-serif`, `Serif`, `Monospace`. The `add_text` tool maps common aliases automatically.
 

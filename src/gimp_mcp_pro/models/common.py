@@ -10,6 +10,16 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+def py_literal(value: Any) -> str:
+    """Return a safe Python literal for generated code sent to GIMP.
+
+    Tool modules build small Python snippets that run inside GIMP's PyGObject
+    context.  Always route user-controlled strings through this helper instead
+    of interpolating them inside quotes manually.
+    """
+    return repr(value)
+
+
 # ---------------------------------------------------------------------------
 # Enums — mirror GIMP 3.0 constants
 # ---------------------------------------------------------------------------
@@ -220,9 +230,7 @@ class OperationResult(BaseModel):
     operation: str = Field(..., description="Name of the operation performed")
     message: Optional[str] = Field(None, description="Human-readable result message")
     error: Optional[str] = Field(None, description="Error description if success=False")
-    data: Optional[dict[str, Any]] = Field(
-        None, description="Operation-specific result data"
-    )
+    data: Optional[dict[str, Any]] = Field(None, description="Operation-specific result data")
     timestamp: float = Field(
         default_factory=time.time,
         description="Unix timestamp of when the result was produced",
@@ -236,7 +244,13 @@ class OperationResult(BaseModel):
         data: dict[str, Any] | None = None,
     ) -> OperationResult:
         """Create a successful result."""
-        return cls(success=True, operation=operation, message=message, data=data)
+        return cls(
+            success=True,
+            operation=operation,
+            message=message,
+            error=None,
+            data=data,
+        )
 
     @classmethod
     def fail(
@@ -246,4 +260,13 @@ class OperationResult(BaseModel):
         data: dict[str, Any] | None = None,
     ) -> OperationResult:
         """Create a failure result."""
-        return cls(success=False, operation=operation, error=error, data=data)
+        return cls(
+            success=False,
+            operation=operation,
+            message=None,
+            error=error,
+            data=data,
+        )
+
+
+OperationResult.model_rebuild(_types_namespace={"Any": Any, "Optional": Optional})

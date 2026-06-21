@@ -36,18 +36,12 @@ class BucketFillParams(BaseModel):
 
     x: float = Field(..., description="X coordinate to fill from")
     y: float = Field(..., description="Y coordinate to fill from")
-    fill_type: FillType = Field(
-        FillType.FOREGROUND, description="Fill type"
-    )
-    color: Optional[Color] = Field(
-        None, description="Color to fill with (sets foreground first)"
-    )
+    fill_type: FillType = Field(FillType.FOREGROUND, description="Fill type")
+    color: Optional[Color] = Field(None, description="Color to fill with (sets foreground first)")
     threshold: float = Field(
         15.0, ge=0.0, le=255.0, description="Color similarity threshold for fill boundary"
     )
-    sample_merged: bool = Field(
-        False, description="Sample color from merged visible layers"
-    )
+    sample_merged: bool = Field(False, description="Sample color from merged visible layers")
     layer_id: Optional[int] = Field(
         None, description="Layer to fill on. Uses active layer if not specified."
     )
@@ -64,11 +58,10 @@ class DrawLineParams(BaseModel):
     x2: float = Field(..., description="End X coordinate")
     y2: float = Field(..., description="End Y coordinate")
     color: Optional[Color] = Field(
-        None, description="Line color (sets foreground color). Uses current foreground if not specified."
+        None,
+        description="Line color (sets foreground color). Uses current foreground if not specified.",
     )
-    brush_size: float = Field(
-        2.0, gt=0, le=1000, description="Brush/line width in pixels"
-    )
+    brush_size: float = Field(2.0, gt=0, le=1000, description="Brush/line width in pixels")
     layer_id: Optional[int] = Field(
         None, description="Layer to draw on. Uses active layer if not specified."
     )
@@ -95,9 +88,7 @@ class BrushStrokeParams(BaseModel):
     color: Optional[Color] = Field(
         None, description="Stroke color. Uses current foreground if not specified."
     )
-    brush_size: float = Field(
-        2.0, gt=0, le=1000, description="Brush size in pixels"
-    )
+    brush_size: float = Field(2.0, gt=0, le=1000, description="Brush size in pixels")
     brush_name: Optional[str] = Field(
         None, description="Named brush to use. Uses current brush if not specified."
     )
@@ -129,9 +120,7 @@ class BrushStrokeParams(BaseModel):
 class DrawShapeParams(BaseModel):
     """Parameters for drawing a rectangle or ellipse (outline or filled)."""
 
-    shape: str = Field(
-        ..., description="Shape type: 'rectangle' or 'ellipse'"
-    )
+    shape: str = Field(..., description="Shape type: 'rectangle' or 'ellipse'")
     x: float = Field(..., description="Bounding box left X")
     y: float = Field(..., description="Bounding box top Y")
     width: float = Field(..., gt=0, description="Shape width")
@@ -146,9 +135,7 @@ class DrawShapeParams(BaseModel):
     color: Optional[Color] = Field(
         None, description="Shape color. Uses current foreground if not specified."
     )
-    line_width: float = Field(
-        2.0, gt=0, le=100, description="Outline width for non-filled shapes"
-    )
+    line_width: float = Field(2.0, gt=0, le=100, description="Outline width for non-filled shapes")
     layer_id: Optional[int] = Field(
         None, description="Layer to draw on. Uses active layer if not specified."
     )

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import base64
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge, LONG_TIMEOUT
+from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.models.common import OperationResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
@@ -17,7 +16,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
     """Register all inspection tools with the MCP server."""
 
     @mcp.tool()
-    def get_image_bitmap(
+    async def get_image_bitmap(
         max_width: int | None = 1024,
         max_height: int | None = 1024,
         region_x: int | None = None,
@@ -57,7 +56,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
                 return OperationResult.fail(
                     operation="get_image_bitmap",
                     error="All region parameters (region_x, region_y, region_width, region_height) "
-                          "must be specified together",
+                    "must be specified together",
                 ).model_dump()
             params["region"] = {
                 "origin_x": region_x,
@@ -67,7 +66,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
             }
 
         try:
-            result = bridge.get_image_bitmap(
+            result = await bridge.async_get_image_bitmap(
                 max_width=params.get("max_width"),
                 max_height=params.get("max_height"),
                 region=params.get("region"),
@@ -102,7 +101,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="get_image_bitmap", error=str(e)).model_dump()
 
     @mcp.tool()
-    def get_image_metadata() -> dict[str, Any]:
+    async def get_image_metadata() -> dict[str, Any]:
         """Get detailed metadata about the active image without bitmap data.
 
         WHEN TO USE: Before any operation — understand canvas dimensions,
@@ -112,7 +111,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
         visibility, opacity, blend mode), channels, paths, file info.
         """
         try:
-            result = bridge.get_image_metadata()
+            result = await bridge.async_get_image_metadata()
             if result.get("status") == "success":
                 return OperationResult.ok(
                     operation="get_image_metadata",
@@ -128,7 +127,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="get_image_metadata", error=str(e)).model_dump()
 
     @mcp.tool()
-    def get_context_state() -> dict[str, Any]:
+    async def get_context_state() -> dict[str, Any]:
         """Get current GIMP context state (colors, brush, opacity, settings).
 
         IMPORTANT: Context can be changed by the user in GIMP's UI at any time.
@@ -138,7 +137,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
         feather state, antialiasing state.
         """
         try:
-            result = bridge.get_context_state()
+            result = await bridge.async_get_context_state()
             if result.get("status") == "success":
                 return OperationResult.ok(
                     operation="get_context_state",
@@ -154,7 +153,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="get_context_state", error=str(e)).model_dump()
 
     @mcp.tool()
-    def get_gimp_info() -> dict[str, Any]:
+    async def get_gimp_info() -> dict[str, Any]:
         """Get GIMP environment info (version, paths, capabilities).
 
         WHEN TO USE: For troubleshooting, environment discovery, or
@@ -164,7 +163,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
         current context, system capabilities, platform info.
         """
         try:
-            result = bridge.get_gimp_info()
+            result = await bridge.async_get_gimp_info()
             if result.get("status") == "success":
                 return OperationResult.ok(
                     operation="get_gimp_info",

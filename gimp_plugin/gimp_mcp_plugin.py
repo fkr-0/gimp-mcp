@@ -20,7 +20,8 @@ Make sure the file is executable (chmod +x on Linux/macOS).
 """
 
 import gi
-gi.require_version('Gimp', '3.0')
+
+gi.require_version("Gimp", "3.0")
 
 from gi.repository import Gimp
 from gi.repository import GLib
@@ -44,8 +45,12 @@ MAX_MESSAGE_SIZE = 100 * 1024 * 1024  # 100 MB
 USE_LENGTH_PREFIX = True  # Set False for backward compat with maorcc bridge
 
 
-def N_(message): return message
-def _(message): return GLib.dgettext(None, message)
+def N_(message):
+    return message
+
+
+def _(message):
+    return GLib.dgettext(None, message)
 
 
 def exec_and_capture(command, context):
@@ -65,8 +70,8 @@ class MCPProPlugin(Gimp.PlugIn):
 
     def __init__(self):
         super().__init__()
-        self.host = 'localhost'
-        self.port = int(os.environ.get('GIMP_MCP_PORT', '9877'))
+        self.host = "localhost"
+        self.port = int(os.environ.get("GIMP_MCP_PORT", "9877"))
         self.running = False
         self.server_socket = None
         # Persistent Python execution context
@@ -81,9 +86,7 @@ class MCPProPlugin(Gimp.PlugIn):
         return ["plug-in-mcp-pro-server"]
 
     def do_create_procedure(self, name):
-        procedure = Gimp.ImageProcedure.new(
-            self, name, Gimp.PDBProcType.PLUGIN, self.run, None
-        )
+        procedure = Gimp.ImageProcedure.new(self, name, Gimp.PDBProcType.PLUGIN, self.run, None)
         procedure.set_menu_label(_("Start MCP Pro Server"))
         procedure.set_documentation(
             _("Starts the MCP Pro server for AI-assisted GIMP editing"),
@@ -91,7 +94,7 @@ class MCPProPlugin(Gimp.PlugIn):
             name,
         )
         procedure.set_attribution("GIMP MCP Pro", "GIMP MCP Pro Contributors", "2026")
-        procedure.add_menu_path('<Image>/Tools/')
+        procedure.add_menu_path("<Image>/Tools/")
         return procedure
 
     def run(self, procedure, run_mode, image, drawables, config, run_data):
@@ -159,7 +162,11 @@ class MCPProPlugin(Gimp.PlugIn):
                 except (ConnectionError, BrokenPipeError, OSError):
                     break
                 except Exception as e:
-                    error_resp = {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
+                    error_resp = {
+                        "status": "error",
+                        "error": str(e),
+                        "traceback": traceback.format_exc(),
+                    }
                     try:
                         self._send_message(client, error_resp)
                     except:
@@ -178,32 +185,32 @@ class MCPProPlugin(Gimp.PlugIn):
             header = self._recv_exact(sock, HEADER_SIZE)
             if header is None:
                 return None
-            length = struct.unpack('>I', header)[0]
+            length = struct.unpack(">I", header)[0]
             if length > MAX_MESSAGE_SIZE:
                 raise ValueError(f"Message too large: {length}")
 
             data = self._recv_exact(sock, length)
             if data is None:
                 return None
-            return json.loads(data.decode('utf-8'))
+            return json.loads(data.decode("utf-8"))
         else:
             # JSON boundary fallback
-            buf = b''
+            buf = b""
             while True:
                 chunk = sock.recv(8192)
                 if not chunk:
                     return None
                 buf += chunk
                 try:
-                    return json.loads(buf.decode('utf-8'))
+                    return json.loads(buf.decode("utf-8"))
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     continue
 
     def _send_message(self, sock, data):
         """Send a message with length-prefixed framing (or raw JSON fallback)."""
-        payload = json.dumps(data).encode('utf-8')
+        payload = json.dumps(data).encode("utf-8")
         if USE_LENGTH_PREFIX:
-            header = struct.pack('>I', len(payload))
+            header = struct.pack(">I", len(payload))
             sock.sendall(header + payload)
         else:
             sock.sendall(payload)
@@ -298,8 +305,15 @@ class MCPProPlugin(Gimp.PlugIn):
             image.select_rectangle(Gimp.ChannelOps.REPLACE, ox, oy, rw, rh)
             orig_layers = image.get_layers()
             if orig_layers:
-                new_layer = Gimp.Layer.new(working_image, 'Region', rw, rh,
-                                          Gimp.ImageType.RGBA_IMAGE, 100, Gimp.LayerMode.NORMAL)
+                new_layer = Gimp.Layer.new(
+                    working_image,
+                    "Region",
+                    rw,
+                    rh,
+                    Gimp.ImageType.RGBA_IMAGE,
+                    100,
+                    Gimp.LayerMode.NORMAL,
+                )
                 working_image.insert_layer(new_layer, None, 0)
                 Gimp.edit_copy([orig_layers[0]])
                 floating = Gimp.edit_paste(new_layer, True)[0]
@@ -329,28 +343,29 @@ class MCPProPlugin(Gimp.PlugIn):
             final_image.scale(tw, th)
 
         # Export to temp PNG
-        fd, temp_path = tempfile.mkstemp(suffix='.png')
+        fd, temp_path = tempfile.mkstemp(suffix=".png")
         os.close(fd)
 
         try:
             from gi.repository import Gio
+
             file_obj = Gio.File.new_for_path(temp_path)
 
-            export_proc = Gimp.get_pdb().lookup_procedure('file-png-export')
+            export_proc = Gimp.get_pdb().lookup_procedure("file-png-export")
             if export_proc:
                 cfg = export_proc.create_config()
-                cfg.set_property('image', final_image)
-                cfg.set_property('file', file_obj)
+                cfg.set_property("image", final_image)
+                cfg.set_property("file", file_obj)
                 try:
-                    cfg.set_property('drawables', final_image.get_layers())
+                    cfg.set_property("drawables", final_image.get_layers())
                 except:
                     pass
                 export_proc.run(cfg)
             else:
                 Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, final_image, file_obj)
 
-            with open(temp_path, 'rb') as f:
-                encoded = base64.b64encode(f.read()).decode('utf-8')
+            with open(temp_path, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode("utf-8")
 
             fw = final_image.get_width()
             fh = final_image.get_height()
@@ -365,15 +380,19 @@ class MCPProPlugin(Gimp.PlugIn):
                     "original_width": orig_w,
                     "original_height": orig_h,
                     "encoding": "base64",
-                }
+                },
             }
         finally:
             if should_delete_final and final_image != working_image:
-                try: final_image.delete()
-                except: pass
+                try:
+                    final_image.delete()
+                except:
+                    pass
             if should_delete and working_image != image:
-                try: working_image.delete()
-                except: pass
+                try:
+                    working_image.delete()
+                except:
+                    pass
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
@@ -396,8 +415,10 @@ class MCPProPlugin(Gimp.PlugIn):
                     "height": layer.get_height(),
                     "has_alpha": layer.has_alpha(),
                 }
-                try: info["blend_mode"] = str(layer.get_mode())
-                except: info["blend_mode"] = "unknown"
+                try:
+                    info["blend_mode"] = str(layer.get_mode())
+                except:
+                    info["blend_mode"] = "unknown"
                 layers_info.append(info)
             except Exception as e:
                 layers_info.append({"name": f"Layer {i}", "error": str(e)})
@@ -406,14 +427,16 @@ class MCPProPlugin(Gimp.PlugIn):
         try:
             f = image.get_file()
             if f:
-                file_info["path"] = f.get_path() if hasattr(f, 'get_path') else None
-                file_info["basename"] = f.get_basename() if hasattr(f, 'get_basename') else None
+                file_info["path"] = f.get_path() if hasattr(f, "get_path") else None
+                file_info["basename"] = f.get_basename() if hasattr(f, "get_basename") else None
         except:
             pass
 
         res_x = res_y = None
-        try: res_x, res_y = image.get_resolution()
-        except: pass
+        try:
+            res_x, res_y = image.get_resolution()
+        except:
+            pass
 
         base_map = {0: "RGB", 1: "Grayscale", 2: "Indexed"}
 
@@ -426,20 +449,25 @@ class MCPProPlugin(Gimp.PlugIn):
                     "base_type": base_map.get(int(image.get_base_type()), "Unknown"),
                     "resolution_x": res_x,
                     "resolution_y": res_y,
-                    "is_dirty": image.is_dirty() if hasattr(image, 'is_dirty') else False,
+                    "is_dirty": image.is_dirty() if hasattr(image, "is_dirty") else False,
                 },
                 "structure": {
                     "num_layers": len(layers),
                     "layers": layers_info,
                 },
                 "file": file_info,
-            }
+            },
         }
 
     def _handle_get_gimp_info(self, params):
         """Get GIMP environment information."""
         info = {
             "session": {"num_open_images": len(Gimp.get_images())},
+            "gimp": {
+                "version": None,
+                "resources_loaded": None,
+                "api_family": "3.x",
+            },
             "system": {
                 "platform": platform.platform(),
                 "python_version": platform.python_version(),
@@ -448,8 +476,19 @@ class MCPProPlugin(Gimp.PlugIn):
                 "mcp_pro_server": True,
                 "length_prefix_framing": USE_LENGTH_PREFIX,
                 "persistent_connections": True,
+                "reports_version": True,
+                "reports_resources_loaded": True,
             },
         }
+        try:
+            info["gimp"]["version"] = Gimp.version()
+        except Exception:
+            pass
+        try:
+            if hasattr(Gimp, 'resources_loaded'):
+                info["gimp"]["resources_loaded"] = Gimp.resources_loaded()
+        except Exception:
+            pass
         return {"status": "success", "results": info}
 
     def _handle_get_context_state(self, params):
@@ -458,19 +497,25 @@ class MCPProPlugin(Gimp.PlugIn):
         try:
             fg = Gimp.context_get_foreground()
             state["foreground_color"] = str(fg)
-            if hasattr(fg, 'get_rgba'):
+            if hasattr(fg, "get_rgba"):
                 state["foreground_rgba"] = list(fg.get_rgba())
-        except: pass
+        except:
+            pass
         try:
             bg = Gimp.context_get_background()
             state["background_color"] = str(bg)
-            if hasattr(bg, 'get_rgba'):
+            if hasattr(bg, "get_rgba"):
                 state["background_rgba"] = list(bg.get_rgba())
-        except: pass
-        try: state["brush_size"] = Gimp.context_get_brush_size()
-        except: pass
-        try: state["opacity"] = Gimp.context_get_opacity()
-        except: pass
+        except:
+            pass
+        try:
+            state["brush_size"] = Gimp.context_get_brush_size()
+        except:
+            pass
+        try:
+            state["opacity"] = Gimp.context_get_opacity()
+        except:
+            pass
 
         return {"status": "success", "results": state}
 

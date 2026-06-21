@@ -9,8 +9,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge, LONG_TIMEOUT
-from gimp_mcp_pro.models.common import Color, OperationResult
+from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
+from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.color")
@@ -25,9 +25,11 @@ def _color_preamble(layer_name: str | None, layer_index: int | None) -> list[str
         "image = images[0]",
     ]
     if layer_name is not None:
+        layer_name_expr = py_literal(layer_name)
+        layer_error_expr = py_literal(f"Layer {layer_name!r} not found")
         code += [
-            f"drawable = image.get_layer_by_name('{layer_name}')",
-            f"if drawable is None: raise RuntimeError('Layer \\'{layer_name}\\' not found')",
+            f"drawable = image.get_layer_by_name({layer_name_expr})",
+            f"if drawable is None: raise RuntimeError({layer_error_expr})",
         ]
     elif layer_index is not None:
         code += [
@@ -165,8 +167,14 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.ok(
                 operation="adjust_levels",
                 message=f"Levels adjusted ({channel}): input [{input_low}-{input_high}], gamma {gamma}",
-                data={"channel": channel, "input_low": input_low, "input_high": input_high,
-                      "gamma": gamma, "output_low": output_low, "output_high": output_high},
+                data={
+                    "channel": channel,
+                    "input_low": input_low,
+                    "input_high": input_high,
+                    "gamma": gamma,
+                    "output_low": output_low,
+                    "output_high": output_high,
+                },
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="adjust_levels", error=str(e)).model_dump()
@@ -431,6 +439,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
         try:
             result = bridge.execute_python(code)
             import json as _json
+
             colors_data = {}
             for out in result.get("results", []):
                 if out and out.strip():
@@ -498,6 +507,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
         try:
             result = bridge.execute_python(code)
             import json as _json
+
             color_data = {}
             for out in result.get("results", []):
                 if out and out.strip():

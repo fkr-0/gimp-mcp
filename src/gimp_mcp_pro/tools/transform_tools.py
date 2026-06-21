@@ -9,8 +9,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge, LONG_TIMEOUT
-from gimp_mcp_pro.models.common import OperationResult
+from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
+from gimp_mcp_pro.models.common import OperationResult, py_literal
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.transform")
@@ -29,9 +29,11 @@ def _img_preamble() -> list[str]:
 def _layer_target(layer_name: str | None, layer_index: int | None) -> list[str]:
     """Code to resolve a layer target."""
     if layer_name is not None:
+        layer_name_expr = py_literal(layer_name)
+        layer_error_expr = py_literal(f"Layer {layer_name!r} not found")
         return [
-            f"target = image.get_layer_by_name('{layer_name}')",
-            f"if target is None: raise RuntimeError('Layer \\'{layer_name}\\' not found')",
+            f"target = image.get_layer_by_name({layer_name_expr})",
+            f"if target is None: raise RuntimeError({layer_error_expr})",
         ]
     elif layer_index is not None:
         return [
@@ -126,11 +128,15 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
         }
         interp_expr = interp_map.get(interpolation.lower(), "Gimp.InterpolationType.CUBIC")
 
-        code = _img_preamble() + _layer_target(layer_name, layer_index) + [
-            f"Gimp.context_set_interpolation({interp_expr})",
-            f"target.scale({new_width}, {new_height}, True)",
-            "Gimp.displays_flush()",
-        ]
+        code = (
+            _img_preamble()
+            + _layer_target(layer_name, layer_index)
+            + [
+                f"Gimp.context_set_interpolation({interp_expr})",
+                f"target.scale({new_width}, {new_height}, True)",
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -189,17 +195,22 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_index: Target layer by index. Uses active layer if neither specified.
         """
         import math
+
         angle_rad = math.radians(angle_degrees)
 
-        code = _img_preamble() + _layer_target(layer_name, layer_index) + [
-            "import math",
-            f"angle_rad = {angle_rad}",
-            "off = target.get_offsets()",
-            "cx = off.offset_x + target.get_width() / 2.0",
-            "cy = off.offset_y + target.get_height() / 2.0",
-            f"Gimp.Item.transform_rotate(target, angle_rad, {'True' if auto_resize else 'False'}, cx, cy)",
-            "Gimp.displays_flush()",
-        ]
+        code = (
+            _img_preamble()
+            + _layer_target(layer_name, layer_index)
+            + [
+                "import math",
+                f"angle_rad = {angle_rad}",
+                "off = target.get_offsets()",
+                "cx = off.offset_x + target.get_width() / 2.0",
+                "cy = off.offset_y + target.get_height() / 2.0",
+                f"Gimp.Item.transform_rotate(target, angle_rad, {'True' if auto_resize else 'False'}, cx, cy)",
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -224,7 +235,11 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
                 error="direction must be 'horizontal' or 'vertical'",
             ).model_dump()
 
-        flip_type = "Gimp.OrientationType.HORIZONTAL" if direction == "horizontal" else "Gimp.OrientationType.VERTICAL"
+        flip_type = (
+            "Gimp.OrientationType.HORIZONTAL"
+            if direction == "horizontal"
+            else "Gimp.OrientationType.VERTICAL"
+        )
         code = _img_preamble() + [
             f"image.flip({flip_type})",
             "Gimp.displays_flush()",
@@ -258,13 +273,19 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
                 operation="flip_layer", error="direction must be 'horizontal' or 'vertical'"
             ).model_dump()
 
-        flip_type = "Gimp.OrientationType.HORIZONTAL" if direction == "horizontal" else "Gimp.OrientationType.VERTICAL"
-        auto_center = "target.get_width() / 2.0" if direction == "horizontal" else "target.get_height() / 2.0"
-
-        code = _img_preamble() + _layer_target(layer_name, layer_index) + [
-            f"Gimp.Item.transform_flip_simple(target, {flip_type}, True, 0)",
-            "Gimp.displays_flush()",
-        ]
+        flip_type = (
+            "Gimp.OrientationType.HORIZONTAL"
+            if direction == "horizontal"
+            else "Gimp.OrientationType.VERTICAL"
+        )
+        code = (
+            _img_preamble()
+            + _layer_target(layer_name, layer_index)
+            + [
+                f"Gimp.Item.transform_flip_simple(target, {flip_type}, True, 0)",
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             bridge.execute_python(code)
             return OperationResult.ok(
@@ -298,7 +319,10 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
 
     @mcp.tool()
     def crop_image(
-        x: int, y: int, width: int, height: int,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
     ) -> dict[str, Any]:
         """Crop the image to a specific rectangle.
 
@@ -380,8 +404,12 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.ok(
                 operation="resize_canvas",
                 message=f"Canvas resized to {new_width}x{new_height}",
-                data={"width": new_width, "height": new_height,
-                      "offset_x": offset_x, "offset_y": offset_y},
+                data={
+                    "width": new_width,
+                    "height": new_height,
+                    "offset_x": offset_x,
+                    "offset_y": offset_y,
+                },
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="resize_canvas", error=str(e)).model_dump()
@@ -401,11 +429,15 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
         """
-        code = _img_preamble() + _layer_target(layer_name, layer_index) + [
-            f"target.set_offsets(target.get_offsets().offset_x + {offset_x}, "
-            f"target.get_offsets().offset_y + {offset_y})",
-            "Gimp.displays_flush()",
-        ]
+        code = (
+            _img_preamble()
+            + _layer_target(layer_name, layer_index)
+            + [
+                f"target.set_offsets(target.get_offsets().offset_x + {offset_x}, "
+                f"target.get_offsets().offset_y + {offset_y})",
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             bridge.execute_python(code)
             return OperationResult.ok(

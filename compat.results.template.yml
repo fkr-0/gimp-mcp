@@ -1,0 +1,109 @@
+schema: gimp-mcp.compat.results.v1
+project: gimp-mcp
+contract: compat.yml
+run_id: TEMPLATE-replace-with-utc-timestamp-or-ci-run-id
+run_started_at: '2026-06-21T17:34:08+00:00'
+run_finished_at: null
+tester: replace-me
+environment:
+  os: replace-me
+  desktop_session: replace-me
+  gimp_executable: replace-me
+  gimp_version: replace-me
+  gimp_verbose_version: replace-me
+  python_version_inside_gimp: replace-me
+  pygobject_version_inside_gimp: replace-me
+  libgimp_api_version: '3.0'
+  libgimp_library_version: 3.2.4
+  gegl_version: replace-me
+  plugin_install_path: replace-me
+  plugin_sha256: replace-me
+  mcp_server_revision: replace-me
+  mcp_server_command: uv run gimp-mcp-pro serve
+checks:
+- id: S-001-yaml-validity
+  kind: static
+  status: skip
+  evidence: not run yet
+- id: S-010-tool-registry-count
+  kind: static
+  status: skip
+  evidence: not run yet
+- id: S-020-unit-suite
+  kind: static
+  status: skip
+  evidence: not run yet
+- id: S-030-quality-gate
+  kind: static
+  status: skip
+  evidence: not run yet
+- id: S-040-doc-claim-gate
+  kind: static
+  status: skip
+  evidence: not run yet
+- id: C-001-env-introspection
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-010-plugin-registration
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-020-transport
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-030-image-basics
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-040-layer-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-050-selection-drawing-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-060-export-bitmap-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-070-transform-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-080-color-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-090-filter-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-100-pdb-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-110-history-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-120-error-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-130-docs-contract
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+summary:
+  status: unverified
+  passed: 0
+  failed: 0
+  skipped: 19
+  waived: 0
+  claim_allowed: false
+  notes:
+  - This is a template, not evidence of live GIMP 3.2.4 compatibility.
+  - Replace status values only after running the corresponding checks.

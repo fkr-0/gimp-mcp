@@ -23,7 +23,10 @@ def register_selection_tools(mcp: Any, bridge: GimpBridge) -> None:
 
     @mcp.tool()
     def select_rectangle(
-        x: float, y: float, width: float, height: float,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
         operation: str = "replace",
         feather_radius: float = 0.0,
     ) -> dict[str, Any]:
@@ -59,7 +62,10 @@ def register_selection_tools(mcp: Any, bridge: GimpBridge) -> None:
 
     @mcp.tool()
     def select_ellipse(
-        x: float, y: float, width: float, height: float,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
         operation: str = "replace",
         feather_radius: float = 0.0,
     ) -> dict[str, Any]:
@@ -128,7 +134,7 @@ def register_selection_tools(mcp: Any, bridge: GimpBridge) -> None:
             bridge.execute_python(code)
             return OperationResult.ok(
                 operation="select_polygon",
-                message=f"Selected polygon with {len(points)//2} vertices",
+                message=f"Selected polygon with {len(points) // 2} vertices",
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_polygon", error=str(e)).model_dump()
@@ -163,7 +169,9 @@ def register_selection_tools(mcp: Any, bridge: GimpBridge) -> None:
         ]
         try:
             bridge.execute_python(code)
-            return OperationResult.ok(operation="select_none", message="Selection cleared").model_dump()
+            return OperationResult.ok(
+                operation="select_none", message="Selection cleared"
+            ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_none", error=str(e)).model_dump()
 
@@ -178,7 +186,9 @@ def register_selection_tools(mcp: Any, bridge: GimpBridge) -> None:
         ]
         try:
             bridge.execute_python(code)
-            return OperationResult.ok(operation="select_invert", message="Selection inverted").model_dump()
+            return OperationResult.ok(
+                operation="select_invert", message="Selection inverted"
+            ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_invert", error=str(e)).model_dump()
 

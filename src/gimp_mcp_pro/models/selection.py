@@ -21,9 +21,7 @@ class SelectRectangleParams(BaseModel):
         description="How to combine with existing selection",
     )
     feather: bool = Field(False, description="Whether to feather edges")
-    feather_radius: float = Field(
-        0.0, ge=0, description="Feather radius in pixels"
-    )
+    feather_radius: float = Field(0.0, ge=0, description="Feather radius in pixels")
     image_id: Optional[int] = Field(
         None, description="Target image. Uses active image if not specified."
     )
@@ -41,9 +39,7 @@ class SelectEllipseParams(BaseModel):
         description="How to combine with existing selection",
     )
     feather: bool = Field(False, description="Whether to feather edges")
-    feather_radius: float = Field(
-        0.0, ge=0, description="Feather radius in pixels"
-    )
+    feather_radius: float = Field(0.0, ge=0, description="Feather radius in pixels")
     image_id: Optional[int] = Field(
         None, description="Target image. Uses active image if not specified."
     )
@@ -68,9 +64,7 @@ class SelectPolygonParams(BaseModel):
         description="How to combine with existing selection",
     )
     feather: bool = Field(False, description="Whether to feather edges")
-    feather_radius: float = Field(
-        0.0, ge=0, description="Feather radius in pixels"
-    )
+    feather_radius: float = Field(0.0, ge=0, description="Feather radius in pixels")
     image_id: Optional[int] = Field(
         None, description="Target image. Uses active image if not specified."
     )

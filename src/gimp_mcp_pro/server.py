@@ -7,10 +7,7 @@ and registers all tools, resources, and prompts.
 from __future__ import annotations
 
 import logging
-import os
-import sys
 from pathlib import Path
-from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -33,34 +30,29 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     if config is None:
         config = ServerConfig()
 
-    setup_logging(debug=config.debug)
+    setup_logging(level=config.log_level_value, debug=config.debug)
     logger.info(f"Initializing GIMP MCP Pro server (GIMP at {config.gimp_host}:{config.gimp_port})")
 
     # Create FastMCP server
     mcp = FastMCP("GIMP MCP Pro")
 
     # Create the bridge (lazy connect — connects on first command)
-    bridge = GimpBridge(
-        host=config.gimp_host,
-        port=config.gimp_port,
-        timeout=config.timeout,
-        use_length_prefix=config.use_length_prefix,
-    )
+    bridge = GimpBridge(**config.bridge_kwargs())
 
     # ------------------------------------------------------------------
     # Register tool modules
     # ------------------------------------------------------------------
 
-    from gimp_mcp_pro.tools.image_tools import register_image_tools
-    from gimp_mcp_pro.tools.layer_tools import register_layer_tools
-    from gimp_mcp_pro.tools.selection_tools import register_selection_tools
-    from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
-    from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
-    from gimp_mcp_pro.tools.history_tools import register_history_tools
-    from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
-    from gimp_mcp_pro.tools.transform_tools import register_transform_tools
-    from gimp_mcp_pro.tools.filter_tools import register_filter_tools
     from gimp_mcp_pro.tools.color_tools import register_color_tools
+    from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
+    from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+    from gimp_mcp_pro.tools.history_tools import register_history_tools
+    from gimp_mcp_pro.tools.image_tools import register_image_tools
+    from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
+    from gimp_mcp_pro.tools.layer_tools import register_layer_tools
+    from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
+    from gimp_mcp_pro.tools.selection_tools import register_selection_tools
+    from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 
     register_image_tools(mcp, bridge)
     register_layer_tools(mcp, bridge)

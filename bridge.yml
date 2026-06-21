@@ -1,0 +1,98 @@
+version: 1
+name: gimp-mcp
+description: Fork workspace for GIMP MCP Pro with uv tooling, typed config, CLI, and GIMP 3.2.4 verification work.
+defaultTrack: dev
+agent:
+  notes: Use uv for all Python tooling. Prefer scripts/project.py or bridge.yml commands over direct tool invocations. .env is local-only; commit .env.example for documented defaults.
+  tasks:
+    - Verify GIMP 3.2.4 compatibility against a live plugin instance.
+    - Keep CLI, config, bridge and test tooling covered by pytest, ruff and mypy.
+  changelog:
+    - Added uv-centered project commands for sync/test/lint/format/typecheck/check.
+    - Added typed pydantic-settings configuration and CLI diagnostics/repl commands.
+commands:
+  sync:
+    run: ["uv", "sync", "--extra", "dev"]
+    description: Install runtime and dev dependencies with uv.
+    timeoutMs: 120000
+    category: build
+  test:
+    run: ["uv", "run", "pytest"]
+    description: Run the full pytest suite with coverage.
+    timeoutMs: 120000
+    category: test
+  test-fast:
+    run: ["uv", "run", "pytest", "--no-cov"]
+    description: Run pytest without coverage for fast local loops.
+    timeoutMs: 120000
+    category: test
+  test-cov:
+    run: ["uv", "run", "pytest", "--cov-report=html", "--cov-report=term-missing:skip-covered"]
+    description: Run pytest with terminal and HTML coverage reports.
+    timeoutMs: 120000
+    category: test
+  lint:
+    run: ["uv", "run", "ruff", "check", "."]
+    description: Run ruff lint checks.
+    timeoutMs: 120000
+    category: lint
+  lint-fix:
+    run: ["uv", "run", "ruff", "check", "--fix", "."]
+    description: Run ruff autofixes.
+    timeoutMs: 120000
+    category: lint
+  format:
+    run: ["uv", "run", "ruff", "format", "."]
+    description: Format the project with ruff.
+    timeoutMs: 120000
+    category: format
+  format-check:
+    run: ["uv", "run", "ruff", "format", "--check", "."]
+    description: Check formatting without modifying files.
+    timeoutMs: 120000
+    category: format
+  typecheck:
+    run: ["uv", "run", "mypy"]
+    description: Run mypy type checks.
+    timeoutMs: 120000
+    category: test
+  check:
+    run: ["uv", "run", "python", "scripts/project.py", "check"]
+    description: "Run the full quality gate: format-check, lint, typecheck, test."
+    timeoutMs: 240000
+    category: test
+  cli-config:
+    run: ["uv", "run", "gimp-mcp-pro", "config", "--json"]
+    description: Print resolved CLI configuration.
+    timeoutMs: 30000
+    category: custom
+  cli-doctor:
+    run: ["uv", "run", "gimp-mcp-pro", "doctor"]
+    description: Run CLI diagnostics without connecting to GIMP.
+    timeoutMs: 30000
+    category: custom
+  compat-list-tools:
+    run: ["uv", "run", "python", "scripts/compat.py", "list-tools", "--grouped"]
+    description: List source-derived MCP tool registry grouped by module.
+    timeoutMs: 30000
+    category: custom
+  compat-validate:
+    run: ["uv", "run", "python", "scripts/compat.py", "validate"]
+    description: Validate compat.yml against source-derived compatibility facts.
+    timeoutMs: 30000
+    category: test
+  compat-audit:
+    run: ["uv", "run", "python", "scripts/compat.py", "audit"]
+    description: Audit the GIMP 3.2.4 public compatibility claim gate.
+    timeoutMs: 30000
+    category: test
+  compat-template:
+    run: ["uv", "run", "python", "scripts/compat.py", "init-results", "--output", "compat.results.template.yml", "--force"]
+    description: Generate a non-claiming compat.results.yml template.
+    timeoutMs: 30000
+    category: custom
+  compat-live-smoke:
+    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--output", "compat.results.yml"]
+    description: Run partial live smoke checks against a running GIMP 3.2.4 plug-in instance.
+    timeoutMs: 120000
+    category: test

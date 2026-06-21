@@ -11,13 +11,15 @@ Key improvements over existing implementations:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import socket
 import struct
 import threading
 import time
-from typing import Any
+from contextlib import suppress
+from typing import Any, cast
 
 from gimp_mcp_pro.utils.errors import (
     GimpCommandError,
@@ -58,10 +60,16 @@ class GimpBridge:
         port: int = 9877,
         timeout: float = DEFAULT_TIMEOUT,
         use_length_prefix: bool = True,
+        long_timeout: float = LONG_TIMEOUT,
+        max_message_size: int = MAX_MESSAGE_SIZE,
+        reconnect_delays: list[float] | tuple[float, ...] | None = None,
     ):
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.long_timeout = long_timeout
+        self.max_message_size = max_message_size
+        self.reconnect_delays = list(reconnect_delays or RECONNECT_DELAYS)
         self.use_length_prefix = use_length_prefix
 
         self._sock: socket.socket | None = None
@@ -82,16 +90,12 @@ class GimpBridge:
         if self._connected and self._sock is not None:
             return
 
-        last_error: Exception | None = None
-        for delay in RECONNECT_DELAYS:
+        for delay in self.reconnect_delays:
             try:
                 self._do_connect()
                 return
             except Exception as e:
-                last_error = e
-                logger.warning(
-                    f"Connection attempt failed: {e}. Retrying in {delay}s..."
-                )
+                logger.warning(f"Connection attempt failed: {e}. Retrying in {delay}s...")
                 time.sleep(delay)
 
         # Final attempt
@@ -100,7 +104,7 @@ class GimpBridge:
         except Exception as e:
             raise GimpConnectionError(
                 f"Could not connect to GIMP at {self.host}:{self.port} "
-                f"after {len(RECONNECT_DELAYS) + 1} attempts. "
+                f"after {len(self.reconnect_delays) + 1} attempts. "
                 f"Ensure the GIMP MCP plugin is running. Last error: {e}"
             ) from e
 
@@ -117,10 +121,8 @@ class GimpBridge:
     def disconnect(self) -> None:
         """Close the connection."""
         if self._sock is not None:
-            try:
+            with suppress(Exception):
                 self._sock.close()
-            except Exception:
-                pass
             self._sock = None
         self._connected = False
 
@@ -178,7 +180,7 @@ class GimpBridge:
             try:
                 self._send(payload)
                 response = self._receive()
-            except socket.timeout as e:
+            except TimeoutError as e:
                 self.disconnect()
                 raise GimpTimeoutError(
                     f"Command '{command_type}' timed out after {effective_timeout}s",
@@ -229,6 +231,61 @@ class GimpBridge:
             timeout=timeout,
         )
 
+    # ------------------------------------------------------------------
+    # Async adapters
+    # ------------------------------------------------------------------
+
+    async def async_send_command(
+        self,
+        command_type: str,
+        params: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Async adapter for send_command.
+
+        This is the low-risk first migration step: it preserves the proven
+        synchronous socket implementation and moves the blocking call to a
+        worker thread so async MCP tools do not block the event loop.
+        """
+        return await asyncio.to_thread(self.send_command, command_type, params, timeout)
+
+    async def async_execute_python(
+        self,
+        code_lines: list[str],
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Async adapter for execute_python."""
+        return await asyncio.to_thread(self.execute_python, code_lines, timeout)
+
+    async def async_evaluate_python(
+        self,
+        expressions: list[str],
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Async adapter for evaluate_python."""
+        return await asyncio.to_thread(self.evaluate_python, expressions, timeout)
+
+    async def async_get_image_bitmap(
+        self,
+        max_width: int | None = None,
+        max_height: int | None = None,
+        region: dict[str, int] | None = None,
+    ) -> dict[str, Any]:
+        """Async adapter for get_image_bitmap."""
+        return await asyncio.to_thread(self.get_image_bitmap, max_width, max_height, region)
+
+    async def async_get_image_metadata(self) -> dict[str, Any]:
+        """Async adapter for get_image_metadata."""
+        return await asyncio.to_thread(self.get_image_metadata)
+
+    async def async_get_context_state(self) -> dict[str, Any]:
+        """Async adapter for get_context_state."""
+        return await asyncio.to_thread(self.get_context_state)
+
+    async def async_get_gimp_info(self) -> dict[str, Any]:
+        """Async adapter for get_gimp_info."""
+        return await asyncio.to_thread(self.get_gimp_info)
+
     def evaluate_python(
         self,
         expressions: list[str],
@@ -266,7 +323,7 @@ class GimpBridge:
         return self.send_command(
             "get_image_bitmap",
             params,
-            timeout=LONG_TIMEOUT,
+            timeout=self.long_timeout,
         )
 
     def get_image_metadata(self) -> dict[str, Any]:
@@ -314,14 +371,14 @@ class GimpBridge:
         header = self._recv_exact(HEADER_SIZE)
         length = struct.unpack(">I", header)[0]
 
-        if length > MAX_MESSAGE_SIZE:
+        if length > self.max_message_size:
             raise GimpConnectionError(
-                f"Message size {length} exceeds maximum {MAX_MESSAGE_SIZE}"
+                f"Message size {length} exceeds maximum {self.max_message_size}"
             )
 
         # Read payload
         data = self._recv_exact(length)
-        return json.loads(data.decode("utf-8"))
+        return cast(dict[str, Any], json.loads(data.decode("utf-8")))
 
     def _receive_json_boundary(self) -> dict[str, Any]:
         """Receive by detecting JSON boundaries (fallback mode).
@@ -337,7 +394,7 @@ class GimpBridge:
             if not chunk:
                 if buffer:
                     try:
-                        return json.loads(buffer.decode("utf-8"))
+                        return cast(dict[str, Any], json.loads(buffer.decode("utf-8")))
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         pass
                 raise GimpConnectionError("Connection closed by GIMP plugin")
@@ -346,7 +403,7 @@ class GimpBridge:
 
             # Try to parse as complete JSON
             try:
-                return json.loads(buffer.decode("utf-8"))
+                return cast(dict[str, Any], json.loads(buffer.decode("utf-8")))
             except (json.JSONDecodeError, UnicodeDecodeError):
                 continue  # Need more data
 
@@ -360,8 +417,7 @@ class GimpBridge:
             chunk = self._sock.recv(min(remaining, 65536))
             if not chunk:
                 raise GimpConnectionError(
-                    f"Connection closed while reading "
-                    f"(got {len(data)} of {n} bytes)"
+                    f"Connection closed while reading (got {len(data)} of {n} bytes)"
                 )
             data.extend(chunk)
         return bytes(data)

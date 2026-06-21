@@ -42,7 +42,9 @@ class ExportImageParams(BaseModel):
     """Parameters for exporting an image."""
 
     file_path: str = Field(
-        ..., min_length=1, description="Output file path (extension determines format if format not specified)"
+        ...,
+        min_length=1,
+        description="Output file path (extension determines format if format not specified)",
     )
     format: Optional[ExportFormat] = Field(
         None, description="Export format. Auto-detected from file_path extension if not set."

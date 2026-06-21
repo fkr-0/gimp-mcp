@@ -12,6 +12,12 @@ from gimp_mcp_pro.models.common import (
     Region,
     SelectionOp,
 )
+from gimp_mcp_pro.models.drawing import (
+    BrushStrokeParams,
+    DrawLineParams,
+    DrawShapeParams,
+    FillParams,
+)
 from gimp_mcp_pro.models.image import (
     CreateImageParams,
     ExportFormat,
@@ -27,12 +33,6 @@ from gimp_mcp_pro.models.selection import (
     SelectEllipseParams,
     SelectPolygonParams,
     SelectRectangleParams,
-)
-from gimp_mcp_pro.models.drawing import (
-    BrushStrokeParams,
-    DrawLineParams,
-    DrawShapeParams,
-    FillParams,
 )
 
 __all__ = [

@@ -94,7 +94,7 @@ def register_history_tools(mcp: Any, bridge: GimpBridge) -> None:
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            f"image.undo_group_start()",
+            "image.undo_group_start()",
         ]
         try:
             bridge.execute_python(code)

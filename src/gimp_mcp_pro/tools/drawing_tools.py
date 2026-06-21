@@ -6,9 +6,9 @@ import logging
 from typing import Any
 
 from gimp_mcp_pro.bridge import GimpBridge
-from gimp_mcp_pro.models.common import Color, FillType, OperationResult
+from gimp_mcp_pro.models.common import Color, FillType, OperationResult, py_literal
 from gimp_mcp_pro.utils.errors import GimpCommandError
-from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, SELECTION_OP_MAP
+from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP
 
 logger = logging.getLogger("gimp_mcp_pro.tools.drawing")
 
@@ -141,8 +141,10 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
 
     @mcp.tool()
     def draw_line(
-        x1: float, y1: float,
-        x2: float, y2: float,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
         color: str | None = None,
         brush_size: float = 2.0,
     ) -> dict[str, Any]:
@@ -227,8 +229,10 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
 
     @mcp.tool()
     def draw_rectangle(
-        x: float, y: float,
-        width: float, height: float,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
         filled: bool = True,
         color: str | None = None,
         line_width: float = 2.0,
@@ -280,8 +284,10 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
 
     @mcp.tool()
     def draw_ellipse(
-        x: float, y: float,
-        width: float, height: float,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
         filled: bool = True,
         color: str | None = None,
         line_width: float = 2.0,
@@ -413,13 +419,17 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             c = Color(value=color)
             code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
 
-        # Escape text for Python string
-        escaped_text = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        # Use Python literals for all user-controlled strings inside generated code.
+        text_expr = py_literal(text)
+        layer_name_expr = py_literal(layer_name)
 
         # Map common font names to GIMP 3.0 font names
         font_map = {
-            "sans": "Sans-serif", "sans-serif": "Sans-serif",
-            "serif": "Serif", "mono": "Monospace", "monospace": "Monospace",
+            "sans": "Sans-serif",
+            "sans-serif": "Sans-serif",
+            "serif": "Serif",
+            "mono": "Monospace",
+            "monospace": "Monospace",
         }
         resolved_font = font_map.get(font_name.lower(), font_name)
 
@@ -427,20 +437,22 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            f"font = Gimp.Font.get_by_name('{resolved_font}')",
+            f"font = Gimp.Font.get_by_name({py_literal(resolved_font)})",
             "if font is None: font = Gimp.context_get_font()",
             "unit = Gimp.Unit.pixel()",
-            f"text_layer = Gimp.TextLayer.new(image, '{escaped_text}', font, {font_size}, unit)",
+            f"text_layer = Gimp.TextLayer.new(image, {text_expr}, font, {font_size}, unit)",
             "image.insert_layer(text_layer, None, 0)",
             f"text_layer.set_offsets({int(x)}, {int(y)})",
-            f"text_layer.set_name('{layer_name}')",
+            f"text_layer.set_name({layer_name_expr})",
             "Gimp.displays_flush()",
         ]
         try:
             bridge.execute_python(code)
             return OperationResult.ok(
                 operation="add_text",
-                message=f"Text layer added: \"{text[:50]}...\"" if len(text) > 50 else f'Text layer added: "{text}"',
+                message=f'Text layer added: "{text[:50]}..."'
+                if len(text) > 50
+                else f'Text layer added: "{text}"',
                 data={"text": text, "x": x, "y": y, "font": font_name, "size": font_size},
             ).model_dump()
         except GimpCommandError as e:

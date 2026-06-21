@@ -14,23 +14,25 @@ issues:
       - gimp-3.2.4
       - compatibility
       - plugin
+      - contract
+    status: fanned-out
+    spec: compat.yml
     goal: >-
-      Confirm that the current GIMP MCP Pro server and bundled GIMP plugin work
-      against GIMP 3.2.4, including PyGObject APIs, PDB procedure names,
-      DrawableFilter behavior, enum mappings, install paths, and runtime menu
-      registration.
+      Verify and certify support for GIMP 3.2.4 through the dedicated
+      compatibility contract in compat.yml. The contract is now the normative
+      source for API/interface checks, smoke scenarios, evidence requirements,
+      result schema, README claim gate, and acceptance criteria.
     checklist:
-      - Record the exact GIMP 3.2.4 build, OS, Python/PyGObject versions, and plugin directory.
-      - Install the plugin in a clean GIMP 3.2.4 profile and confirm Tools -> Start MCP Pro Server appears.
-      - Start the plugin and confirm localhost TCP listener on the configured port.
-      - Run the existing unit suite through uv.
-      - Build a smoke-test script covering image creation, layer creation, selection, drawing, export, bitmap inspection, filters, transforms, and PDB search.
-      - Capture each failing tool with exact error, traceback, expected behavior, and suspected API migration cause.
-      - Update README compatibility statements from GIMP 3.0.8 to verified 3.2.4 status only after smoke tests pass.
+      - Maintain compat.yml as the detailed GIMP 3.2.4 verification contract.
+      - Run the static checks from compat.yml and record results in compat.results.yml.
+      - Run the required live clean-profile GIMP 3.2.4 smoke scenarios and record exact evidence.
+      - Reconcile runtime MCP tool count with README/tool-reference claims.
+      - Update README/setup compatibility statements only after the claim gate passes.
     acceptance:
-      - GIMP 3.2.4 compatibility matrix committed.
-      - All 67 advertised tools either pass smoke tests or have linked follow-up issues.
-      - README and setup instructions no longer claim unsupported current-release compatibility.
+      - compat.yml is committed and remains YAML-parseable.
+      - compat.results.yml contains at least one clean-profile GIMP 3.2.4 verification run.
+      - All required compat.yml checks pass or have explicit waivers with linked follow-up issues.
+      - README and setup instructions state only the actually verified compatibility status.
 
   - id: GIMP-MCP-002
     title: Add asynchronous bridge and tool execution path

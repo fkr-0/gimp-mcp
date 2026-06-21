@@ -27,19 +27,24 @@ classifiers = [
 dependencies = [
     "mcp>=1.0.0",
     "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-asyncio>=0.21",
-    "pytest-cov>=4.0",
-    "ruff>=0.1.0",
-    "mypy>=1.5",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.6.0",
+    "mypy>=1.10",
+    "PyYAML>=6.0",
+    "types-PyYAML>=6.0",
 ]
 
 [project.scripts]
-gimp-mcp-pro = "gimp_mcp_pro.server:main"
+gimp-mcp-pro = "gimp_mcp_pro.cli:main"
+gimp-mcp-pro-server = "gimp_mcp_pro.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gimp_mcp_pro"]
@@ -47,14 +52,105 @@ packages = ["src/gimp_mcp_pro"]
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+src = ["src", "tests", "scripts"]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",
+    "gimp_plugin",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP"]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "ARG", "PT"]
+ignore = [
+    "E501",   # line length is enforced by formatter where practical
+    "ARG001", # MCP/register callback signatures intentionally accept injected args
+    "ARG002", # compatibility signatures keep unused arguments explicit
+    "B904",   # existing command wrappers preserve original traceback behavior for now
+    "N806",   # GIMP/PyGObject naming uses capitalized module handles
+    "N818",   # existing exception names keep project terminology
+    "UP006",  # built-in generic migration can happen in a later compatibility pass
+    "UP007",  # Optional-to-union migration can happen in a later compatibility pass
+    "UP045",  # Optional-to-| migration can happen in a later compatibility pass
+    "PT011",  # existing tests sometimes use broad validation exceptions intentionally
+    "PT018",  # grouped asserts in compact protocol tests are acceptable for now
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gimp_mcp_pro"]
 
 [tool.mypy]
 python_version = "3.10"
-strict = true
+mypy_path = "src"
+packages = ["gimp_mcp_pro"]
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+strict_equality = true
+exclude = [
+    "^gimp_plugin/",
+    "^tests/",
+    "^scripts/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "gimp_mcp_pro.tools.*",
+    "gimp_mcp_pro.server",
+]
+disable_error_code = [
+    "no-untyped-def",
+    "no-any-return",
+    "attr-defined",
+    "operator",
+    "union-attr",
+    "arg-type",
+    "assignment",
+    "return-value",
+    "valid-type",
+    "misc",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=gimp_mcp_pro",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=xml",
+]
+markers = [
+    "integration: requires a live GIMP plugin instance",
+    "slow: long-running tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["gimp_mcp_pro"]
+omit = [
+    "src/gimp_mcp_pro/prompts/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 20
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

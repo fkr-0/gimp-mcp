@@ -10,11 +10,16 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge, LONG_TIMEOUT
+from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
 from gimp_mcp_pro.models.common import OperationResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.filter")
+
+
+def py_literal(value: str) -> str:
+    """Return a safe Python string literal for generated GIMP code."""
+    return repr(value)
 
 
 def _filter_preamble(layer_name: str | None, layer_index: int | None) -> list[str]:
@@ -26,9 +31,11 @@ def _filter_preamble(layer_name: str | None, layer_index: int | None) -> list[st
         "image = images[0]",
     ]
     if layer_name is not None:
+        layer_name_expr = py_literal(layer_name)
+        layer_error_expr = py_literal(f"Layer {layer_name!r} not found")
         code += [
-            f"drawable = image.get_layer_by_name('{layer_name}')",
-            f"if drawable is None: raise RuntimeError('Layer \\'{layer_name}\\' not found')",
+            f"drawable = image.get_layer_by_name({layer_name_expr})",
+            f"if drawable is None: raise RuntimeError({layer_error_expr})",
         ]
     elif layer_index is not None:
         code += [
@@ -58,14 +65,18 @@ def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
     for k, v in props.items():
         prop_lines.append(f"cfg.set_property('{k}', {v})")
 
-    return [
-        f"df = Gimp.DrawableFilter.new(drawable, '{gegl_op}', '')",
-        "cfg = df.get_config()",
-    ] + prop_lines + [
-        "drawable.append_filter(df)",
-        "drawable.merge_filter(df)",
-        "Gimp.displays_flush()",
-    ]
+    return (
+        [
+            f"df = Gimp.DrawableFilter.new(drawable, '{gegl_op}', '')",
+            "cfg = df.get_config()",
+        ]
+        + prop_lines
+        + [
+            "drawable.append_filter(df)",
+            "drawable.merge_filter(df)",
+            "Gimp.displays_flush()",
+        ]
+    )
 
 
 def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
@@ -93,10 +104,13 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             radius_y = radius_x
 
         code = _filter_preamble(layer_name, layer_index)
-        code += _apply_drawable_filter("gegl:gaussian-blur", {
-            "std-dev-x": str(radius_x),
-            "std-dev-y": str(radius_y),
-        })
+        code += _apply_drawable_filter(
+            "gegl:gaussian-blur",
+            {
+                "std-dev-x": str(radius_x),
+                "std-dev-y": str(radius_y),
+            },
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -128,11 +142,14 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_index: Target layer by index.
         """
         code = _filter_preamble(layer_name, layer_index)
-        code += _apply_drawable_filter("gegl:unsharp-mask", {
-            "scale": str(amount),
-            "std-dev": str(radius),
-            "threshold": str(threshold),
-        })
+        code += _apply_drawable_filter(
+            "gegl:unsharp-mask",
+            {
+                "scale": str(amount),
+                "std-dev": str(radius),
+                "threshold": str(threshold),
+            },
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -164,10 +181,13 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             block_height = block_width
 
         code = _filter_preamble(layer_name, layer_index)
-        code += _apply_drawable_filter("gegl:pixelize", {
-            "size-x": str(block_width),
-            "size-y": str(block_height),
-        })
+        code += _apply_drawable_filter(
+            "gegl:pixelize",
+            {
+                "size-x": str(block_width),
+                "size-y": str(block_height),
+            },
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -236,11 +256,14 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_index: Target layer by index.
         """
         code = _filter_preamble(layer_name, layer_index)
-        code += _apply_drawable_filter("gegl:emboss", {
-            "azimuth": str(azimuth),
-            "elevation": str(elevation),
-            "depth": str(depth),
-        })
+        code += _apply_drawable_filter(
+            "gegl:emboss",
+            {
+                "azimuth": str(azimuth),
+                "elevation": str(elevation),
+                "depth": str(depth),
+            },
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -266,10 +289,13 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_index: Target layer by index.
         """
         code = _filter_preamble(layer_name, layer_index)
-        code += _apply_drawable_filter("gegl:noise-hsv", {
-            "holdness": "2",
-            "value-distance": str(amount),
-        })
+        code += _apply_drawable_filter(
+            "gegl:noise-hsv",
+            {
+                "holdness": "2",
+                "value-distance": str(amount),
+            },
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -296,9 +322,12 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_index: Target layer by index.
         """
         code = _filter_preamble(layer_name, layer_index)
-        code += _apply_drawable_filter("gegl:median-blur", {
-            "radius": str(radius),
-        })
+        code += _apply_drawable_filter(
+            "gegl:median-blur",
+            {
+                "radius": str(radius),
+            },
+        )
         try:
             bridge.execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -333,7 +362,8 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_index: Target layer by index.
         """
         from gimp_mcp_pro.models.common import Color
-        c = Color(value=color)
+
+        Color(value=color)
 
         code = _filter_preamble(layer_name, layer_index) + [
             "pdb = Gimp.get_pdb()",

@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from gimp_mcp_pro.bridge import GimpBridge
-from gimp_mcp_pro.models.common import OperationResult
+from gimp_mcp_pro.models.common import OperationResult, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP
@@ -23,8 +23,8 @@ def _layer_lookup_code(layer_name: str | None, layer_index: int | None) -> list[
     ]
     if layer_name is not None:
         code += [
-            f"target = image.get_layer_by_name('{layer_name}')",
-            f"if target is None: raise RuntimeError('Layer \\'{layer_name}\\' not found')",
+            f"target = image.get_layer_by_name({py_literal(layer_name)})",
+            f"if target is None: raise RuntimeError({py_literal(f'Layer {layer_name!r} not found')})",
         ]
     elif layer_index is not None:
         code += [
@@ -77,9 +77,15 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             Operation result with layer info.
         """
         params = CreateLayerParams(
-            name=name, opacity=opacity, blend_mode=blend_mode,
-            fill=fill, has_alpha=has_alpha, position=position,
-            width=width, height=height,
+            name=name,
+            opacity=opacity,
+            blend_mode=blend_mode,
+            fill=fill,
+            has_alpha=has_alpha,
+            position=position,
+            width=width,
+            height=height,
+            image_id=None,
         )
         mode_expr = BLEND_MODE_MAP.get(params.blend_mode, "Gimp.LayerMode.NORMAL")
         fill_expr = FILL_TYPE_MAP.get(params.fill, "Gimp.FillType.TRANSPARENT")
@@ -92,7 +98,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open in GIMP')",
             "image = images[0]",
-            f"layer = Gimp.Layer.new(image, '{params.name}', {w}, {h}, "
+            f"layer = Gimp.Layer.new(image, {py_literal(params.name)}, {w}, {h}, "
             f"{img_type}, {params.opacity}, {mode_expr})",
             f"image.insert_layer(layer, None, {params.position})",
             f"Gimp.Drawable.edit_fill(layer, {fill_expr})",
@@ -103,8 +109,12 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.ok(
                 operation="create_layer",
                 message=f"Created layer '{params.name}'",
-                data={"name": params.name, "opacity": params.opacity,
-                      "blend_mode": params.blend_mode.value, "position": params.position},
+                data={
+                    "name": params.name,
+                    "opacity": params.opacity,
+                    "blend_mode": params.blend_mode.value,
+                    "position": params.position,
+                },
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="create_layer", error=str(e)).model_dump()
@@ -138,6 +148,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
         try:
             result = bridge.execute_python(code)
             import json as _json
+
             layers_data = []
             for out in result.get("results", []):
                 if out and out.strip():
@@ -216,8 +227,10 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(name)",
         ]
         try:
-            result = bridge.execute_python(code)
-            return OperationResult.ok(operation="delete_layer", message="Layer deleted").model_dump()
+            bridge.execute_python(code)
+            return OperationResult.ok(
+                operation="delete_layer", message="Layer deleted"
+            ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="delete_layer", error=str(e)).model_dump()
 
@@ -308,7 +321,9 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
         ]
         try:
             bridge.execute_python(code)
-            return OperationResult.ok(operation="duplicate_layer", message="Layer duplicated").model_dump()
+            return OperationResult.ok(
+                operation="duplicate_layer", message="Layer duplicated"
+            ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="duplicate_layer", error=str(e)).model_dump()
 
