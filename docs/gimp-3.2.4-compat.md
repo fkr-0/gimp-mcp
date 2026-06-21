@@ -126,7 +126,7 @@ covered:
   - length-prefixed request/response path
   - GIMP/PDB introspection probes
   - plug-in procedure presence probe
-  - 84 registered MCP tools
+  - 86 registered MCP tools
   - representative image/layer/selection/drawing/export/transform/color/filter/history/PDB/error scenarios
   - bitmap PNG extraction
   - static unit/lint/type/docs claim gate
@@ -137,7 +137,7 @@ remaining_manual_depth:
 
 ## Tool count reconciliation
 
-The source-derived registry currently contains 84 `@mcp.tool` entries. README must keep its advertised tool total aligned with the runtime registry before this branch publishes the compatibility story.
+The source-derived registry currently contains 86 `@mcp.tool` entries. README must keep its advertised tool total aligned with the runtime registry before this branch publishes the compatibility story.
 
 ```bash
 uv run python scripts/compat.py list-tools --grouped

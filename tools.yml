@@ -8,15 +8,15 @@ scope: implemented MCP tool inventory, async coverage, GIMP 3.2.4 compatibility 
 current_test_status:
   command: uv run pytest --cov=src/gimp_mcp_pro --cov-report=term-missing:skip-covered
   result: passed
-  passed: 353
+  passed: 369
   failed: 0
-  coverage_percent: 82.49
+  coverage_percent: 82.45
 coverage_baseline:
   direct_tool_unit_tests_percent: 82
   live_gimp_integration_tests_percent: 100
   async_tests_percent: 82
   gimp_3_2_4_tests_percent: 100
-  note: Coverage includes generated-code success paths for the unique 84-tool registered
+  note: Coverage includes generated-code success paths for the unique 86-tool registered
     MCP surface.
 gimp_3_2_4_context:
   release_date: 2026-04-19
@@ -42,7 +42,7 @@ common_findings:
 - The async-native bridge is covered by C-025-async-transport and dedicated unit tests
   for framing, concurrent commands, and stream cleanup.
 - Future tool candidates should stay in features.yml until implemented; compat.yml
-  remains the contract for the verified 84-tool runtime registry.
+  remains the contract for the verified 86-tool runtime registry.
 modules:
 - module: src/gimp_mcp_pro/tools/image_tools.py
   implemented_tools_count: 6
@@ -2353,7 +2353,7 @@ tools:
 future_tool_candidates:
   source: features.yml
   status: planning_not_runtime_contract
-  note: Future candidates are not counted in the implemented 84-tool runtime registry
+  note: Future candidates are not counted in the implemented 86-tool runtime registry
     until promoted with implementation and compat coverage.
   recently_added_ids:
   - FEAT-046

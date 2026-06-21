@@ -129,8 +129,8 @@ bridge.send_command(...)           # sync transport path
 ## Current status
 
 ```yaml
-mcp_tool_handlers: 84
-async_handlers: 84
+mcp_tool_handlers: 86
+async_handlers: 86
 sync_handlers: 0
 tool_return_annotation: ToolResult
 raw_transport_response_annotation: PluginResponse

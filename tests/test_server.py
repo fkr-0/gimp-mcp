@@ -49,6 +49,7 @@ def patch_tool_registrars(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "color_tools": "register_color_tools",
         "drawing_tools": "register_drawing_tools",
         "filter_tools": "register_filter_tools",
+        "gimp_dev_tools": "register_gimp_dev_tools",
         "history_tools": "register_history_tools",
         "image_tools": "register_image_tools",
         "inspect_tools": "register_inspect_tools",
@@ -62,8 +63,12 @@ def patch_tool_registrars(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         module = __import__(f"gimp_mcp_pro.tools.{module_name}", fromlist=[function_name])
 
         def register(
-            mcp: FakeFastMCP, bridge: FakeAsyncGimpBridge, *, name: str = function_name
+            mcp: FakeFastMCP,
+            bridge: FakeAsyncGimpBridge,
+            *args: object,
+            name: str = function_name,
         ) -> None:
+            del args
             calls.append(name)
             mcp.registered_tools.append(name)
             assert isinstance(bridge, FakeAsyncGimpBridge)
@@ -100,6 +105,7 @@ def test_create_server_wires_bridge_and_tool_registrars(monkeypatch: pytest.Monk
         "register_transform_tools",
         "register_filter_tools",
         "register_color_tools",
+        "register_gimp_dev_tools",
     ]
 
 

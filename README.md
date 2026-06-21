@@ -2,13 +2,13 @@
 
 **Production-grade Model Context Protocol server for GIMP 3.0+**
 
-> 84 typed tools • reliable communication • AI-friendly workflows
+> 86 typed tools • reliable communication • AI-friendly workflows
 
 GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structured, typed MCP tools — creating images, managing layers, drawing shapes, applying filters, adjusting colors, and more.
 
 ## Features
 
-- **84 typed MCP tools** across 12 tool modules — image management, layers, selections, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, and agent workflow helpers
+- **86 typed MCP tools** across 13 tool modules — image management, layers, selections, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, gimp.dev discovery, and agent workflow helpers
 - **Reliable communication** — length-prefixed socket framing (no more JSON boundary guessing)
 - **Persistent connections** — one TCP connection, kept alive, with automatic reconnection
 - **GIMP 3.2.4 verification in progress** — compatibility is gated by `compat.yml` and must not be claimed as verified until `compat.results.yml` contains a passing clean-profile live run
@@ -32,6 +32,8 @@ gimp_3_2_4:
 
 This branch keeps the public compatibility claim deliberately conservative. Static contract validation passes, but verified GIMP 3.2.4 support requires a clean-profile live run recorded in `compat.results.yml`. See `docs/gimp-3.2.4-compat.md` for the runbook.
 
+For practical agent prompts and step-by-step editing patterns, see `docs/agent-workflows.md`.
+
 ## Architecture
 
 ```
@@ -43,7 +45,7 @@ AI Assistant  ←→  MCP Server (gimp-mcp-pro)  ←→  GIMP Plugin
 
 Two processes: the MCP server runs outside GIMP and communicates with a plugin running inside GIMP's Python process via TCP with length-prefixed framing.
 
-The MCP server registers all 84 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
+The MCP server registers all 86 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
 
 ## Project tooling
 

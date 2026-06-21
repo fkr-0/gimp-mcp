@@ -17,6 +17,7 @@ from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
 from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
 from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
@@ -148,6 +149,40 @@ class RecordingAsyncBridge(AsyncNoopBridge):
         return await super().async_get_image_metadata()
 
 
+class FakeGimpDevAdapter:
+    """Small gimp.dev adapter fake used by registration/invocation tests."""
+
+    def status(self) -> dict[str, object]:
+        """Return deterministic fake status data."""
+        return {"enabled": True, "available": True, "root": "/fake/gimp.dev"}
+
+    def load_catalog(self, *, validate: bool = True) -> dict[str, object]:
+        """Return deterministic fake catalog data."""
+        return {
+            "plugins": [
+                {
+                    "name": "sprite-tools",
+                    "validation_errors": [],
+                    "procedures": [
+                        {
+                            "name": "python-fu-gimp-dev-sprite-sheet-plan",
+                            "handler": "run_sheet_plan",
+                            "commands": ["sprite.sheet.detect"],
+                            "arguments": [{"name": "columns"}],
+                        }
+                    ],
+                }
+            ],
+            "validation_errors": [],
+        }
+
+    def summarize_catalog(self, catalog: dict[str, object]):
+        """Summarize fake catalog with the real adapter logic."""
+        from gimp_mcp_pro.gimp_dev_integration import GimpDevAdapter
+
+        return GimpDevAdapter().summarize_catalog(catalog)
+
+
 def register_functions() -> list[RegisterFn]:
     return [
         register_agent_tools,
@@ -162,6 +197,7 @@ def register_functions() -> list[RegisterFn]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
+        lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
     ]
 
 
@@ -221,7 +257,7 @@ def test_all_mcp_tool_handlers_return_tool_result_alias() -> None:
 def test_all_registered_tools_are_coroutine_functions() -> None:
     tools = registered_tools()
 
-    assert len(tools) == 84
+    assert len(tools) == 86
     assert all(inspect.iscoroutinefunction(tool) for tool in tools.values())
 
 
@@ -367,7 +403,7 @@ async def test_async_native_bridge_can_drive_registered_tool_surface() -> None:
     assert info_result["success"] is True
     assert bitmap_result["success"] is True
     assert gimp_result["success"] is True
-    assert len(tools) == 84
+    assert len(tools) == 86
     assert ("get_gimp_info", None) in bridge.calls
     assert (
         "get_image_bitmap",

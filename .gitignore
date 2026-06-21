@@ -23,6 +23,7 @@ venv/
 # Build artifacts
 build/
 dist/
+docs-pdf/
 
 # Editor / OS
 .DS_Store

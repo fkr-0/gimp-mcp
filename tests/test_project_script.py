@@ -19,6 +19,7 @@ def test_project_script_lists_commands(capsys: pytest.CaptureFixture[str]) -> No
     assert "compat-validate" in captured.out
     assert "docs-generate" in captured.out
     assert "docs-build" in captured.out
+    assert "docs-pdf" in captured.out
 
 
 def test_project_script_exposes_quality_gate() -> None:
@@ -39,5 +40,6 @@ def test_project_script_exposes_docs_commands() -> None:
     assert "docs-generate" in project.COMMANDS
     assert "docs-audit" in project.COMMANDS
     assert "docs-build" in project.COMMANDS
+    assert "docs-pdf" in project.COMMANDS
     assert "--extra" in project.COMMANDS["docs-build"]
     assert "dev" in project.COMMANDS["docs-build"]

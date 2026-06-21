@@ -528,7 +528,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 84
+  expected_registry_total: 86
   registry:
     image:
       - create_image
@@ -584,6 +584,9 @@ mcp_tool_contract:
     pdb:
       - search_pdb
       - execute_python
+    gimp_dev:
+      - gimp_dev_status
+      - gimp_dev_plugin_catalog
     target:
       - resolve_target
       - validate_targets

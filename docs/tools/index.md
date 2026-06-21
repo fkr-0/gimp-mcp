@@ -5,7 +5,7 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **84**
+Total tools: **86**
 
 | Category | Tools | Page |
 |---|---:|---|
@@ -13,6 +13,7 @@ Total tools: **84**
 | Color Adjustments | 13 | [color_tools](color_tools.md) |
 | Drawing and Text | 10 | [drawing_tools](drawing_tools.md) |
 | Filters and Effects | 8 | [filter_tools](filter_tools.md) |
+| gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
 | History | 4 | [history_tools](history_tools.md) |
 | Image Management | 6 | [image_tools](image_tools.md) |
 | Inspection | 8 | [inspect_tools](inspect_tools.md) |
@@ -69,6 +70,11 @@ Total tools: **84**
 - [`apply_noise`](filter_tools.md#apply-noise) — Add random noise to a layer.
 - [`apply_median`](filter_tools.md#apply-median) — Apply median filter (denoise) to a layer.
 - [`apply_drop_shadow`](filter_tools.md#apply-drop-shadow) — Apply a drop shadow effect to a layer.
+
+### gimp.dev Integration
+
+- [`gimp_dev_status`](gimp_dev_tools.md#gimp-dev-status) — Return local ``gimp.dev`` integration availability.
+- [`gimp_dev_plugin_catalog`](gimp_dev_tools.md#gimp-dev-plugin-catalog) — Return the pure ``gimp.dev`` plug-in procedure catalog.
 
 ### History
 

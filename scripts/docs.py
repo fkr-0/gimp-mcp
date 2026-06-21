@@ -31,6 +31,7 @@ MODULE_TITLES: dict[str, str] = {
     "target_tools": "Target Resolution",
     "drawing_tools": "Drawing and Text",
     "inspect_tools": "Inspection",
+    "gimp_dev_tools": "gimp.dev Integration",
     "history_tools": "History",
     "pdb_tools": "PDB and Escape Hatch",
     "transform_tools": "Transforms",

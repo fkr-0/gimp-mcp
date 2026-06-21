@@ -19,6 +19,7 @@ from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
 from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
 from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
@@ -192,6 +193,40 @@ class FailingBridge(ScriptedBridge):
         raise GimpCommandError("boom", command="get_gimp_info")
 
 
+class FakeGimpDevAdapter:
+    """Small gimp.dev adapter fake used by registration/invocation tests."""
+
+    def status(self) -> dict[str, object]:
+        """Return deterministic fake status data."""
+        return {"enabled": True, "available": True, "root": "/fake/gimp.dev"}
+
+    def load_catalog(self, *, validate: bool = True) -> dict[str, object]:
+        """Return deterministic fake catalog data."""
+        return {
+            "plugins": [
+                {
+                    "name": "sprite-tools",
+                    "validation_errors": [],
+                    "procedures": [
+                        {
+                            "name": "python-fu-gimp-dev-sprite-sheet-plan",
+                            "handler": "run_sheet_plan",
+                            "commands": ["sprite.sheet.detect"],
+                            "arguments": [{"name": "columns"}],
+                        }
+                    ],
+                }
+            ],
+            "validation_errors": [],
+        }
+
+    def summarize_catalog(self, catalog: dict[str, object]):
+        """Summarize fake catalog with the real adapter logic."""
+        from gimp_mcp_pro.gimp_dev_integration import GimpDevAdapter
+
+        return GimpDevAdapter().summarize_catalog(catalog)
+
+
 def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
     mcp = CaptureMCP()
     for register in [
@@ -207,6 +242,7 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
+        lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
     ]:
         register(mcp, bridge)
     return mcp.tools
@@ -227,6 +263,8 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "end_edit_transaction": {},
     "execute_python": {"code": ["x = 1", "print(x)"]},
     "export_image": {"file_path": "/tmp/gimp-mcp-test.png"},
+    "gimp_dev_status": {},
+    "gimp_dev_plugin_catalog": {"include_raw_catalog": True, "validate": False},
     "get_image_bitmap": {"max_width": 32, "max_height": 24},
     "offset_layer": {"offset_x": 4, "offset_y": 5},
     "observe_region": {"x": 0, "y": 0, "width": 16, "height": 16},
@@ -272,7 +310,8 @@ async def test_all_tools_have_fast_success_path(tool_name: str) -> None:
 
     assert result["success"] is True, f"{tool_name} returned {result!r}"
     assert inspect.iscoroutinefunction(tool)
-    assert bridge.calls, f"{tool_name} did not touch the async bridge"
+    if not tool_name.startswith("gimp_dev_"):
+        assert bridge.calls, f"{tool_name} did not touch the async bridge"
 
 
 @pytest.mark.asyncio

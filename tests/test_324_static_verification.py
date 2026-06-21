@@ -44,6 +44,6 @@ def test_plugin_get_gimp_info_reports_324_probe_fields() -> None:
 def test_compat_tool_extractor_counts_async_defs() -> None:
     names = compat.flatten_registry(compat.extract_source_tool_registry())
 
-    assert len(names) == 84
+    assert len(names) == 86
     assert "get_gimp_info" in names
     assert "get_image_bitmap" in names

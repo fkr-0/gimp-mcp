@@ -55,11 +55,13 @@ nav:
       - Docstring Style: docstring-style.md
       - Tool Docstring Audit: tool-docstring-audit.md
   - Tool Reference:
+      - Agent Workflows: agent-workflows.md
       - Overview: tools/index.md
       - Agent Tools: tools/agent_tools.md
       - Color Adjustments: tools/color_tools.md
       - Drawing and Text: tools/drawing_tools.md
       - Filters and Effects: tools/filter_tools.md
+      - gimp.dev Integration: tools/gimp_dev_tools.md
       - History: tools/history_tools.md
       - Image Management: tools/image_tools.md
       - Inspection: tools/inspect_tools.md
@@ -68,6 +70,9 @@ nav:
       - Selections: tools/selection_tools.md
       - Target Resolution: tools/target_tools.md
       - Transforms: tools/transform_tools.md
+  - Tutorials:
+      - Agent Prompt Cookbook: agent-workflows.md
+      - Agent Editing Workflows: tutorial-workflows.md
   - Architecture:
       - Async Tool Architecture: async-tool-architecture.md
       - Future Tool Roadmap: future-tools-roadmap.md
