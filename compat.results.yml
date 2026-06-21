@@ -1,9 +1,9 @@
 schema: gimp-mcp.compat.results.v1
 project: gimp-mcp
 contract: compat.yml
-run_id: live-smoke-1782070812
-run_started_at: '2026-06-21T19:39:33+00:00'
-run_finished_at: '2026-06-21T19:40:12+00:00'
+run_id: live-smoke-1782072487
+run_started_at: '2026-06-21T20:06:25+00:00'
+run_finished_at: '2026-06-21T20:08:07+00:00'
 tester: archlinux
 environment:
   os: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
@@ -16,33 +16,33 @@ environment:
   libgimp_api_version: '3.0'
   libgimp_library_version: 3.2.4
   gegl_version: 0.4.70
-  plugin_install_path: /tmp/gimp-mcp-live-gxubihvr/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+  plugin_install_path: /tmp/gimp-mcp-live-c1_9erid/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
   plugin_sha256: 1326baa1c97d71a2129fbf34a8b4aa739eee0a8337eef7714b73d6e60d4b7a96
-  mcp_server_revision: 7d0ead67fd940e2308934f1a0669e1b318a5f2cd
+  mcp_server_revision: 2e13467179c243409a795bcfc860d679680c7327
   mcp_server_command: uv run gimp-mcp-pro serve
   spawned_gimp: true
   xvfb: true
-  xdg_config_home: /tmp/gimp-mcp-live-gxubihvr/config
-  gimp3_directory: /tmp/gimp-mcp-live-gxubihvr/config/GIMP/3.0
-  mcp_port: 45221
+  xdg_config_home: /tmp/gimp-mcp-live-c1_9erid/config
+  gimp3_directory: /tmp/gimp-mcp-live-c1_9erid/config/GIMP/3.0
+  mcp_port: 59223
 checks:
 - id: C-000-spawn-gimp
   status: pass
   evidence:
-    pid: 146371
+    pid: 431590
     gimp: gimp-3.2
     xvfb: true
-    plugin_path: /tmp/gimp-mcp-live-gxubihvr/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-    xdg_config_home: /tmp/gimp-mcp-live-gxubihvr/config
-    gimp3_directory: /tmp/gimp-mcp-live-gxubihvr/config/GIMP/3.0
-    mcp_port: 45221
+    plugin_path: /tmp/gimp-mcp-live-c1_9erid/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+    xdg_config_home: /tmp/gimp-mcp-live-c1_9erid/config
+    gimp3_directory: /tmp/gimp-mcp-live-c1_9erid/config/GIMP/3.0
+    mcp_port: 59223
 - id: C-005-autostart-server
   status: pass
   evidence:
     detail: connected
     startup_timeout: 45.0
     socket_host: localhost
-    socket_port: 45221
+    socket_port: 59223
 - id: C-020-transport
   status: pass
   evidence:
@@ -103,6 +103,107 @@ checks:
           reports_resources_loaded: true
     oversized_response_guard: Message size 433 exceeds maximum 1
     failures: []
+- id: C-025-async-transport
+  status: pass
+  evidence:
+    async_bridge_class: AsyncGimpBridge
+    first_round_trip:
+      status: success
+      results:
+        session:
+          num_open_images: 0
+        gimp:
+          version: 3.2.4
+          resources_loaded: available_requires_callback
+          api_family: 3.x
+        system:
+          platform: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+          python_version: 3.14.5
+        capabilities:
+          mcp_pro_server: true
+          length_prefix_framing: true
+          persistent_connections: true
+          reports_version: true
+          reports_resources_loaded: true
+    registered_tool_total: 75
+    tool_calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 96x64 rgb image
+        error: null
+        data:
+          width: 96
+          height: 64
+          color_mode: rgb
+          fill: white
+        timestamp: 1782072386.1107075
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'async-compat'
+        error: null
+        data:
+          name: async-compat
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782072386.154667
+    - tool: get_image_info
+      success: true
+      result:
+        success: true
+        operation: get_image_info
+        message: Image metadata retrieved
+        error: null
+        data:
+          basic:
+            width: 96
+            height: 64
+            base_type: RGB
+            resolution_x: null
+            resolution_y: null
+            is_dirty: true
+          structure:
+            num_layers: 2
+            layers:
+            - name: async-compat
+              visible: true
+              opacity: 100.0
+              width: 96
+              height: 64
+              has_alpha: true
+              blend_mode: '28'
+            - name: Background
+              visible: true
+              opacity: 100.0
+              width: 96
+              height: 64
+              has_alpha: false
+              blend_mode: '28'
+          file: {}
+        timestamp: 1782072386.289012
+    - tool: get_image_bitmap
+      success: true
+      result:
+        success: true
+        operation: get_image_bitmap
+        message: 'Image captured: 64x42 pixels'
+        error: null
+        data:
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAEAAAAAqCAYAAAADBl3iAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGFRQGGiOblRkAAABKSURBVGje7dABAQAABAMw9O98PdgirJOkHpt6ToAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBBw1wIUsQRQEPv6bgAAAABJRU5ErkJggg==
+          format: png
+          width: 64
+          height: 42
+          original_width: 96
+          original_height: 64
+          encoding: base64
+        timestamp: 1782072386.596295
+    failed_tools: []
 - id: C-001-env-introspection
   status: pass
   evidence:
@@ -127,8 +228,8 @@ checks:
     data:
       procedure_exists: true
       lookup_non_null: true
-      procedure_repr: <__gi__.GimpPDBProcedure object at 0x7f44145ac340 (GimpPDBProcedure
-        at 0x7f4408011af0)>
+      procedure_repr: <__gi__.GimpPDBProcedure object at 0x7fa167bc80c0 (GimpPDBProcedure
+        at 0x7fa15c007ac0)>
       menu_path_static: <Image>/Tools/
       menu_label_static: Start MCP Pro Server
       activation_model: spawned GIMP invokes persistent procedure through python-fu-eval;
@@ -149,13 +250,13 @@ checks:
           height: 240
           color_mode: rgb
           fill: white
-        timestamp: 1782070773.7750454
+        timestamp: 1782072386.6064448
     - tool: list_images
       success: true
       result:
         success: true
         operation: list_images
-        message: Found 1 open image(s)
+        message: Found 2 open image(s)
         error: null
         data:
           images:
@@ -164,8 +265,13 @@ checks:
             base_type: '0'
             num_layers: 1
             is_dirty: true
-          count: 1
-        timestamp: 1782070773.8189278
+          - width: 96
+            height: 64
+            base_type: '0'
+            num_layers: 2
+            is_dirty: true
+          count: 2
+        timestamp: 1782072386.6071887
     - tool: get_image_info
       success: true
       result:
@@ -192,7 +298,7 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782070773.8196754
+        timestamp: 1782072386.6076117
     - tool: create_layer
       success: true
       result:
@@ -205,7 +311,7 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782070773.8227732
+        timestamp: 1782072386.6102164
     - tool: duplicate_image
       success: true
       result:
@@ -214,7 +320,7 @@ checks:
         message: Image duplicated
         error: null
         data: null
-        timestamp: 1782070773.9746928
+        timestamp: 1782072386.626267
     - tool: flatten_image
       success: true
       result:
@@ -223,7 +329,7 @@ checks:
         message: All layers flattened into one
         error: null
         data: null
-        timestamp: 1782070774.0348148
+        timestamp: 1782072386.688848
     - tool: get_image_info
       success: true
       result:
@@ -250,7 +356,7 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782070774.036324
+        timestamp: 1782072386.689364
     failed_tools: []
     registry:
       expected_total: 75
@@ -347,7 +453,7 @@ checks:
           height: 180
           color_mode: rgb
           fill: white
-        timestamp: 1782070774.061675
+        timestamp: 1782072386.7026403
     - tool: create_layer
       success: true
       result:
@@ -360,7 +466,7 @@ checks:
           opacity: 80.0
           blend_mode: normal
           position: 0
-        timestamp: 1782070774.0681686
+        timestamp: 1782072386.7059808
     - tool: list_layers
       success: true
       result:
@@ -387,7 +493,7 @@ checks:
             has_alpha: false
             blend_mode: '28'
           count: 2
-        timestamp: 1782070774.0735142
+        timestamp: 1782072386.707983
     - tool: set_active_layer
       success: true
       result:
@@ -397,7 +503,7 @@ checks:
         error: null
         data:
           layer_name: layer-contract
-        timestamp: 1782070774.075042
+        timestamp: 1782072386.7087917
     - tool: set_layer_opacity
       success: true
       result:
@@ -407,7 +513,7 @@ checks:
         error: null
         data:
           opacity: 55.0
-        timestamp: 1782070774.077727
+        timestamp: 1782072386.7100601
     - tool: set_layer_visibility
       success: true
       result:
@@ -417,7 +523,7 @@ checks:
         error: null
         data:
           visible: false
-        timestamp: 1782070774.08002
+        timestamp: 1782072386.7107177
     - tool: set_layer_visibility
       success: true
       result:
@@ -427,7 +533,7 @@ checks:
         error: null
         data:
           visible: true
-        timestamp: 1782070774.081348
+        timestamp: 1782072386.7119882
     - tool: duplicate_layer
       success: true
       result:
@@ -436,7 +542,7 @@ checks:
         message: Layer duplicated
         error: null
         data: null
-        timestamp: 1782070774.0887287
+        timestamp: 1782072386.7162962
     - tool: add_alpha_channel
       success: true
       result:
@@ -445,7 +551,7 @@ checks:
         message: Alpha channel added
         error: null
         data: null
-        timestamp: 1782070774.0904117
+        timestamp: 1782072386.7171164
     - tool: create_layer
       success: true
       result:
@@ -458,7 +564,7 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782070774.0950599
+        timestamp: 1782072386.7205985
     - tool: delete_layer
       success: true
       result:
@@ -467,7 +573,7 @@ checks:
         message: Layer deleted
         error: null
         data: null
-        timestamp: 1782070774.098467
+        timestamp: 1782072386.7221715
     - tool: merge_visible_layers
       success: true
       result:
@@ -476,7 +582,7 @@ checks:
         message: Visible layers merged
         error: null
         data: null
-        timestamp: 1782070774.127486
+        timestamp: 1782072386.741992
     - tool: list_layers
       success: true
       result:
@@ -495,7 +601,7 @@ checks:
             has_alpha: true
             blend_mode: '28'
           count: 1
-        timestamp: 1782070774.1286445
+        timestamp: 1782072386.7426758
     failed_tools: []
 - id: C-050-selection-drawing-contract
   status: pass
@@ -513,7 +619,7 @@ checks:
           height: 180
           color_mode: rgb
           fill: white
-        timestamp: 1782070774.1423197
+        timestamp: 1782072386.7530873
     - tool: create_layer
       success: true
       result:
@@ -526,7 +632,7 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782070774.1482942
+        timestamp: 1782072386.756336
     - tool: set_active_layer
       success: true
       result:
@@ -536,7 +642,7 @@ checks:
         error: null
         data:
           layer_name: draw-contract
-        timestamp: 1782070774.152969
+        timestamp: 1782072386.7593913
     - tool: set_foreground_color
       success: true
       result:
@@ -546,7 +652,7 @@ checks:
         error: null
         data:
           color: red
-        timestamp: 1782070774.154576
+        timestamp: 1782072386.7602808
     - tool: set_background_color
       success: true
       result:
@@ -556,7 +662,7 @@ checks:
         error: null
         data:
           color: blue
-        timestamp: 1782070774.1555252
+        timestamp: 1782072386.760791
     - tool: select_rectangle
       success: true
       result:
@@ -565,7 +671,7 @@ checks:
         message: Selected rectangle (10,10) 40x30
         error: null
         data: null
-        timestamp: 1782070774.181747
+        timestamp: 1782072386.7761037
     - tool: fill_selection
       success: true
       result:
@@ -574,7 +680,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782070774.1884305
+        timestamp: 1782072386.7832282
     - tool: select_ellipse
       success: true
       result:
@@ -583,7 +689,7 @@ checks:
         message: Selected ellipse at (60,10) 40x30
         error: null
         data: null
-        timestamp: 1782070774.1917162
+        timestamp: 1782072386.7851243
     - tool: fill_selection
       success: true
       result:
@@ -592,7 +698,7 @@ checks:
         message: Filled with background
         error: null
         data: null
-        timestamp: 1782070774.1943407
+        timestamp: 1782072386.786674
     - tool: select_polygon
       success: true
       result:
@@ -601,7 +707,7 @@ checks:
         message: Selected polygon with 3 vertices
         error: null
         data: null
-        timestamp: 1782070774.19581
+        timestamp: 1782072386.789032
     - tool: fill_selection
       success: true
       result:
@@ -610,7 +716,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782070774.1974237
+        timestamp: 1782072386.7904396
     - tool: select_all
       success: true
       result:
@@ -619,7 +725,7 @@ checks:
         message: Selected all
         error: null
         data: null
-        timestamp: 1782070774.2170148
+        timestamp: 1782072386.808655
     - tool: select_invert
       success: true
       result:
@@ -628,7 +734,7 @@ checks:
         message: Selection inverted
         error: null
         data: null
-        timestamp: 1782070774.2179906
+        timestamp: 1782072386.8097239
     - tool: select_none
       success: true
       result:
@@ -637,7 +743,7 @@ checks:
         message: Selection cleared
         error: null
         data: null
-        timestamp: 1782070774.2187552
+        timestamp: 1782072386.810152
     - tool: select_rectangle
       success: true
       result:
@@ -646,7 +752,7 @@ checks:
         message: Selected rectangle (20,70) 60x40
         error: null
         data: null
-        timestamp: 1782070774.2196066
+        timestamp: 1782072386.8106244
     - tool: select_grow
       success: true
       result:
@@ -655,7 +761,7 @@ checks:
         message: Selection grown by 2px
         error: null
         data: null
-        timestamp: 1782070774.2205126
+        timestamp: 1782072386.811181
     - tool: select_shrink
       success: true
       result:
@@ -664,7 +770,7 @@ checks:
         message: Selection shrunk by 1px
         error: null
         data: null
-        timestamp: 1782070774.2220702
+        timestamp: 1782072386.8122358
     - tool: fill_selection
       success: true
       result:
@@ -673,7 +779,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782070774.2240953
+        timestamp: 1782072386.8140442
     - tool: draw_line
       success: true
       result:
@@ -682,7 +788,7 @@ checks:
         message: Drew line from (5,5) to (120,80)
         error: null
         data: null
-        timestamp: 1782070774.2272468
+        timestamp: 1782072386.8186147
     - tool: draw_brush_stroke
       success: true
       result:
@@ -691,7 +797,7 @@ checks:
         message: Drew pencil stroke with 3 points
         error: null
         data: null
-        timestamp: 1782070774.2309368
+        timestamp: 1782072386.8246198
     - tool: draw_rectangle
       success: true
       result:
@@ -700,7 +806,7 @@ checks:
         message: Drew filled rectangle at (130,70) size 40x30
         error: null
         data: null
-        timestamp: 1782070774.2333045
+        timestamp: 1782072386.830604
     - tool: draw_ellipse
       success: true
       result:
@@ -709,7 +815,7 @@ checks:
         message: Drew filled ellipse at (180,70) size 40x30
         error: null
         data: null
-        timestamp: 1782070774.2365174
+        timestamp: 1782072386.8343306
     - tool: draw_polygon
       success: true
       result:
@@ -718,7 +824,7 @@ checks:
         message: Drew filled polygon with 3 vertices
         error: null
         data: null
-        timestamp: 1782070774.2390318
+        timestamp: 1782072386.8422203
     - tool: add_text
       success: true
       result:
@@ -732,7 +838,7 @@ checks:
           y: 140
           font: Sans
           size: 18
-        timestamp: 1782070774.2987354
+        timestamp: 1782072386.9049666
     - tool: select_all
       success: true
       result:
@@ -741,7 +847,7 @@ checks:
         message: Selected all
         error: null
         data: null
-        timestamp: 1782070774.2992043
+        timestamp: 1782072386.905729
     - tool: edit_clear
       success: true
       result:
@@ -750,7 +856,7 @@ checks:
         message: Selection cleared
         error: null
         data: null
-        timestamp: 1782070774.3401906
+        timestamp: 1782072386.9519987
     - tool: select_none
       success: true
       result:
@@ -759,7 +865,7 @@ checks:
         message: Selection cleared
         error: null
         data: null
-        timestamp: 1782070774.3409073
+        timestamp: 1782072386.9532874
     failed_tools: []
 - id: C-060-export-bitmap-contract
   status: pass
@@ -777,7 +883,7 @@ checks:
           height: 90
           color_mode: rgb
           fill: white
-        timestamp: 1782070774.357798
+        timestamp: 1782072386.9686978
     - tool: draw_rectangle
       success: true
       result:
@@ -786,7 +892,7 @@ checks:
         message: Drew filled rectangle at (10,10) size 40x30
         error: null
         data: null
-        timestamp: 1782070774.364741
+        timestamp: 1782072386.978795
     - tool: get_image_bitmap
       success: true
       result:
@@ -795,14 +901,14 @@ checks:
         message: 'Image captured: 80x60 pixels'
         error: null
         data:
-          image_data: iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGFRMnIoJJLuEAAACRSURBVGje7dmxDYQwEEXBD7oAd0AI7dIkqUsgwjRA6JO4Y17oZDWWI+/QWsubGvOygIGBf7vPzdlxpNaeQ+Y50/RgcK1Z155D9j3L4kkDAwMDAwMDAwMDAwMDAwMDf6m7L55Ssm0ZO93FeaaU54AHqxZgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg4H/sAusWEb/SUzduAAAAAElFTkSuQmCC
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGFRQGG1ScpY8AAACRSURBVGje7dmxDYQwEEXBD7oAd0AI7dIkqUsgwjRA6JO4Y17oZDWWI+/QWsubGvOygIGBf7vPzdlxpNaeQ+Y50/RgcK1Z155D9j3L4kkDAwMDAwMDAwMDAwMDAwMDf6m7L55Ssm0ZO93FeaaU54AHqxZgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg4H/sAusWEb/SUzduAAAAAElFTkSuQmCC
           format: png
           width: 80
           height: 60
           original_width: 120
           original_height: 90
           encoding: base64
-        timestamp: 1782070774.5694654
+        timestamp: 1782072387.1690888
     - tool: get_image_bitmap
       success: true
       result:
@@ -811,14 +917,14 @@ checks:
         message: 'Image captured: 30x30 pixels'
         error: null
         data:
-          image_data: iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAAAAAAD/1EFU8gAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGFRMnIoJJLuEAAAA1SURBVEjH7dCxDQAgDAPBBLH/ymYBaiKk+9LNSe4kqYFWDQV+1r6u3a4Gg8FgMBgMBoM/gA9fYQQ8UjP91QAAAABJRU5ErkJggg==
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAAAAAAD/1EFU8gAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGFRQGG1ScpY8AAAA1SURBVEjH7dCxDQAgDAPBBLH/ymYBaiKk+9LNSe4kqYFWDQV+1r6u3a4Gg8FgMBgMBoM/gA9fYQQ8UjP91QAAAABJRU5ErkJggg==
           format: png
           width: 30
           height: 30
           original_width: 120
           original_height: 90
           encoding: base64
-        timestamp: 1782070774.8402214
+        timestamp: 1782072387.4295473
     - tool: export_image
       success: true
       result:
@@ -829,7 +935,7 @@ checks:
         data:
           file_path: /tmp/gimp-mcp-compat.png
           format: png
-        timestamp: 1782070775.0273416
+        timestamp: 1782072387.6012874
     - tool: export_image
       success: true
       result:
@@ -840,7 +946,7 @@ checks:
         data:
           file_path: /tmp/gimp-mcp-compat.jpg
           format: jpeg
-        timestamp: 1782070775.2271836
+        timestamp: 1782072387.8255582
     failed_tools: []
 - id: C-070-transform-contract
   status: pass
@@ -858,7 +964,7 @@ checks:
           height: 140
           color_mode: rgb
           fill: white
-        timestamp: 1782070775.2423131
+        timestamp: 1782072387.8424313
     - tool: create_layer
       success: true
       result:
@@ -871,7 +977,7 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782070775.2473967
+        timestamp: 1782072387.846885
     - tool: set_active_layer
       success: true
       result:
@@ -881,7 +987,7 @@ checks:
         error: null
         data:
           layer_name: transform-layer
-        timestamp: 1782070775.2522283
+        timestamp: 1782072387.8520236
     - tool: scale_layer
       success: true
       result:
@@ -892,7 +998,7 @@ checks:
         data:
           width: 120
           height: 80
-        timestamp: 1782070775.3312337
+        timestamp: 1782072387.859926
     - tool: offset_layer
       success: true
       result:
@@ -903,7 +1009,7 @@ checks:
         data:
           offset_x: 5
           offset_y: 7
-        timestamp: 1782070775.332328
+        timestamp: 1782072387.8638906
     - tool: rotate_layer
       success: true
       result:
@@ -913,7 +1019,7 @@ checks:
         error: null
         data:
           angle_degrees: 10.0
-        timestamp: 1782070775.3370492
+        timestamp: 1782072387.8741825
     - tool: flip_layer
       success: true
       result:
@@ -923,7 +1029,7 @@ checks:
         error: null
         data:
           direction: horizontal
-        timestamp: 1782070775.337991
+        timestamp: 1782072387.8785686
     - tool: scale_image
       success: true
       result:
@@ -934,7 +1040,7 @@ checks:
         data:
           width: 160
           height: 120
-        timestamp: 1782070775.3436441
+        timestamp: 1782072387.8886983
     - tool: rotate_image
       success: true
       result:
@@ -944,7 +1050,7 @@ checks:
         error: null
         data:
           angle: 90
-        timestamp: 1782070775.35584
+        timestamp: 1782072387.904646
     - tool: flip_image
       success: true
       result:
@@ -954,7 +1060,7 @@ checks:
         error: null
         data:
           direction: vertical
-        timestamp: 1782070775.359313
+        timestamp: 1782072387.908637
     - tool: resize_canvas
       success: true
       result:
@@ -967,7 +1073,7 @@ checks:
           height: 170
           offset_x: 10
           offset_y: 10
-        timestamp: 1782070775.3612273
+        timestamp: 1782072387.9114866
     - tool: select_rectangle
       success: true
       result:
@@ -976,7 +1082,7 @@ checks:
         message: Selected rectangle (20,20) 80x60
         error: null
         data: null
-        timestamp: 1782070775.3626218
+        timestamp: 1782072387.9128346
     - tool: crop_to_selection
       success: true
       result:
@@ -985,7 +1091,7 @@ checks:
         message: Image cropped to selection
         error: null
         data: null
-        timestamp: 1782070775.365026
+        timestamp: 1782072387.9156473
     - tool: crop_image
       success: true
       result:
@@ -998,7 +1104,7 @@ checks:
           y: 0
           width: 50
           height: 40
-        timestamp: 1782070775.3672268
+        timestamp: 1782072387.917918
     - tool: autocrop_image
       success: true
       result:
@@ -1007,7 +1113,7 @@ checks:
         message: Image auto-cropped
         error: null
         data: null
-        timestamp: 1782070775.3692453
+        timestamp: 1782072387.9206817
     - tool: get_image_info
       success: true
       result:
@@ -1041,7 +1147,7 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782070775.3711238
+        timestamp: 1782072387.922694
     failed_tools: []
 - id: C-080-color-contract
   status: pass
@@ -1059,7 +1165,7 @@ checks:
           height: 90
           color_mode: rgb
           fill: white
-        timestamp: 1782070775.3905768
+        timestamp: 1782072387.944015
     - tool: draw_rectangle
       success: true
       result:
@@ -1068,7 +1174,7 @@ checks:
         message: Drew filled rectangle at (0,0) size 120x90
         error: null
         data: null
-        timestamp: 1782070775.4004214
+        timestamp: 1782072387.9534209
     - tool: set_foreground_color
       success: true
       result:
@@ -1078,7 +1184,7 @@ checks:
         error: null
         data:
           color: green
-        timestamp: 1782070775.4019651
+        timestamp: 1782072387.9542558
     - tool: set_background_color
       success: true
       result:
@@ -1088,7 +1194,7 @@ checks:
         error: null
         data:
           color: blue
-        timestamp: 1782070775.403194
+        timestamp: 1782072387.9549549
     - tool: get_colors
       success: true
       result:
@@ -1107,7 +1213,7 @@ checks:
             g: 0.0
             b: 1.0
             a: 1.0
-        timestamp: 1782070775.4225373
+        timestamp: 1782072387.9652243
     - tool: swap_colors
       success: true
       result:
@@ -1116,7 +1222,7 @@ checks:
         message: Foreground and background colors swapped
         error: null
         data: null
-        timestamp: 1782070775.4236782
+        timestamp: 1782072387.9658625
     - tool: sample_color
       success: true
       result:
@@ -1129,7 +1235,7 @@ checks:
           g: 0.0
           b: 0.0
           a: 1.0
-        timestamp: 1782070775.4819577
+        timestamp: 1782072388.0277097
     - tool: adjust_brightness_contrast
       success: true
       result:
@@ -1140,7 +1246,7 @@ checks:
         data:
           brightness: 5
           contrast: 5
-        timestamp: 1782070775.486976
+        timestamp: 1782072388.030624
     - tool: adjust_hue_saturation
       success: true
       result:
@@ -1152,7 +1258,7 @@ checks:
           hue: 5.0
           saturation: 5.0
           lightness: 0.0
-        timestamp: 1782070775.5411124
+        timestamp: 1782072388.0802512
     - tool: adjust_levels
       success: true
       result:
@@ -1167,7 +1273,7 @@ checks:
           gamma: 1.0
           output_low: 0
           output_high: 255
-        timestamp: 1782070775.5437613
+        timestamp: 1782072388.0852542
     - tool: adjust_curves
       success: true
       result:
@@ -1178,7 +1284,7 @@ checks:
         data:
           channel: value
           num_points: 3
-        timestamp: 1782070775.5783243
+        timestamp: 1782072388.1297424
     - tool: desaturate
       success: true
       result:
@@ -1188,7 +1294,7 @@ checks:
         error: null
         data:
           method: luminosity
-        timestamp: 1782070775.6545475
+        timestamp: 1782072388.201552
     - tool: invert_colors
       success: true
       result:
@@ -1197,7 +1303,7 @@ checks:
         message: Colors inverted
         error: null
         data: null
-        timestamp: 1782070775.657827
+        timestamp: 1782072388.204582
     - tool: apply_threshold
       success: true
       result:
@@ -1208,7 +1314,7 @@ checks:
         data:
           low: 64
           high: 255
-        timestamp: 1782070775.6604853
+        timestamp: 1782072388.2070444
     - tool: posterize
       success: true
       result:
@@ -1218,7 +1324,7 @@ checks:
         error: null
         data:
           levels: 4
-        timestamp: 1782070775.6637852
+        timestamp: 1782072388.2096853
     - tool: color_to_alpha
       success: true
       result:
@@ -1228,7 +1334,7 @@ checks:
         error: null
         data:
           color: white
-        timestamp: 1782070775.6695817
+        timestamp: 1782072388.21419
     - tool: auto_white_balance
       success: true
       result:
@@ -1237,7 +1343,7 @@ checks:
         message: Auto white balance applied
         error: null
         data: null
-        timestamp: 1782070775.6726267
+        timestamp: 1782072388.2161977
     failed_tools: []
 - id: C-090-filter-contract
   status: pass
@@ -1255,7 +1361,7 @@ checks:
           height: 100
           color_mode: rgb
           fill: white
-        timestamp: 1782070775.6807964
+        timestamp: 1782072388.2274923
     - tool: draw_rectangle
       success: true
       result:
@@ -1264,7 +1370,7 @@ checks:
         message: Drew filled rectangle at (10,10) size 80x60
         error: null
         data: null
-        timestamp: 1782070775.6838865
+        timestamp: 1782072388.231465
     - tool: apply_gaussian_blur
       success: true
       result:
@@ -1275,7 +1381,7 @@ checks:
         data:
           radius_x: 1.0
           radius_y: 1.0
-        timestamp: 1782070775.7446914
+        timestamp: 1782072388.2901103
     - tool: apply_unsharp_mask
       success: true
       result:
@@ -1287,7 +1393,7 @@ checks:
           amount: 0.2
           radius: 1.0
           threshold: 0.0
-        timestamp: 1782070775.7541356
+        timestamp: 1782072388.298716
     - tool: apply_pixelize
       success: true
       result:
@@ -1298,7 +1404,7 @@ checks:
         data:
           block_width: 4
           block_height: 4
-        timestamp: 1782070775.7690947
+        timestamp: 1782072388.3168378
     - tool: apply_edge_detect
       success: true
       result:
@@ -1309,7 +1415,7 @@ checks:
         data:
           method: sobel
           amount: 1.0
-        timestamp: 1782070775.8052495
+        timestamp: 1782072388.3602574
     - tool: apply_emboss
       success: true
       result:
@@ -1318,7 +1424,7 @@ checks:
         message: Emboss applied (azimuth=315.0°, depth=1)
         error: null
         data: null
-        timestamp: 1782070775.839758
+        timestamp: 1782072388.403411
     - tool: apply_noise
       success: true
       result:
@@ -1328,7 +1434,7 @@ checks:
         error: null
         data:
           amount: 0.05
-        timestamp: 1782070775.8496754
+        timestamp: 1782072388.4178813
     - tool: apply_median
       success: true
       result:
@@ -1338,7 +1444,7 @@ checks:
         error: null
         data:
           radius: 1
-        timestamp: 1782070775.859286
+        timestamp: 1782072388.4302816
     - tool: apply_drop_shadow
       success: false
       result:
@@ -1346,12 +1452,22 @@ checks:
         operation: apply_drop_shadow
         message: null
         error: Drop shadow procedure not found
-        data: null
-        timestamp: 1782070775.8609529
+        data:
+          error_code: optional_capability_unavailable
+          optional_capability: true
+          capability: Script-Fu drop shadow
+          procedure: script-fu-drop-shadow
+          recommendation: Install/enable Script-Fu drop shadow support or compose
+            the shadow with typed layer and blur tools.
+        timestamp: 1782072388.4321318
     failed_tools: []
     accepted_optional_failures:
     - tool: apply_drop_shadow
       reason: Drop shadow procedure not found
+      capability: Script-Fu drop shadow
+      procedure: script-fu-drop-shadow
+      recommendation: Install/enable Script-Fu drop shadow support or compose the
+        shadow with typed layer and blur tools.
     optional_capability_policy: known unavailable optional capabilities do not fail
       the transport smoke
 - id: C-100-pdb-contract
@@ -1377,7 +1493,7 @@ checks:
           data:
             query: png
             procedures: []
-          timestamp: 1782070775.8636217
+          timestamp: 1782072388.435779
       - tool: execute_python
         success: true
         result:
@@ -1392,7 +1508,7 @@ checks:
 
               '
             lines_executed: 2
-          timestamp: 1782070775.8639731
+          timestamp: 1782072388.4362886
       - tool: execute_python
         success: true
         result:
@@ -1406,7 +1522,7 @@ checks:
 
               '
             lines_executed: 1
-          timestamp: 1782070775.8642542
+          timestamp: 1782072388.4365976
       failed_tools: []
 - id: C-110-history-contract
   status: pass
@@ -1424,7 +1540,7 @@ checks:
           height: 90
           color_mode: rgb
           fill: white
-        timestamp: 1782070775.8766456
+        timestamp: 1782072388.4520392
     - tool: begin_undo_group
       success: true
       result:
@@ -1434,7 +1550,7 @@ checks:
         error: null
         data:
           name: compat-history
-        timestamp: 1782070775.8773866
+        timestamp: 1782072388.45262
     - tool: draw_line
       success: true
       result:
@@ -1443,7 +1559,7 @@ checks:
         message: Drew line from (5,5) to (90,70)
         error: null
         data: null
-        timestamp: 1782070775.8817403
+        timestamp: 1782072388.4571908
     - tool: end_undo_group
       success: true
       result:
@@ -1452,7 +1568,7 @@ checks:
         message: Undo group ended
         error: null
         data: null
-        timestamp: 1782070775.8822587
+        timestamp: 1782072388.4578836
     - tool: undo
       success: false
       result:
@@ -1461,8 +1577,13 @@ checks:
         message: null
         error: Undo is not available via the GIMP 3.0 plugin API. Use Ctrl+Z in GIMP
           directly.
-        data: null
-        timestamp: 1782070775.8830278
+        data:
+          error_code: optional_capability_unavailable
+          optional_capability: true
+          capability: programmatic image undo
+          procedure: gimp-image-undo
+          recommendation: Use Ctrl+Z in GIMP directly or group changes with begin_undo_group/end_undo_group.
+        timestamp: 1782072388.4592457
     - tool: redo
       success: false
       result:
@@ -1471,16 +1592,29 @@ checks:
         message: null
         error: Redo is not available via the GIMP 3.0 plugin API. Use Ctrl+Y in GIMP
           directly.
-        data: null
-        timestamp: 1782070775.8837523
+        data:
+          error_code: optional_capability_unavailable
+          optional_capability: true
+          capability: programmatic image redo
+          procedure: gimp-image-redo
+          recommendation: Use Ctrl+Y in GIMP directly after verifying the active image
+            state.
+        timestamp: 1782072388.4604516
     failed_tools: []
     accepted_optional_failures:
     - tool: undo
       reason: Undo is not available via the GIMP 3.0 plugin API. Use Ctrl+Z in GIMP
         directly.
+      capability: programmatic image undo
+      procedure: gimp-image-undo
+      recommendation: Use Ctrl+Z in GIMP directly or group changes with begin_undo_group/end_undo_group.
     - tool: redo
       reason: Redo is not available via the GIMP 3.0 plugin API. Use Ctrl+Y in GIMP
         directly.
+      capability: programmatic image redo
+      procedure: gimp-image-redo
+      recommendation: Use Ctrl+Y in GIMP directly after verifying the active image
+        state.
     optional_capability_policy: known unavailable optional capabilities do not fail
       the transport smoke
 - id: C-120-error-contract
@@ -1496,7 +1630,7 @@ checks:
         message: null
         error: Layer 'does-not-exist' not found
         data: null
-        timestamp: 1782070775.8861823
+        timestamp: 1782072388.4641685
     - tool: rotate_image
       success: false
       result:
@@ -1505,7 +1639,7 @@ checks:
         message: null
         error: angle must be 90, 180, or 270 (got 13)
         data: null
-        timestamp: 1782070775.8862085
+        timestamp: 1782072388.4642193
 - id: C-130-docs-contract
   status: pass
   evidence:
@@ -1544,34 +1678,34 @@ checks:
       asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None,
       asyncio_default_test_loop_scope=function
 
-      collected 141 items
+      collected 149 items
 
 
       tests/test_324_static_verification.py ....                               [  2%]
 
       tests/test_async_bridge.py ..                                            [  4%]
 
-      tests/test_async_bridge_native.py .....                                  [  7%]
+      tests/test_async_bridge_native.py .......                                [  8%]
 
-      tests/test_async_inspect_tools.py ...                                    [  9%]
+      tests/test_async_inspect_tools.py ...                                    [ 10%]
 
-      tests/test_async_tool_registry.py .......                                [ 14%]
+      tests/test_async_tool_registry.py ...........                            [ 18%]
 
-      tests/test_bridge.py .........                                           [ 21%]
+      tests/test_bridge.py .........                                           [ 24%]
 
-      tests/test_bridge_enhanced.py ....                                       [ 24%]
+      tests/test_bridge_enhanced.py ....                                       [ 26%]
 
-      tests/test_cli.py ....                                                   [ 26%]
+      tests/test_cli.py ....                                                   [ 29%]
 
-      tests/test_compat_contract.py ........                                   [ 32%]
+      tests/test_compat_contract.py ........                                   [ 34%]
 
-      tests/test_config.py .......                                             [ 37%]
+      tests/test_config.py .......                                             [ 39%]
 
-      tests/test_docs.py .........                                             [ 43%]
+      tests/test_docs.py .........                                             [ 45%]
 
-      tests/test_live_spawn_setup.py ..............                            [ 53%]
+      tests/test_live_spawn_setup.py ...............                           [ 55%]
 
-      tests/test_models/test_common.py .....................                   [ 68%]
+      tests/test_models/test_common.py ......................                  [ 70%]
 
       tests/test_phase2.py ......................................              [ 95%]
 
@@ -1580,7 +1714,7 @@ checks:
       tests/test_server.py ..                                                  [100%]
 
 
-      ============================= 141 passed in 16.94s =============================
+      ============================= 149 passed in 47.98s =============================
 
       '
 - id: S-030-quality-gate
@@ -1620,34 +1754,34 @@ checks:
       asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None,
       asyncio_default_test_loop_scope=function
 
-      collected 141 items
+      collected 149 items
 
 
       tests/test_324_static_verification.py ....                               [  2%]
 
       tests/test_async_bridge.py ..                                            [  4%]
 
-      tests/test_async_bridge_native.py .....                                  [  7%]
+      tests/test_async_bridge_native.py .......                                [  8%]
 
-      tests/test_async_inspect_tools.py ...                                    [  9%]
+      tests/test_async_inspect_tools.py ...                                    [ 10%]
 
-      tests/test_async_tool_registry.py .......                                [ 14%]
+      tests/test_async_tool_registry.py ...........                            [ 18%]
 
-      tests/test_bridge.py .........                                           [ 21%]
+      tests/test_bridge.py .........                                           [ 24%]
 
-      tests/test_bridge_enhanced.py ....                                       [ 24%]
+      tests/test_bridge_enhanced.py ....                                       [ 26%]
 
-      tests/test_cli.py ....                                                   [ 26%]
+      tests/test_cli.py ....                                                   [ 29%]
 
-      tests/test_compat_contract.py ........                                   [ 32%]
+      tests/test_compat_contract.py ........                                   [ 34%]
 
-      tests/test_config.py .......                                             [ 37%]
+      tests/test_config.py .......                                             [ 39%]
 
-      tests/test_docs.py .........                                             [ 43%]
+      tests/test_docs.py .........                                             [ 45%]
 
-      tests/test_live_spawn_setup.py ..............                            [ 53%]
+      tests/test_live_spawn_setup.py ...............                           [ 55%]
 
-      tests/test_models/test_common.py .....................                   [ 68%]
+      tests/test_models/test_common.py ......................                  [ 70%]
 
       tests/test_phase2.py ......................................              [ 95%]
 
@@ -1665,9 +1799,9 @@ checks:
 
       ---------------------------------------------------------------------------------------
 
-      src/gimp_mcp_pro/async_bridge.py              163     42     32      7    71%   84,
-      90-97, 111-112, 183-184, 188-189, 194, 208, 224, 237, 242-244, 248-249, 265,
-      285, 307-314, 318, 322, 335, 343, 351, 360, 364, 368, 372
+      src/gimp_mcp_pro/async_bridge.py              163     33     32      5    76%   84,
+      112, 183-184, 188-189, 208, 224, 237, 242-244, 248-249, 265, 285, 307-314, 318,
+      322, 335, 343, 351, 360, 364, 368, 372
 
       src/gimp_mcp_pro/bridge.py                    173     29     30      4    80%   107,
       148, 206-207, 266, 282, 291, 295, 299, 315, 332-339, 347, 351, 411-416, 423-424,
@@ -1678,6 +1812,9 @@ checks:
 
       src/gimp_mcp_pro/config.py                     54      5     14      5    85%   98,
       100, 104, 112, 129
+
+      src/gimp_mcp_pro/models/common.py             121      0     20      2    99%   302->304,
+      304->306
 
       src/gimp_mcp_pro/models/drawing.py             68      2      8      2    95%   106,
       108
@@ -1698,15 +1835,15 @@ checks:
       36, 63-77, 89-103, 129-150, 172-189, 215-245, 273-304, 330-359, 384-420, 448-490,
       506-516
 
-      src/gimp_mcp_pro/tools/filter_tools.py        108     81     12      0    22%   22,
-      27-51, 64-68, 107-126, 152-169, 192-211, 235-253, 277-293, 314-330, 350-365,
-      393-418
+      src/gimp_mcp_pro/tools/filter_tools.py        111     70     14      3    35%   22,
+      34-36, 41, 64-68, 107-126, 152-169, 192-211, 235-253, 277-293, 314-330, 350-365,
+      413, 427
 
-      src/gimp_mcp_pro/tools/history_tools.py        39     24      0      0    38%   27-49,
-      61-83, 103-117, 129-142
+      src/gimp_mcp_pro/tools/history_tools.py        45     23      4      1    47%   43,
+      58, 70-101, 121-135, 147-160
 
-      src/gimp_mcp_pro/tools/image_tools.py          89     62     14      1    27%   22,
-      53-100, 116-159, 187-192, 214-268, 285-297, 310-323
+      src/gimp_mcp_pro/tools/image_tools.py          89     52     14      2    38%   22,
+      68-71, 99-100, 116-159, 187-192, 214-268, 285-297, 310-323
 
       src/gimp_mcp_pro/tools/inspect_tools.py        54     21     16      5    57%   49->51,
       51->55, 57, 96-102, 119-133, 150-164, 190-195
@@ -1731,16 +1868,16 @@ checks:
 
       ---------------------------------------------------------------------------------------
 
-      TOTAL                                        1985    888    290     38    52%
+      TOTAL                                        2002    857    300     43    54%
 
 
-      10 files skipped due to complete coverage.
+      9 files skipped due to complete coverage.
 
       Coverage XML written to file coverage.xml
 
-      Required test coverage of 20.0% reached. Total coverage: 52.35%
+      Required test coverage of 20.0% reached. Total coverage: 54.21%
 
-      ============================= 141 passed in 18.19s =============================
+      ============================= 149 passed in 49.33s =============================
 
       '
 - id: S-040-doc-claim-gate
@@ -1751,7 +1888,7 @@ checks:
     mentions_compatibility_and_3_2_4: true
 summary:
   status: verified
-  passed: 22
+  passed: 23
   failed: 0
   skipped: 0
   waived: 0
