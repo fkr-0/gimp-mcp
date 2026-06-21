@@ -137,3 +137,13 @@ raw_transport_response_annotation: PluginResponse
 server_transport: AsyncGimpBridge
 remaining_live_dependency: actual GIMP 3.2.4 clean-profile smoke run
 ```
+
+
+## Optional 3.2.4 capabilities
+
+Async tools that depend on optional GIMP procedures should not hide the failure
+or return only a localized text string. They should return the standard tool
+result with `data.error_code: optional_capability_unavailable`, plus the related
+PDB procedure and a fallback recommendation. The compatibility runner uses this
+metadata to distinguish an accepted optional limitation from an async transport
+regression.

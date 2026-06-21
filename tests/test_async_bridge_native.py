@@ -11,7 +11,7 @@ import pytest
 
 from gimp_mcp_pro.async_bridge import AsyncGimpBridge
 from gimp_mcp_pro.bridge import HEADER_SIZE
-from gimp_mcp_pro.utils.errors import GimpConnectionError, GimpTimeoutError
+from gimp_mcp_pro.utils.errors import GimpCommandError, GimpConnectionError, GimpTimeoutError
 
 
 class AsyncMockGimpServer:
@@ -154,3 +154,50 @@ async def test_native_async_context_manager() -> None:
         await server.stop()
 
     assert result["results"]["gimp"]["version"] == "3.2.4"
+
+
+@pytest.mark.asyncio
+async def test_native_async_plugin_error_raises_without_dropping_stream() -> None:
+    server = AsyncMockGimpServer()
+    server.queue_response({"status": "error", "error": "bad command"})
+    server.queue_response({"status": "success", "results": {"ok": True}})
+    await server.start()
+
+    bridge = AsyncGimpBridge(host="127.0.0.1", port=server.port, reconnect_delays=[])
+    try:
+        with pytest.raises(GimpCommandError) as excinfo:
+            await bridge.send_command("bad")
+        assert "bad command" in str(excinfo.value)
+        assert bridge.connected
+
+        result = await bridge.send_command("after_error")
+    finally:
+        await bridge.disconnect()
+        await server.stop()
+
+    assert result["results"] == {"ok": True}
+    assert [request["id"] for request in server.received] == [1, 2]
+    assert [request["type"] for request in server.received] == ["bad", "after_error"]
+
+
+@pytest.mark.asyncio
+async def test_native_async_concurrent_commands_are_serialized() -> None:
+    server = AsyncMockGimpServer()
+    for index in range(3):
+        server.queue_response({"status": "success", "results": {"index": index}})
+    await server.start()
+
+    bridge = AsyncGimpBridge(host="127.0.0.1", port=server.port, reconnect_delays=[])
+    try:
+        results = await asyncio.gather(
+            bridge.send_command("cmd_a"),
+            bridge.send_command("cmd_b"),
+            bridge.send_command("cmd_c"),
+        )
+    finally:
+        await bridge.disconnect()
+        await server.stop()
+
+    assert [result["results"]["index"] for result in results] == [0, 1, 2]
+    assert [request["id"] for request in server.received] == [1, 2, 3]
+    assert [request["type"] for request in server.received] == ["cmd_a", "cmd_b", "cmd_c"]

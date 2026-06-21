@@ -125,17 +125,17 @@ commands:
     category: custom
   compat-live-smoke:
     run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--output", "compat.results.yml"]
-    description: Run partial live smoke checks against an already-running GIMP plug-in bridge.
+    description: Run partial live checks against an already-running GIMP plug-in bridge; use compat-live-xvfb for the full claim gate.
     timeoutMs: 120000
     category: test
   compat-live-spawn:
-    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--xvfb", "--output", "compat.results.yml"]
-    description: Spawn a clean-profile GIMP instance under xvfb-run -a, autostart the plug-in bridge, run live smoke checks, then stop GIMP.
+    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--xvfb", "--include-static-checks", "--output", "compat.results.yml"]
+    description: Spawn a clean-profile GIMP instance under xvfb-run -a, autostart the plug-in bridge, run the live compat matrix and static claim gate, then stop GIMP.
     timeoutMs: 180000
     category: test
   compat-live-xvfb:
-    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--xvfb", "--output", "compat.results.yml"]
-    description: Run the self-contained clean-profile live smoke under xvfb-run -a for headless environments.
+    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--xvfb", "--include-static-checks", "--output", "compat.results.yml"]
+    description: Run the self-contained clean-profile live compat matrix and static claim gate under xvfb-run -a for headless environments.
     timeoutMs: 180000
     category: test
   gimp-clean-profile:

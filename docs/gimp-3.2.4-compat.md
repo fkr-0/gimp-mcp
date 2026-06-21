@@ -41,6 +41,30 @@ cp compat.results.template.yml compat.results.yml
 
 Only fill `compat.results.yml` with real values after a run. The template is intentionally non-claiming.
 
+
+## Optional capability result shape
+
+GIMP 3.2.4 installations can differ in optional PDB and Script-Fu procedures.
+This does not invalidate transport compatibility when the bridge and core API are
+working. Optional tools must return a structured failure instead of relying only
+on human wording:
+
+```yaml
+success: false
+operation: apply_drop_shadow
+error: Drop shadow procedure not found
+data:
+  error_code: optional_capability_unavailable
+  optional_capability: true
+  capability: Script-Fu drop shadow
+  procedure: script-fu-drop-shadow
+  recommendation: Compose the shadow with typed layer and blur tools.
+```
+
+The live smoke runner accepts this machine-readable shape for known optional
+capabilities such as `script-fu-drop-shadow`, `gimp-image-undo`, and
+`gimp-image-redo`. Unexpected tool failures still fail the check.
+
 ## Result schema validation
 
 `validate-results` checks whether an evidence file is structurally usable. It does not grant the public compatibility claim by itself.

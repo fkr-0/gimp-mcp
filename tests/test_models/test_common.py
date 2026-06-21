@@ -78,6 +78,26 @@ class TestOperationResult:
         assert d["success"] is True
         assert d["operation"] == "test"
 
+    def test_optional_capability_unavailable(self):
+        r = OperationResult.optional_capability_unavailable(
+            operation="apply_drop_shadow",
+            capability="Script-Fu drop shadow",
+            procedure="script-fu-drop-shadow",
+            error="Drop shadow procedure not found",
+            recommendation="Compose the shadow manually.",
+        )
+
+        assert r.success is False
+        assert r.operation == "apply_drop_shadow"
+        assert r.error == "Drop shadow procedure not found"
+        assert r.data == {
+            "error_code": "optional_capability_unavailable",
+            "optional_capability": True,
+            "capability": "Script-Fu drop shadow",
+            "procedure": "script-fu-drop-shadow",
+            "recommendation": "Compose the shadow manually.",
+        }
+
 
 class TestRegion:
     def test_valid(self):

@@ -44,6 +44,7 @@ except ImportError as exc:  # pragma: no cover - live utility guard
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from gimp_mcp_pro.async_bridge import AsyncGimpBridge  # noqa: E402
 from gimp_mcp_pro.bridge import GimpBridge  # noqa: E402
 from gimp_mcp_pro.config import ServerConfig  # noqa: E402
 from gimp_mcp_pro.utils.errors import GimpCommandError, GimpConnectionError  # noqa: E402
@@ -246,7 +247,7 @@ class _CompatToolRegistrar:
         return decorator
 
 
-def build_registered_tools(bridge: GimpBridge) -> dict[str, Any]:
+def build_registered_tools(bridge: Any) -> dict[str, Any]:
     """Register all MCP tools against the live bridge and return callables."""
     from gimp_mcp_pro.tools.color_tools import register_color_tools
     from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
@@ -321,6 +322,32 @@ def _tool_error_text(item: dict[str, Any]) -> str:
     return str(item.get("error") or "")
 
 
+def _structured_optional_capability(item: dict[str, Any]) -> dict[str, str] | None:
+    """Return structured optional-capability metadata from a tool result.
+
+    Tool handlers should use ``OperationResult.optional_capability_unavailable``
+    for optional 3.2.4 features such as Script-Fu drop shadow or programmatic
+    undo/redo. The live runner still supports legacy string matching, but this
+    structured path is preferred because it is stable across wording changes.
+    """
+    result = item.get("result")
+    if not isinstance(result, dict):
+        return None
+    data = result.get("data")
+    if not isinstance(data, dict):
+        return None
+    if data.get("error_code") != "optional_capability_unavailable":
+        return None
+    if data.get("optional_capability") is not True:
+        return None
+    metadata: dict[str, str] = {"reason": _tool_error_text(item)}
+    for key in ("capability", "procedure", "recommendation"):
+        value = data.get(key)
+        if value is not None:
+            metadata[key] = str(value)
+    return metadata
+
+
 def accept_optional_tool_failures(
     check: dict[str, Any],
     *,
@@ -349,8 +376,11 @@ def accept_optional_tool_failures(
     for item in failed:
         tool = str(item.get("tool") or "")
         error_text = _tool_error_text(item)
+        structured = _structured_optional_capability(item)
         expected = optional_errors.get(tool)
-        if expected and expected in error_text:
+        if structured is not None:
+            accepted.append({"tool": tool, **structured})
+        elif expected and expected in error_text:
             accepted.append({"tool": tool, "reason": error_text})
         else:
             rejected.append({"tool": tool, "reason": error_text})
@@ -809,6 +839,49 @@ def _transport_check(
     )
 
 
+async def _async_transport_probe(config: ServerConfig) -> dict[str, Any]:
+    """Exercise the asyncio-native bridge and registered async MCP tools live."""
+    bridge = AsyncGimpBridge(**config.bridge_kwargs())
+    try:
+        await bridge.connect()
+        first = await bridge.async_get_gimp_info()
+        tools = build_registered_tools(bridge)
+        tool_results = await _run_tool_calls(
+            tools,
+            [
+                tool_call("create_image", 96, 64, "rgb", "white"),
+                tool_call("create_layer", name="async-compat", opacity=100.0, fill="transparent"),
+                tool_call("get_image_info"),
+                tool_call("get_image_bitmap", 64, 64),
+            ],
+        )
+        failures = [item for item in tool_results if not item.get("success")]
+        return {
+            "async_bridge_class": bridge.__class__.__name__,
+            "first_round_trip": first,
+            "registered_tool_total": len(tools),
+            "tool_calls": tool_results,
+            "failed_tools": [item.get("tool") for item in failures],
+        }
+    finally:
+        await bridge.disconnect()
+
+
+def _async_transport_check(config: ServerConfig) -> dict[str, Any]:
+    """Return live evidence for the asyncio-native transport path."""
+    try:
+        evidence = asyncio.run(_async_transport_probe(config))
+    except Exception as exc:  # noqa: BLE001 - live compat evidence must preserve failures
+        return make_check("C-025-async-transport", "fail", {"error": str(exc)})
+    ok = (
+        evidence.get("registered_tool_total") == 75
+        and not evidence.get("failed_tools")
+        and isinstance(evidence.get("first_round_trip"), dict)
+        and evidence["first_round_trip"].get("status") == "success"
+    )
+    return make_check("C-025-async-transport", "pass" if ok else "fail", evidence)
+
+
 def _env_introspection_check(bridge: GimpBridge, environment: dict[str, Any]) -> dict[str, Any]:
     """Capture exact Python/GI/GIMP runtime versions from inside GIMP."""
     body = """
@@ -953,6 +1026,7 @@ def run_smoke(
         return finish_result(started, environment, checks)
 
     checks.append(_transport_check(bridge, config, info))
+    checks.append(_async_transport_check(config))
     checks.append(_env_introspection_check(bridge, environment))
     checks.append(_plugin_registration_check(bridge))
 

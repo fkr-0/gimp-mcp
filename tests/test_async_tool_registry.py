@@ -24,6 +24,7 @@ from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.tools.types import AsyncToolBridge
+from gimp_mcp_pro.utils.errors import GimpCommandError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TOOLS_DIR = PROJECT_ROOT / "src" / "gimp_mcp_pro" / "tools"
@@ -85,6 +86,20 @@ class AsyncNoopBridge:
 
     async def async_get_gimp_info(self) -> PluginResponse:
         return {"status": "success", "results": {"version": "3.2.4"}}
+
+
+class OptionalCapabilityBridge(AsyncNoopBridge):
+    """Bridge that raises known optional-capability command failures."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+
+    async def async_execute_python(
+        self,
+        code_lines: list[str],
+        timeout: float | None = None,
+    ) -> PluginResponse:
+        raise GimpCommandError(self.message, command="exec")
 
 
 class RecordingAsyncBridge(AsyncNoopBridge):
@@ -255,8 +270,102 @@ async def test_representative_tools_await_async_bridge_methods() -> None:
     ) in bridge.calls
 
 
+@pytest.mark.asyncio
+async def test_optional_324_history_failures_are_machine_readable() -> None:
+    tools = registered_tools(
+        OptionalCapabilityBridge(
+            "Undo is not available via the GIMP 3.0 plugin API. Use Ctrl+Z in GIMP directly."
+        )
+    )
+
+    result = await tools["undo"]()
+
+    assert result["success"] is False
+    assert result["data"]["error_code"] == "optional_capability_unavailable"
+    assert result["data"]["procedure"] == "gimp-image-undo"
+
+
+@pytest.mark.asyncio
+async def test_optional_324_drop_shadow_failure_is_machine_readable() -> None:
+    tools = registered_tools(OptionalCapabilityBridge("Drop shadow procedure not found"))
+
+    result = await tools["apply_drop_shadow"]()
+
+    assert result["success"] is False
+    assert result["data"]["error_code"] == "optional_capability_unavailable"
+    assert result["data"]["procedure"] == "script-fu-drop-shadow"
+
+
 def test_server_uses_asyncio_native_bridge_for_mcp_tools() -> None:
     source = (PROJECT_ROOT / "src" / "gimp_mcp_pro" / "server.py").read_text()
 
     assert "from gimp_mcp_pro.async_bridge import AsyncGimpBridge" in source
     assert "bridge = AsyncGimpBridge(**config.bridge_kwargs())" in source
+
+
+def test_live_compat_matrix_declares_async_transport_check() -> None:
+    contract = (PROJECT_ROOT / "compat.yml").read_text()
+    runner = (PROJECT_ROOT / "tests" / "live_gimp_324_smoke.py").read_text()
+
+    assert "C-025-async-transport" in contract
+    assert "C-025-async-transport" in runner
+    assert "AsyncGimpBridge" in runner
+
+
+@pytest.mark.asyncio
+async def test_async_native_bridge_can_drive_registered_tool_surface() -> None:
+    class ScriptedAsyncBridge(AsyncNoopBridge):
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, object]] = []
+
+        async def async_get_gimp_info(self) -> PluginResponse:
+            self.calls.append(("get_gimp_info", None))
+            return {"status": "success", "results": {"gimp": {"version": "3.2.4"}}}
+
+        async def async_execute_python(
+            self,
+            code_lines: list[str],
+            timeout: float | None = None,
+        ) -> PluginResponse:
+            self.calls.append(("execute_python", code_lines))
+            return {"status": "success", "results": ["ok"]}
+
+        async def async_get_image_metadata(self) -> PluginResponse:
+            self.calls.append(("get_image_metadata", None))
+            return {"status": "success", "results": {"basic": {"width": 96, "height": 64}}}
+
+        async def async_get_image_bitmap(
+            self,
+            max_width: int | None = None,
+            max_height: int | None = None,
+            region: BitmapRegion | None = None,
+        ) -> PluginResponse:
+            self.calls.append(
+                (
+                    "get_image_bitmap",
+                    {"max_width": max_width, "max_height": max_height, "region": region},
+                )
+            )
+            return {
+                "status": "success",
+                "results": {"image_data": "iVBORw0KGgo=", "width": 64, "height": 64},
+            }
+
+    bridge = ScriptedAsyncBridge()
+    tools = registered_tools(bridge)
+
+    create_result = await tools["create_image"](96, 64, "rgb", "white")
+    info_result = await tools["get_image_info"]()
+    bitmap_result = await tools["get_image_bitmap"](64, 64)
+    gimp_result = await tools["get_gimp_info"]()
+
+    assert create_result["success"] is True
+    assert info_result["success"] is True
+    assert bitmap_result["success"] is True
+    assert gimp_result["success"] is True
+    assert len(tools) == 75
+    assert ("get_gimp_info", None) in bridge.calls
+    assert (
+        "get_image_bitmap",
+        {"max_width": 64, "max_height": 64, "region": None},
+    ) in bridge.calls

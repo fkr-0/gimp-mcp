@@ -268,5 +268,42 @@ class OperationResult(BaseModel):
             data=data,
         )
 
+    @classmethod
+    def optional_capability_unavailable(
+        cls,
+        operation: str,
+        capability: str,
+        error: str,
+        *,
+        procedure: str | None = None,
+        recommendation: str | None = None,
+    ) -> OperationResult:
+        """Create a structured failure for an optional GIMP capability.
+
+        GIMP installations can differ in optional PDB and Script-Fu procedures.
+        Tools use this result shape when the bridge and core API are working but
+        a non-required procedure is unavailable in the current GIMP profile.
+
+        Args:
+            operation: Tool operation name.
+            capability: Human-readable capability label.
+            error: Human-readable error message.
+            procedure: Optional PDB procedure related to the missing capability.
+            recommendation: Optional fallback or user-facing recommendation.
+
+        Returns:
+            Failure result with machine-readable optional-capability metadata.
+        """
+        data: dict[str, Any] = {
+            "error_code": "optional_capability_unavailable",
+            "optional_capability": True,
+            "capability": capability,
+        }
+        if procedure:
+            data["procedure"] = procedure
+        if recommendation:
+            data["recommendation"] = recommendation
+        return cls.fail(operation=operation, error=error, data=data)
+
 
 OperationResult.model_rebuild(_types_namespace={"Any": Any, "Optional": Optional})

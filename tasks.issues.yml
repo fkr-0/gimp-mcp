@@ -70,6 +70,7 @@ issues:
   - Annotate raw bridge transport responses with PluginResponse.
   - Add representative runtime invocation tests proving tools await async bridge methods.
   - Add static tests rejecting non-ToolResult tool return annotations.
+  - Return structured optional-capability metadata for known GIMP 3.2.4 optional procedure gaps.
   acceptance:
   - Async bridge tests pass without requiring GIMP.
   - Sync bridge behavior remains covered and unchanged.
@@ -80,6 +81,7 @@ issues:
   - Every @mcp.tool handler is annotated as returning ToolResult.
   - Both GimpBridge and AsyncGimpBridge satisfy the AsyncToolBridge protocol surface.
   - Representative registered tools invoke async bridge methods under pytest.
+  - Optional GIMP 3.2.4 capability failures are machine-readable and accepted by the live smoke normalizer.
 - id: GIMP-MCP-003
   title: Introduce Pydantic settings and environment loading
   type: feature

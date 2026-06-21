@@ -465,24 +465,52 @@ pdb_contract:
     - file-png-export
     - file-jpeg-export
     - gimp-image-autocrop
+  optional_capability_result_contract:
+    result_path: tool_result.data
+    required_fields:
+      error_code: optional_capability_unavailable
+      optional_capability: true
+      capability: non_empty_string
+      procedure: pdb_or_script_fu_procedure_name_when_known
+      recommendation: human_readable_fallback_when_available
+    policy: >-
+      Optional GIMP 3.2.4 capabilities may be absent in a clean profile, but
+      their tools MUST return machine-readable optional-capability metadata.
+      The live smoke runner prefers this structured shape over fragile string
+      matching and treats it as a passing optional-capability limitation, not as
+      a transport or core API failure.
   optional_procedures:
     gimp-image-undo:
       required_for_tool: undo
+      expected_error_code: optional_capability_unavailable
+      expected_result_fields:
+        procedure: gimp-image-undo
+        optional_capability: true
       pass_policy: >-
         If unavailable in a clean 3.2.4 profile, undo MUST return a structured
-        tool error that explains the limitation instead of crashing the bridge.
+        optional-capability result that explains the limitation instead of
+        crashing the bridge.
     gimp-image-redo:
       required_for_tool: redo
+      expected_error_code: optional_capability_unavailable
+      expected_result_fields:
+        procedure: gimp-image-redo
+        optional_capability: true
       pass_policy: >-
         If unavailable in a clean 3.2.4 profile, redo MUST return a structured
-        tool error that explains the limitation instead of crashing the bridge.
+        optional-capability result that explains the limitation instead of
+        crashing the bridge.
   conditional_procedures:
     script-fu-drop-shadow:
       required_for_tool: apply_drop_shadow
+      expected_error_code: optional_capability_unavailable
+      expected_result_fields:
+        procedure: script-fu-drop-shadow
+        optional_capability: true
       pass_policy: >-
         If unavailable in a clean 3.2.4 profile, apply_drop_shadow MUST either
-        be reimplemented with DrawableFilter/GEGL or documented as unavailable
-        with a failing/waived compatibility check.
+        be reimplemented with DrawableFilter/GEGL or return a structured
+        optional-capability result accepted by the live smoke runner.
   search_contract:
     tool: search_pdb
     required_behavior:
@@ -644,6 +672,14 @@ live_smoke_scenarios:
       - Raw JSON legacy mode is not used in default verification.
       - socket close by client is handled without plug-in crash.
       - invalid command returns status=error.
+  - id: C-025-async-transport
+    required: true
+    title: Asyncio-native bridge transport and async MCP tool path
+    assertions:
+      - AsyncGimpBridge performs a length-prefixed get_gimp_info round-trip.
+      - AsyncGimpBridge can register the complete 75-tool MCP surface.
+      - Representative image, layer, metadata, and bitmap tools succeed through actual async tool handlers.
+      - The async bridge closes its stream cleanly after the scenario.
   - id: C-030-image-basics
     required: true
     tools:

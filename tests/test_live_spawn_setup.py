@@ -306,6 +306,43 @@ def test_optional_tool_failures_are_accepted_only_when_expected() -> None:
     assert normalized["evidence"]["accepted_optional_failures"][0]["tool"] == "apply_drop_shadow"
 
 
+def test_structured_optional_tool_failure_is_accepted_without_string_policy() -> None:
+    """Machine-readable optional-capability results should drive smoke normalization."""
+    check = live.make_check(
+        "C-110-history-contract",
+        "fail",
+        {
+            "calls": [
+                {
+                    "tool": "undo",
+                    "success": False,
+                    "result": {
+                        "success": False,
+                        "operation": "undo",
+                        "error": "localized or changed wording",
+                        "data": {
+                            "error_code": "optional_capability_unavailable",
+                            "optional_capability": True,
+                            "capability": "programmatic image undo",
+                            "procedure": "gimp-image-undo",
+                        },
+                    },
+                }
+            ],
+            "failed_tools": ["undo"],
+        },
+    )
+
+    normalized = live.accept_optional_tool_failures(check, optional_errors={})
+
+    assert normalized["status"] == "pass"
+    assert normalized["evidence"]["failed_tools"] == []
+    accepted = normalized["evidence"]["accepted_optional_failures"][0]
+    assert accepted["tool"] == "undo"
+    assert accepted["procedure"] == "gimp-image-undo"
+    assert accepted["capability"] == "programmatic image undo"
+
+
 def test_unexpected_tool_failures_still_fail() -> None:
     """Optional normalization must not hide unrelated tool failures."""
     check = live.make_check(

@@ -415,4 +415,13 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
                 message=f"Drop shadow applied (offset {offset_x},{offset_y}, blur {blur_radius})",
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(operation="apply_drop_shadow", error=str(e)).model_dump()
+            error = str(e)
+            if "Drop shadow procedure not found" in error:
+                return OperationResult.optional_capability_unavailable(
+                    operation="apply_drop_shadow",
+                    capability="Script-Fu drop shadow",
+                    procedure="script-fu-drop-shadow",
+                    error=error,
+                    recommendation="Install/enable Script-Fu drop shadow support or compose the shadow with typed layer and blur tools.",
+                ).model_dump()
+            return OperationResult.fail(operation="apply_drop_shadow", error=error).model_dump()

@@ -46,7 +46,16 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 data={"steps": steps},
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(operation="undo", error=str(e)).model_dump()
+            error = str(e)
+            if "Undo is not available via the GIMP 3.0 plugin API" in error:
+                return OperationResult.optional_capability_unavailable(
+                    operation="undo",
+                    capability="programmatic image undo",
+                    procedure="gimp-image-undo",
+                    error=error,
+                    recommendation="Use Ctrl+Z in GIMP directly or group changes with begin_undo_group/end_undo_group.",
+                ).model_dump()
+            return OperationResult.fail(operation="undo", error=error).model_dump()
 
     @mcp.tool()
     async def redo(steps: int = 1) -> ToolResult:
@@ -80,7 +89,16 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 data={"steps": steps},
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(operation="redo", error=str(e)).model_dump()
+            error = str(e)
+            if "Redo is not available via the GIMP 3.0 plugin API" in error:
+                return OperationResult.optional_capability_unavailable(
+                    operation="redo",
+                    capability="programmatic image redo",
+                    procedure="gimp-image-redo",
+                    error=error,
+                    recommendation="Use Ctrl+Y in GIMP directly after verifying the active image state.",
+                ).model_dump()
+            return OperationResult.fail(operation="redo", error=error).model_dump()
 
     @mcp.tool()
     async def begin_undo_group(name: str = "AI Operation") -> ToolResult:
