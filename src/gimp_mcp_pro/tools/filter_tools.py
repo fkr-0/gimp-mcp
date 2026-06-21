@@ -10,8 +10,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
+from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.filter")
@@ -79,11 +80,11 @@ def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
     )
 
 
-def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all filter/effect tools with the MCP server."""
 
     @mcp.tool()
-    def apply_gaussian_blur(
+    async def apply_gaussian_blur(
         radius_x: float = 5.0,
         radius_y: float | None = None,
         layer_name: str | None = None,
@@ -99,6 +100,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             radius_y: Vertical blur radius. Defaults to radius_x for uniform blur.
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if radius_y is None:
             radius_y = radius_x
@@ -112,7 +116,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             },
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_gaussian_blur",
                 message=f"Gaussian blur applied (radius {radius_x}x{radius_y})",
@@ -122,7 +126,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_gaussian_blur", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_unsharp_mask(
+    async def apply_unsharp_mask(
         amount: float = 0.5,
         radius: float = 3.0,
         threshold: float = 0.0,
@@ -140,6 +144,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             threshold: Minimum difference threshold (0.0-1.0, higher = less sharpening of subtle detail)
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _filter_preamble(layer_name, layer_index)
         code += _apply_drawable_filter(
@@ -151,7 +158,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             },
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_unsharp_mask",
                 message=f"Unsharp mask applied (amount={amount}, radius={radius})",
@@ -161,7 +168,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_unsharp_mask", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_pixelize(
+    async def apply_pixelize(
         block_width: int = 10,
         block_height: int | None = None,
         layer_name: str | None = None,
@@ -176,6 +183,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             block_height: Pixel block height. Defaults to block_width for square blocks.
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if block_height is None:
             block_height = block_width
@@ -189,7 +199,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             },
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_pixelize",
                 message=f"Pixelized with {block_width}x{block_height} blocks",
@@ -199,7 +209,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_pixelize", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_edge_detect(
+    async def apply_edge_detect(
         method: str = "sobel",
         amount: float = 1.0,
         layer_name: str | None = None,
@@ -215,6 +225,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             amount: Edge detection strength (0.0-10.0)
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         method = method.lower().strip()
         if method == "laplace":
@@ -227,7 +240,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
         code = _filter_preamble(layer_name, layer_index)
         code += _apply_drawable_filter(gegl_op, props)
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_edge_detect",
                 message=f"Edge detection applied ({method})",
@@ -237,7 +250,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_edge_detect", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_emboss(
+    async def apply_emboss(
         azimuth: float = 315.0,
         elevation: float = 45.0,
         depth: int = 2,
@@ -254,6 +267,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             depth: Emboss depth (1-100)
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _filter_preamble(layer_name, layer_index)
         code += _apply_drawable_filter(
@@ -265,7 +281,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             },
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_emboss",
                 message=f"Emboss applied (azimuth={azimuth}°, depth={depth})",
@@ -274,7 +290,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_emboss", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_noise(
+    async def apply_noise(
         amount: float = 0.2,
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -287,6 +303,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             amount: Noise intensity (0.0-1.0)
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _filter_preamble(layer_name, layer_index)
         code += _apply_drawable_filter(
@@ -297,7 +316,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             },
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_noise",
                 message=f"Noise added (amount={amount})",
@@ -307,7 +326,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_noise", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_median(
+    async def apply_median(
         radius: int = 3,
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -320,6 +339,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             radius: Filter radius (1-20)
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _filter_preamble(layer_name, layer_index)
         code += _apply_drawable_filter(
@@ -329,7 +351,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             },
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_median",
                 message=f"Median filter applied (radius={radius})",
@@ -339,7 +361,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_median", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_drop_shadow(
+    async def apply_drop_shadow(
         offset_x: float = 4.0,
         offset_y: float = 4.0,
         blur_radius: float = 8.0,
@@ -360,6 +382,9 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             opacity: Shadow opacity 0-100
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         from gimp_mcp_pro.models.common import Color
 
@@ -380,7 +405,7 @@ def register_filter_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_drop_shadow",
                 message=f"Drop shadow applied (offset {offset_x},{offset_y}, blur {blur_radius})",

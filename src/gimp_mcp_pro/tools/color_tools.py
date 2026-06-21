@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
+from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.color")
@@ -45,11 +46,11 @@ def _color_preamble(layer_name: str | None, layer_index: int | None) -> list[str
     return code
 
 
-def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all color adjustment tools with the MCP server."""
 
     @mcp.tool()
-    def adjust_brightness_contrast(
+    async def adjust_brightness_contrast(
         brightness: int = 0,
         contrast: int = 0,
         layer_name: str | None = None,
@@ -62,6 +63,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             contrast: Contrast adjustment (-127 to 127, 0 = no change)
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         brightness = max(-127, min(127, brightness))
         contrast = max(-127, min(127, contrast))
@@ -71,7 +75,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="adjust_brightness_contrast",
                 message=f"Brightness={brightness}, Contrast={contrast}",
@@ -83,7 +87,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             ).model_dump()
 
     @mcp.tool()
-    def adjust_hue_saturation(
+    async def adjust_hue_saturation(
         hue: float = 0.0,
         saturation: float = 0.0,
         lightness: float = 0.0,
@@ -98,6 +102,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             lightness: Lightness adjustment (-100 to 100, 0 = no change)
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         hue = max(-180.0, min(180.0, hue))
         saturation = max(-100.0, min(100.0, saturation))
@@ -109,7 +116,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="adjust_hue_saturation",
                 message=f"Hue={hue}°, Saturation={saturation}, Lightness={lightness}",
@@ -121,7 +128,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             ).model_dump()
 
     @mcp.tool()
-    def adjust_levels(
+    async def adjust_levels(
         input_low: int = 0,
         input_high: int = 255,
         gamma: float = 1.0,
@@ -145,6 +152,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             channel: "value" (all), "red", "green", "blue", "alpha"
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         channel_map = {
             "value": "Gimp.HistogramChannel.VALUE",
@@ -163,7 +173,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="adjust_levels",
                 message=f"Levels adjusted ({channel}): input [{input_low}-{input_high}], gamma {gamma}",
@@ -180,7 +190,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="adjust_levels", error=str(e)).model_dump()
 
     @mcp.tool()
-    def adjust_curves(
+    async def adjust_curves(
         control_points: list[float],
         channel: str = "value",
         layer_name: str | None = None,
@@ -198,6 +208,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             channel: "value", "red", "green", "blue", "alpha"
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if len(control_points) < 4 or len(control_points) % 2 != 0:
             return OperationResult.fail(
@@ -219,7 +232,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             n_points = len(control_points) // 2
             return OperationResult.ok(
                 operation="adjust_curves",
@@ -230,7 +243,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="adjust_curves", error=str(e)).model_dump()
 
     @mcp.tool()
-    def desaturate(
+    async def desaturate(
         method: str = "luminosity",
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -245,6 +258,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
                     "luminance" (linear luminance)
             layer_name: Target layer. Uses active layer if not specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         method_map = {
             "luminosity": "Gimp.DesaturateMode.LUMA",
@@ -261,7 +277,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="desaturate",
                 message=f"Desaturated using {method} method",
@@ -271,20 +287,27 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="desaturate", error=str(e)).model_dump()
 
     @mcp.tool()
-    def invert_colors(
+    async def invert_colors(
         layer_name: str | None = None,
         layer_index: int | None = None,
     ) -> dict[str, Any]:
         """Invert all colors in a layer (negative effect).
 
         Each pixel's color is replaced with its complement.
+
+        Args:
+            layer_name: Target layer by name. Uses the active layer when omitted.
+            layer_index: Target layer by index. Uses the active layer when omitted.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _color_preamble(layer_name, layer_index) + [
             "Gimp.Drawable.invert(drawable, False)",
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="invert_colors", message="Colors inverted"
             ).model_dump()
@@ -292,7 +315,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="invert_colors", error=str(e)).model_dump()
 
     @mcp.tool()
-    def apply_threshold(
+    async def apply_threshold(
         low: int = 128,
         high: int = 255,
         layer_name: str | None = None,
@@ -307,6 +330,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             high: Upper threshold (0-255, default 255)
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _color_preamble(layer_name, layer_index) + [
             f"Gimp.Drawable.threshold(drawable, Gimp.HistogramChannel.VALUE, "
@@ -314,7 +340,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="apply_threshold",
                 message=f"Threshold applied ({low}-{high})",
@@ -324,7 +350,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="apply_threshold", error=str(e)).model_dump()
 
     @mcp.tool()
-    def posterize(
+    async def posterize(
         levels: int = 4,
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -335,6 +361,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             levels: Number of color levels per channel (2-256, lower = more dramatic)
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         levels = max(2, min(256, levels))
 
@@ -343,7 +372,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="posterize",
                 message=f"Posterized to {levels} levels",
@@ -353,7 +382,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="posterize", error=str(e)).model_dump()
 
     @mcp.tool()
-    def color_to_alpha(
+    async def color_to_alpha(
         color: str = "white",
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -367,6 +396,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             color: Color to make transparent — name, hex, or rgb.
             layer_name: Target layer.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         c = Color(value=color)
 
@@ -382,7 +414,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
         ]
 
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="color_to_alpha",
                 message=f"Color '{color}' made transparent",
@@ -392,20 +424,27 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="color_to_alpha", error=str(e)).model_dump()
 
     @mcp.tool()
-    def auto_white_balance(
+    async def auto_white_balance(
         layer_name: str | None = None,
         layer_index: int | None = None,
     ) -> dict[str, Any]:
         """Automatically adjust white balance (stretch colors).
 
         Performs automatic levels adjustment to normalize color distribution.
+
+        Args:
+            layer_name: Target layer by name. Uses the active layer when omitted.
+            layer_index: Target layer by index. Uses the active layer when omitted.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _color_preamble(layer_name, layer_index) + [
             "Gimp.Drawable.levels_stretch(drawable)",
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="auto_white_balance",
                 message="Auto white balance applied",
@@ -414,11 +453,14 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="auto_white_balance", error=str(e)).model_dump()
 
     @mcp.tool()
-    def get_colors() -> dict[str, Any]:
+    async def get_colors() -> dict[str, Any]:
         """Get the current foreground and background colors.
 
         WHEN TO USE: Before drawing to verify colors are set correctly,
         especially since the user can change them in GIMP's UI at any time.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = [
             "import json",
@@ -437,7 +479,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(json.dumps(result))",
         ]
         try:
-            result = bridge.execute_python(code)
+            result = await bridge.async_execute_python(code)
             import json as _json
 
             colors_data = {}
@@ -457,14 +499,18 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="get_colors", error=str(e)).model_dump()
 
     @mcp.tool()
-    def swap_colors() -> dict[str, Any]:
-        """Swap foreground and background colors."""
+    async def swap_colors() -> dict[str, Any]:
+        """Swap foreground and background colors.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
+        """
         code = [
             "from gi.repository import Gimp",
             "Gimp.context_swap_colors()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="swap_colors",
                 message="Foreground and background colors swapped",
@@ -473,7 +519,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="swap_colors", error=str(e)).model_dump()
 
     @mcp.tool()
-    def sample_color(
+    async def sample_color(
         x: int,
         y: int,
         sample_merged: bool = False,
@@ -485,6 +531,9 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             y: Y coordinate to sample
             sample_merged: If True, sample from all visible layers merged.
                           If False, sample from active layer only.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = [
             "import json",
@@ -505,7 +554,7 @@ def register_color_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(json.dumps(result))",
         ]
         try:
-            result = bridge.execute_python(code)
+            result = await bridge.async_execute_python(code)
             import json as _json
 
             color_data = {}

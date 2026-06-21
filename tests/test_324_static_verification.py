@@ -6,7 +6,6 @@ import ast
 from pathlib import Path
 
 import scripts.compat as compat
-
 from gimp_mcp_pro.models.common import py_literal
 from gimp_mcp_pro.tools.layer_tools import _layer_lookup_code
 from gimp_mcp_pro.tools.transform_tools import _layer_target

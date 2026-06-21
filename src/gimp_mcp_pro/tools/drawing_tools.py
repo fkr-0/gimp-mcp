@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.models.common import Color, FillType, OperationResult, py_literal
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP
 
@@ -44,11 +44,11 @@ def _get_drawable_code() -> list[str]:
     ]
 
 
-def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all drawing tools with the MCP server."""
 
     @mcp.tool()
-    def set_foreground_color(color: str) -> dict[str, Any]:
+    async def set_foreground_color(color: str) -> dict[str, Any]:
         """Set the foreground color used for drawing operations.
 
         WHEN TO USE: Before any drawing, fill, or stroke operation that
@@ -56,6 +56,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
 
         Args:
             color: Color as name ("red"), hex ("#FF0000"), or rgb("rgb(255,0,0)")
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         c = Color(value=color)
         code = [
@@ -64,7 +67,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.context_set_foreground(_color)",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="set_foreground_color",
                 message=f"Foreground color set to {color}",
@@ -74,11 +77,14 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="set_foreground_color", error=str(e)).model_dump()
 
     @mcp.tool()
-    def set_background_color(color: str) -> dict[str, Any]:
+    async def set_background_color(color: str) -> dict[str, Any]:
         """Set the background color.
 
         Args:
             color: Color as name ("white"), hex ("#FFFFFF"), or rgb("rgb(255,255,255)")
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         c = Color(value=color)
         code = [
@@ -87,7 +93,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.context_set_background(_color)",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="set_background_color",
                 message=f"Background color set to {color}",
@@ -97,7 +103,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="set_background_color", error=str(e)).model_dump()
 
     @mcp.tool()
-    def fill_selection(
+    async def fill_selection(
         fill_type: str = "foreground",
         color: str | None = None,
     ) -> dict[str, Any]:
@@ -115,6 +121,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             fill_type: "foreground", "background", "white", "transparent", or "pattern"
             color: Optional color to set before filling (sets foreground color).
                    Uses current foreground if not specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         fill_expr = FILL_TYPE_MAP.get(FillType(fill_type), "Gimp.FillType.FOREGROUND")
         code = ["from gi.repository import Gimp, Gegl"]
@@ -131,7 +140,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="fill_selection",
                 message=f"Filled with {fill_type}" + (f" ({color})" if color else ""),
@@ -140,7 +149,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="fill_selection", error=str(e)).model_dump()
 
     @mcp.tool()
-    def draw_line(
+    async def draw_line(
         x1: float,
         y1: float,
         x2: float,
@@ -155,6 +164,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             x2, y2: End coordinates
             color: Line color. Uses current foreground if not specified.
             brush_size: Line width in pixels (default 2.0)
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = ["from gi.repository import Gimp, Gegl"]
         if color:
@@ -167,7 +179,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="draw_line",
                 message=f"Drew line from ({x1},{y1}) to ({x2},{y2})",
@@ -176,7 +188,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="draw_line", error=str(e)).model_dump()
 
     @mcp.tool()
-    def draw_brush_stroke(
+    async def draw_brush_stroke(
         points: list[float],
         tool: str = "pencil",
         color: str | None = None,
@@ -194,6 +206,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             tool: "pencil" (hard edge) or "paintbrush" (soft)
             color: Stroke color. Uses current foreground if not specified.
             brush_size: Brush width in pixels
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if len(points) < 4 or len(points) % 2 != 0:
             return OperationResult.fail(
@@ -219,7 +234,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
         code.append("Gimp.displays_flush()")
 
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="draw_brush_stroke",
                 message=f"Drew {tool} stroke with {len(points) // 2} points",
@@ -228,7 +243,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="draw_brush_stroke", error=str(e)).model_dump()
 
     @mcp.tool()
-    def draw_rectangle(
+    async def draw_rectangle(
         x: float,
         y: float,
         width: float,
@@ -248,6 +263,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             filled: True for solid fill, False for outline only
             color: Shape color. Uses current foreground if not specified.
             line_width: Outline width for non-filled rectangles
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = ["from gi.repository import Gimp, Gegl"]
         if color:
@@ -273,7 +291,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             mode = "filled" if filled else "outline"
             return OperationResult.ok(
                 operation="draw_rectangle",
@@ -283,7 +301,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="draw_rectangle", error=str(e)).model_dump()
 
     @mcp.tool()
-    def draw_ellipse(
+    async def draw_ellipse(
         x: float,
         y: float,
         width: float,
@@ -302,6 +320,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             filled: True for solid fill, False for outline only
             color: Shape color. Uses current foreground if not specified.
             line_width: Outline width for non-filled ellipses
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = ["from gi.repository import Gimp, Gegl"]
         if color:
@@ -325,7 +346,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             mode = "filled" if filled else "outline"
             return OperationResult.ok(
                 operation="draw_ellipse",
@@ -335,7 +356,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="draw_ellipse", error=str(e)).model_dump()
 
     @mcp.tool()
-    def draw_polygon(
+    async def draw_polygon(
         points: list[float],
         filled: bool = True,
         color: str | None = None,
@@ -352,6 +373,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             filled: True for solid fill, False for outline only
             color: Shape color. Uses current foreground if not specified.
             line_width: Outline width for non-filled polygons
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if len(points) < 6 or len(points) % 2 != 0:
             return OperationResult.fail(
@@ -381,7 +405,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             n_verts = len(points) // 2
             mode = "filled" if filled else "outline"
             return OperationResult.ok(
@@ -392,7 +416,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="draw_polygon", error=str(e)).model_dump()
 
     @mcp.tool()
-    def add_text(
+    async def add_text(
         text: str,
         x: float = 0.0,
         y: float = 0.0,
@@ -413,6 +437,9 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             font_size: Font size in pixels.
             color: Text color. Uses current foreground if not specified.
             layer_name: Name for the text layer.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = ["from gi.repository import Gimp, Gegl"]
         if color:
@@ -447,7 +474,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="add_text",
                 message=f'Text layer added: "{text[:50]}..."'
@@ -459,7 +486,7 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="add_text", error=str(e)).model_dump()
 
     @mcp.tool()
-    def edit_clear() -> dict[str, Any]:
+    async def edit_clear() -> dict[str, Any]:
         """Clear the current selection area (make it transparent).
 
         WHEN TO USE: To erase part of a layer. The cleared area becomes
@@ -467,13 +494,16 @@ def register_drawing_tools(mcp: Any, bridge: GimpBridge) -> None:
 
         Requires: Active layer must have an alpha channel. Use
         add_alpha_channel first if needed.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _get_drawable_code() + [
             "Gimp.Drawable.edit_clear(drawable)",
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="edit_clear", message="Selection cleared"
             ).model_dump()

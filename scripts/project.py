@@ -32,6 +32,10 @@ COMMANDS: dict[str, Command] = {
     "typecheck": ["uv", "run", "mypy"],
     "doctor": ["uv", "run", "gimp-mcp-pro", "doctor"],
     "config": ["uv", "run", "gimp-mcp-pro", "config", "--json"],
+    "docs-generate": ["uv", "run", "python", "scripts/docs.py", "generate"],
+    "docs-audit": ["uv", "run", "python", "scripts/docs.py", "audit"],
+    "docs-build": ["uv", "run", "--extra", "dev", "mkdocs", "build", "--strict"],
+    "docs-serve": ["uv", "run", "--extra", "dev", "mkdocs", "serve"],
     "compat-list-tools": ["uv", "run", "python", "scripts/compat.py", "list-tools", "--grouped"],
     "compat-validate": ["uv", "run", "python", "scripts/compat.py", "validate"],
     "compat-audit": ["uv", "run", "python", "scripts/compat.py", "audit"],
@@ -61,10 +65,29 @@ COMMANDS: dict[str, Command] = {
         "--output",
         "compat.results.yml",
     ],
+    "compat-live-spawn": [
+        "uv",
+        "run",
+        "python",
+        "tests/live_gimp_324_smoke.py",
+        "--spawn",
+        "--output",
+        "compat.results.yml",
+    ],
+    "compat-live-xvfb": [
+        "uv",
+        "run",
+        "python",
+        "tests/live_gimp_324_smoke.py",
+        "--spawn",
+        "--xvfb",
+        "--output",
+        "compat.results.yml",
+    ],
     "async-repl": ["uv", "run", "gimp-mcp-pro", "async-repl"],
 }
 
-CHECK_COMMANDS = ("format-check", "lint", "typecheck", "test")
+CHECK_COMMANDS = ("docs-audit", "format-check", "lint", "typecheck", "test")
 
 
 def run_command(command: Command) -> int:
@@ -96,7 +119,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("name", choices=sorted(COMMANDS))
     run.set_defaults(func=cmd_run)
 
-    check = subparsers.add_parser("check", help="Run format-check, lint, typecheck, and tests.")
+    check = subparsers.add_parser(
+        "check", help="Run docs-audit, format-check, lint, typecheck, and tests."
+    )
     check.set_defaults(func=cmd_check)
 
     list_cmd = subparsers.add_parser("list", help="List available commands.")

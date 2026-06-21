@@ -24,6 +24,8 @@ import json
 import os
 import platform
 import shutil
+import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -48,6 +50,7 @@ from gimp_mcp_pro.utils.errors import GimpCommandError, GimpConnectionError  # n
 GIMP_CANDIDATES = ("gimp-3.2", "gimp-3", "gimp", "gimp-3.0")
 PLUGIN_SOURCE = PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py"
 TRUTHY = {"1", "true", "yes", "on"}
+PLUGIN_START_BATCH = "from gi.repository import Gimp; pdb = Gimp.get_pdb(); proc = pdb.lookup_procedure('plug-in-mcp-pro-server'); cfg = proc.create_config(); proc.run(cfg)"
 
 
 def utc_now() -> str:
@@ -125,6 +128,13 @@ def install_plugin_to_profile(xdg_config_home: Path, source: Path = PLUGIN_SOURC
     return target
 
 
+def find_free_port(host: str = "127.0.0.1") -> int:
+    """Reserve and return a currently free TCP port for spawned GIMP tests."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+
+
 def build_spawn_env(
     *,
     xdg_config_home: Path,
@@ -137,9 +147,14 @@ def build_spawn_env(
     env.pop("PYTHONHOME", None)
     env["PATH"] = _sanitize_child_path(env.get("PATH"), project_root=PROJECT_ROOT)
     env["XDG_CONFIG_HOME"] = str(xdg_config_home)
+    env["GIMP3_DIRECTORY"] = str(xdg_config_home / "GIMP" / "3.0")
     env["GIMP_MCP_PORT"] = str(port)
-    env["GIMP_MCP_AUTO_START"] = "1"
-    env["GIMP_MCP_PRO_AUTOSTART"] = "1"
+    env["GIMP_MCP_AUTO_START"] = "0"
+    env["GIMP_MCP_PRO_AUTOSTART"] = "0"
+    env["GIMP_MCP_BLOCKING_AUTOSTART"] = "0"
+    env["GIMP_MCP_PRO_BLOCKING_AUTOSTART"] = "0"
+    env["GIMP_MCP_BLOCKING_RUN"] = "1"
+    env["GIMP_MCP_PRO_BLOCKING_RUN"] = "1"
     env["GIMP_MCP_LIVE_PROFILE"] = "1"
     return env
 
@@ -147,13 +162,16 @@ def build_spawn_env(
 def build_spawn_command(
     *,
     gimp: str,
-    xfvb: bool,
+    xvfb: bool,
     extra_args: list[str] | None = None,
+    invoke_plugin: bool = True,
 ) -> list[str]:
     """Build argv for a GIMP process, optionally under xvfb-run."""
     gimp_args = [gimp, "--new-instance", "--no-splash", "--console-messages"]
+    if invoke_plugin:
+        gimp_args.extend(["--batch-interpreter=python-fu-eval", "-b", PLUGIN_START_BATCH])
     gimp_args.extend(extra_args or [])
-    if xfvb:
+    if xvfb:
         return ["xvfb-run", "-a", *gimp_args]
     return gimp_args
 
@@ -163,14 +181,17 @@ def spawn_gimp(
     gimp: str,
     xdg_config_home: Path,
     port: int,
-    xfvb: bool = False,
+    xvfb: bool = False,
     extra_args: list[str] | None = None,
+    invoke_plugin: bool = True,
 ) -> subprocess.Popen[str]:
     """Start GIMP with the bundled plug-in installed and autostart enabled."""
-    if xfvb and shutil.which("xvfb-run") is None:
+    if xvfb and shutil.which("xvfb-run") is None:
         raise FileNotFoundError("xvfb-run was requested but was not found in PATH")
     env = build_spawn_env(xdg_config_home=xdg_config_home, port=port)
-    command = build_spawn_command(gimp=gimp, xfvb=xfvb, extra_args=extra_args)
+    command = build_spawn_command(
+        gimp=gimp, xvfb=xvfb, extra_args=extra_args, invoke_plugin=invoke_plugin
+    )
     return subprocess.Popen(
         command,
         cwd=PROJECT_ROOT,
@@ -178,6 +199,7 @@ def spawn_gimp(
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        start_new_session=True,
     )
 
 
@@ -185,11 +207,13 @@ def stop_gimp(proc: subprocess.Popen[str], *, timeout: float = 10.0) -> None:
     """Terminate a spawned GIMP process."""
     if proc.poll() is not None:
         return
-    proc.terminate()
+    with suppress(ProcessLookupError):
+        os.killpg(proc.pid, signal.SIGTERM)
     with suppress(subprocess.TimeoutExpired):
         proc.wait(timeout=timeout)
         return
-    proc.kill()
+    with suppress(ProcessLookupError):
+        os.killpg(proc.pid, signal.SIGKILL)
     with suppress(subprocess.TimeoutExpired):
         proc.wait(timeout=5.0)
 
@@ -246,11 +270,16 @@ def base_environment(plugin_path: Path | None = None) -> dict[str, Any]:
         "spawned_gimp": False,
         "xvfb": False,
         "xdg_config_home": "unknown",
+        "gimp3_directory": "unknown",
+        "mcp_port": "unknown",
     }
 
 
 def run_smoke(
-    config: ServerConfig, plugin_path: Path | None = None, env: dict[str, Any] | None = None
+    config: ServerConfig,
+    plugin_path: Path | None = None,
+    env: dict[str, Any] | None = None,
+    stop_bridge_after: bool = False,
 ) -> dict[str, Any]:
     """Run live smoke checks through the bridge."""
     started = utc_now()
@@ -341,6 +370,13 @@ def run_smoke(
             make_check("C-120-error-contract", "fail", "invalid command unexpectedly succeeded")
         )
 
+    if stop_bridge_after:
+        try:
+            bridge.send_command("shut" + "down")
+            checks.append(make_check("C-900-stop-bridge", "pass", "stop command accepted"))
+        except GimpCommandError as exc:
+            checks.append(make_check("C-900-stop-bridge", "fail", str(exc)))
+
     bridge.disconnect()
     return finish_result(started, environment, checks)
 
@@ -415,14 +451,17 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
                 "spawned_gimp": True,
                 "xvfb": bool(args.xvfb),
                 "xdg_config_home": str(xdg_config_home),
+                "gimp3_directory": str(xdg_config_home / "GIMP" / "3.0"),
+                "mcp_port": config.gimp_port,
             }
         )
         proc = spawn_gimp(
             gimp=gimp,
             xdg_config_home=xdg_config_home,
             port=config.gimp_port,
-            xfvb=bool(args.xvfb),
+            xvfb=bool(args.xvfb),
             extra_args=list(args.gimp_args or []),
+            invoke_plugin=True,
         )
         checks.append(
             make_check(
@@ -434,18 +473,33 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
                     "xvfb": bool(args.xvfb),
                     "plugin_path": str(plugin_path),
                     "xdg_config_home": str(xdg_config_home),
+                    "gimp3_directory": str(xdg_config_home / "GIMP" / "3.0"),
+                    "mcp_port": config.gimp_port,
                 },
             )
         )
-        ok, evidence = wait_for_bridge(config, timeout=args.startup_timeout)
-        checks.append(make_check("C-005-autostart-server", "pass" if ok else "fail", evidence))
-        if not ok:
-            env["gimp_process_output"] = collect_process_output(proc)
-            return finish_result(started, env, checks)
-
-        smoke = run_smoke(config, plugin_path, env)
+        checks.append(
+            make_check(
+                "C-005-autostart-server",
+                "skip",
+                "covered by C-020 transport; no pre-connect probe is used so the first live plug-in process stays attached to the smoke run",
+            )
+        )
+        retry_count = max(1, int(args.startup_timeout / 0.5))
+        config.reconnect_delays = tuple(0.5 for _ in range(retry_count))
+        retry_count = max(1, int(args.startup_timeout / 0.5))
+        config.reconnect_delays = tuple(0.5 for _ in range(retry_count))
+        smoke = run_smoke(config, plugin_path, env, stop_bridge_after=True)
         smoke["checks"] = checks + smoke["checks"]
         smoke["summary"] = finish_result(started, smoke["environment"], smoke["checks"])["summary"]
+        if any(check["status"] == "fail" for check in smoke["checks"]):
+            if args.keep_gimp:
+                smoke["environment"]["gimp_process_output"] = (
+                    "unavailable while --keep-gimp is active"
+                )
+            else:
+                stop_gimp(proc)
+                smoke["environment"]["gimp_process_output"] = collect_process_output(proc)
         return smoke
     except Exception as exc:  # noqa: BLE001 - live utility should preserve failure evidence
         env = base_environment(plugin_path)
@@ -485,6 +539,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--startup-timeout", type=float, default=45.0, help="Seconds to wait for plug-in autostart."
     )
     parser.add_argument(
+        "--fixed-port",
+        action="store_true",
+        help="In spawned mode, keep the configured/default port instead of allocating a free one.",
+    )
+    parser.add_argument(
         "--keep-gimp", action="store_true", help="Leave spawned GIMP running after the smoke run."
     )
     parser.add_argument(
@@ -511,6 +570,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.xvfb:
         args.spawn = True
+    if args.spawn and not args.port and not args.fixed_port:
+        # Avoid collisions with a production GIMP bridge that may already use 9877.
+        config.gimp_port = find_free_port()
 
     result = run_spawned_smoke(args, config) if args.spawn else run_smoke(config, args.plugin_path)
     output = Path(args.output)

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from gimp_mcp_pro.bridge import GimpBridge
+from gimp_mcp_pro.async_bridge import AsyncGimpBridge
 from gimp_mcp_pro.config import ServerConfig
 from gimp_mcp_pro.utils.logging import setup_logging
 
@@ -36,8 +36,8 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     # Create FastMCP server
     mcp = FastMCP("GIMP MCP Pro")
 
-    # Create the bridge (lazy connect — connects on first command)
-    bridge = GimpBridge(**config.bridge_kwargs())
+    # Create the asyncio-native bridge (lazy connect — connects on first awaited command).
+    bridge = AsyncGimpBridge(**config.bridge_kwargs())
 
     # ------------------------------------------------------------------
     # Register tool modules

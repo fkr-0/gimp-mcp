@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.models.common import OperationResult, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP
 
@@ -41,11 +41,11 @@ def _layer_lookup_code(layer_name: str | None, layer_index: int | None) -> list[
     return code
 
 
-def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all layer management tools with the MCP server."""
 
     @mcp.tool()
-    def create_layer(
+    async def create_layer(
         name: str = "New Layer",
         opacity: float = 100.0,
         blend_mode: str = "normal",
@@ -105,7 +105,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="create_layer",
                 message=f"Created layer '{params.name}'",
@@ -120,7 +120,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="create_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def list_layers() -> dict[str, Any]:
+    async def list_layers() -> dict[str, Any]:
         """List all layers in the active image with their properties.
 
         WHEN TO USE: Before drawing (to find the right layer), when debugging
@@ -146,7 +146,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(json.dumps(result))",
         ]
         try:
-            result = bridge.execute_python(code)
+            result = await bridge.async_execute_python(code)
             import json as _json
 
             layers_data = []
@@ -166,7 +166,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="list_layers", error=str(e)).model_dump()
 
     @mcp.tool()
-    def set_active_layer(
+    async def set_active_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
     ) -> dict[str, Any]:
@@ -178,6 +178,9 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
         Args:
             layer_name: Layer name to activate (e.g., "Background")
             layer_index: Layer index (0 = topmost). Alternative to name.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if layer_name is None and layer_index is None:
             return OperationResult.fail(
@@ -191,7 +194,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(target.get_name())",
         ]
         try:
-            result = bridge.execute_python(code)
+            result = await bridge.async_execute_python(code)
             name = ""
             for out in result.get("results", []):
                 if out and out.strip():
@@ -205,7 +208,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="set_active_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def delete_layer(
+    async def delete_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
     ) -> dict[str, Any]:
@@ -214,6 +217,9 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
         Args:
             layer_name: Name of layer to delete.
             layer_index: Index of layer to delete (0 = topmost).
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if layer_name is None and layer_index is None:
             return OperationResult.fail(
@@ -227,7 +233,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(name)",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="delete_layer", message="Layer deleted"
             ).model_dump()
@@ -235,7 +241,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="delete_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def set_layer_opacity(
+    async def set_layer_opacity(
         opacity: float,
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -246,6 +252,9 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             opacity: Opacity 0-100 (0 = fully transparent, 100 = fully opaque)
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if not 0.0 <= opacity <= 100.0:
             return OperationResult.fail(
@@ -257,7 +266,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="set_layer_opacity",
                 message=f"Layer opacity set to {opacity}%",
@@ -267,7 +276,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="set_layer_opacity", error=str(e)).model_dump()
 
     @mcp.tool()
-    def set_layer_visibility(
+    async def set_layer_visibility(
         visible: bool,
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -278,13 +287,16 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             visible: True to show, False to hide.
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _layer_lookup_code(layer_name, layer_index) + [
             f"target.set_visible({visible})",
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             state = "visible" if visible else "hidden"
             return OperationResult.ok(
                 operation="set_layer_visibility",
@@ -295,7 +307,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="set_layer_visibility", error=str(e)).model_dump()
 
     @mcp.tool()
-    def duplicate_layer(
+    async def duplicate_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
         new_name: str | None = None,
@@ -306,6 +318,9 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             layer_name: Source layer name.
             layer_index: Source layer index. Uses active layer if neither specified.
             new_name: Name for the duplicate. Defaults to "Copy of <original>".
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _layer_lookup_code(layer_name, layer_index) + [
             "dup = target.copy()",
@@ -320,7 +335,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(dup.get_name())",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="duplicate_layer", message="Layer duplicated"
             ).model_dump()
@@ -328,11 +343,14 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="duplicate_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def merge_visible_layers() -> dict[str, Any]:
+    async def merge_visible_layers() -> dict[str, Any]:
         """Merge all visible layers into one.
 
         WHEN TO USE: Consolidate visible work while preserving hidden layers.
         WARNING: Destructive operation — consider using undo groups.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = [
             "images = Gimp.get_images()",
@@ -342,7 +360,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="merge_visible_layers", message="Visible layers merged"
             ).model_dump()
@@ -350,7 +368,7 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="merge_visible_layers", error=str(e)).model_dump()
 
     @mcp.tool()
-    def add_alpha_channel(
+    async def add_alpha_channel(
         layer_name: str | None = None,
         layer_index: int | None = None,
     ) -> dict[str, Any]:
@@ -362,13 +380,16 @@ def register_layer_tools(mcp: Any, bridge: GimpBridge) -> None:
         Args:
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _layer_lookup_code(layer_name, layer_index) + [
             "if not target.has_alpha():\n    target.add_alpha()",
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="add_alpha_channel", message="Alpha channel added"
             ).model_dump()

@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
+from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult, py_literal
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.transform")
@@ -49,11 +50,11 @@ def _layer_target(layer_name: str | None, layer_index: int | None) -> list[str]:
         ]
 
 
-def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all transform tools with the MCP server."""
 
     @mcp.tool()
-    def scale_image(
+    async def scale_image(
         new_width: int,
         new_height: int,
         interpolation: str = "cubic",
@@ -68,6 +69,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             new_height: Target height in pixels (1-32768)
             interpolation: Quality — "none", "linear", "cubic" (recommended),
                           "nohalo", "lohalo"
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if new_width < 1 or new_width > 32768 or new_height < 1 or new_height > 32768:
             return OperationResult.fail(
@@ -90,7 +94,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="scale_image",
                 message=f"Image scaled to {new_width}x{new_height}",
@@ -100,7 +104,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="scale_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def scale_layer(
+    async def scale_layer(
         new_width: int,
         new_height: int,
         interpolation: str = "cubic",
@@ -118,6 +122,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             interpolation: "none", "linear", "cubic", "nohalo", "lohalo"
             layer_name: Target layer by name. Uses active layer if neither specified.
             layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         interp_map = {
             "none": "Gimp.InterpolationType.NONE",
@@ -138,7 +145,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             ]
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="scale_layer",
                 message=f"Layer scaled to {new_width}x{new_height}",
@@ -148,11 +155,14 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="scale_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def rotate_image(angle: int) -> dict[str, Any]:
+    async def rotate_image(angle: int) -> dict[str, Any]:
         """Rotate the entire image by 90, 180, or 270 degrees.
 
         Args:
             angle: Rotation angle — must be 90, 180, or 270.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         rotation_map = {
             90: "Gimp.RotationType.DEGREES90",
@@ -170,7 +180,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="rotate_image",
                 message=f"Image rotated {angle}°",
@@ -180,7 +190,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="rotate_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def rotate_layer(
+    async def rotate_layer(
         angle_degrees: float,
         auto_resize: bool = True,
         layer_name: str | None = None,
@@ -193,6 +203,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             auto_resize: If True, resize layer to fit rotated content
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         import math
 
@@ -212,7 +225,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             ]
         )
         try:
-            bridge.execute_python(code, timeout=LONG_TIMEOUT)
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="rotate_layer",
                 message=f"Layer rotated {angle_degrees}°",
@@ -222,11 +235,14 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="rotate_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def flip_image(direction: str = "horizontal") -> dict[str, Any]:
+    async def flip_image(direction: str = "horizontal") -> dict[str, Any]:
         """Flip the entire image.
 
         Args:
             direction: "horizontal" (mirror left/right) or "vertical" (mirror top/bottom)
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         direction = direction.lower().strip()
         if direction not in ("horizontal", "vertical"):
@@ -245,7 +261,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="flip_image",
                 message=f"Image flipped {direction}",
@@ -255,7 +271,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="flip_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def flip_layer(
+    async def flip_layer(
         direction: str = "horizontal",
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -266,6 +282,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             direction: "horizontal" or "vertical"
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         direction = direction.lower().strip()
         if direction not in ("horizontal", "vertical"):
@@ -287,7 +306,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             ]
         )
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="flip_layer",
                 message=f"Layer flipped {direction}",
@@ -297,11 +316,14 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="flip_layer", error=str(e)).model_dump()
 
     @mcp.tool()
-    def crop_to_selection() -> dict[str, Any]:
+    async def crop_to_selection() -> dict[str, Any]:
         """Crop the image to the current selection bounds.
 
         WHEN TO USE: After making a selection around the area you want to keep.
         The image canvas will be resized to fit the selection.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _img_preamble() + [
             "bounds = Gimp.Selection.bounds(image)",
@@ -310,7 +332,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="crop_to_selection", message="Image cropped to selection"
             ).model_dump()
@@ -318,7 +340,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="crop_to_selection", error=str(e)).model_dump()
 
     @mcp.tool()
-    def crop_image(
+    async def crop_image(
         x: int,
         y: int,
         width: int,
@@ -331,6 +353,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             y: Top edge Y coordinate
             width: Crop width in pixels
             height: Crop height in pixels
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         if width < 1 or height < 1:
             return OperationResult.fail(
@@ -342,7 +367,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="crop_image",
                 message=f"Image cropped to {width}x{height} at ({x},{y})",
@@ -352,10 +377,13 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="crop_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def autocrop_image() -> dict[str, Any]:
+    async def autocrop_image() -> dict[str, Any]:
         """Automatically crop the image to remove border whitespace/transparency.
 
         WHEN TO USE: After drawing, to trim unused canvas around the content.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _img_preamble() + [
             "pdb = Gimp.get_pdb()",
@@ -368,7 +396,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="autocrop_image", message="Image auto-cropped"
             ).model_dump()
@@ -376,7 +404,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="autocrop_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def resize_canvas(
+    async def resize_canvas(
         new_width: int,
         new_height: int,
         offset_x: int = 0,
@@ -392,6 +420,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             new_height: New canvas height
             offset_x: Horizontal offset for existing content (can be negative)
             offset_y: Vertical offset for existing content (can be negative)
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = _img_preamble() + [
             f"image.resize({new_width}, {new_height}, {offset_x}, {offset_y})",
@@ -400,7 +431,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             "Gimp.displays_flush()",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="resize_canvas",
                 message=f"Canvas resized to {new_width}x{new_height}",
@@ -415,7 +446,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="resize_canvas", error=str(e)).model_dump()
 
     @mcp.tool()
-    def offset_layer(
+    async def offset_layer(
         offset_x: int,
         offset_y: int,
         layer_name: str | None = None,
@@ -428,6 +459,9 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             offset_y: Vertical offset in pixels (positive = down)
             layer_name: Target layer by name.
             layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         code = (
             _img_preamble()
@@ -439,7 +473,7 @@ def register_transform_tools(mcp: Any, bridge: GimpBridge) -> None:
             ]
         )
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="offset_layer",
                 message=f"Layer moved by ({offset_x}, {offset_y})",

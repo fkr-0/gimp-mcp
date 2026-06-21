@@ -5,14 +5,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.models.common import OperationResult
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.inspect")
 
 
-def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all inspection tools with the MCP server."""
 
     @mcp.tool()
@@ -23,7 +23,7 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
         region_y: int | None = None,
         region_width: int | None = None,
         region_height: int | None = None,
-    ) -> Any:
+    ) -> dict[str, Any]:
         """Get the current image as a viewable bitmap (PNG).
 
         PRIMARY USE: Verification tool for checking work mid-workflow.
@@ -109,6 +109,9 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
 
         Returns comprehensive info: dimensions, color mode, layers (name,
         visibility, opacity, blend mode), channels, paths, file info.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         try:
             result = await bridge.async_get_image_metadata()
@@ -135,6 +138,9 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
 
         Returns: foreground/background colors, brush info, opacity, paint mode,
         feather state, antialiasing state.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         try:
             result = await bridge.async_get_context_state()
@@ -161,6 +167,9 @@ def register_inspect_tools(mcp: Any, bridge: GimpBridge) -> None:
 
         Returns: GIMP version, directories, open images, PDB availability,
         current context, system capabilities, platform info.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
         """
         try:
             result = await bridge.async_get_gimp_info()

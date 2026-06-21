@@ -10,18 +10,19 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import LONG_TIMEOUT, GimpBridge
+from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.pdb")
 
 
-def register_pdb_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register PDB discovery and raw execution tools."""
 
     @mcp.tool()
-    def search_pdb(query: str, max_results: int = 20) -> dict[str, Any]:
+    async def search_pdb(query: str, max_results: int = 20) -> dict[str, Any]:
         """Search GIMP's Procedure Database for available operations.
 
         GIMP has thousands of procedures (filters, file operations, etc.).
@@ -51,7 +52,7 @@ def register_pdb_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(json.dumps(results))",
         ]
         try:
-            result = bridge.execute_python(code)
+            result = await bridge.async_execute_python(code)
             import json as _json
 
             procedures = []
@@ -72,7 +73,7 @@ def register_pdb_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="search_pdb", error=str(e)).model_dump()
 
     @mcp.tool()
-    def execute_python(
+    async def execute_python(
         code: list[str],
         timeout_seconds: float = 30.0,
     ) -> dict[str, Any]:
@@ -107,7 +108,7 @@ def register_pdb_tools(mcp: Any, bridge: GimpBridge) -> None:
         timeout = min(timeout_seconds, LONG_TIMEOUT)
 
         try:
-            result = bridge.execute_python(code, timeout=timeout)
+            result = await bridge.async_execute_python(code, timeout=timeout)
             return OperationResult.ok(
                 operation="execute_python",
                 message="Code executed successfully",

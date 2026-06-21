@@ -3,13 +3,15 @@ name: gimp-mcp
 description: Fork workspace for GIMP MCP Pro with uv tooling, typed config, CLI, and GIMP 3.2.4 verification work.
 defaultTrack: dev
 agent:
-  notes: Use uv for all Python tooling. Prefer scripts/project.py or bridge.yml commands over direct tool invocations. .env is local-only; commit .env.example for documented defaults.
+  notes: Use uv for all Python tooling. Prefer scripts/project.py or bridge.yml commands over direct tool invocations. .env is local-only; commit .env.example for documented defaults. Live GIMP checks can run either against an already-running plug-in bridge or by spawning a clean XDG profile with plug-in autostart.
   tasks:
     - Verify GIMP 3.2.4 compatibility against a live plugin instance.
     - Keep CLI, config, bridge and test tooling covered by pytest, ruff and mypy.
+    - Use compat-live-spawn or compat-live-xvfb for self-contained live smoke runs that do not assume a pre-started plug-in server.
   changelog:
     - Added uv-centered project commands for sync/test/lint/format/typecheck/check.
     - Added typed pydantic-settings configuration and CLI diagnostics/repl commands.
+    - Added clean-profile live smoke spawn commands for GIMP/Xvfb autostart verification.
 commands:
   sync:
     run: ["uv", "sync", "--extra", "dev"]
@@ -58,7 +60,7 @@ commands:
     category: test
   check:
     run: ["uv", "run", "python", "scripts/project.py", "check"]
-    description: "Run the full quality gate: format-check, lint, typecheck, test."
+    description: Run the full quality gate: format-check, lint, typecheck, test.
     timeoutMs: 240000
     category: test
   cli-config:
@@ -71,6 +73,26 @@ commands:
     description: Run CLI diagnostics without connecting to GIMP.
     timeoutMs: 30000
     category: custom
+  docs-generate:
+    run: ["uv", "run", "python", "scripts/docs.py", "generate"]
+    description: Generate MkDocs Material pages from README, API modules, and nested MCP tool docstrings.
+    timeoutMs: 30000
+    category: custom
+  docs-audit:
+    run: ["uv", "run", "python", "scripts/docs.py", "audit"]
+    description: Check that every MCP tool has a meaningful renderable docstring and typed signature.
+    timeoutMs: 30000
+    category: test
+  docs-build:
+    run: ["uv", "run", "--extra", "dev", "mkdocs", "build", "--strict"]
+    description: Build the MkDocs Material documentation site in strict mode.
+    timeoutMs: 120000
+    category: build
+  docs-serve:
+    run: ["uv", "run", "--extra", "dev", "mkdocs", "serve"]
+    description: Serve the MkDocs Material documentation site locally.
+    timeoutMs: 120000
+    category: dev
   compat-list-tools:
     run: ["uv", "run", "python", "scripts/compat.py", "list-tools", "--grouped"]
     description: List source-derived MCP tool registry grouped by module.
@@ -98,6 +120,21 @@ commands:
     category: custom
   compat-live-smoke:
     run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--output", "compat.results.yml"]
-    description: Run partial live smoke checks against a running GIMP 3.2.4 plug-in instance.
+    description: Run partial live smoke checks against an already-running GIMP plug-in bridge.
     timeoutMs: 120000
     category: test
+  compat-live-spawn:
+    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--output", "compat.results.yml"]
+    description: Spawn a clean-profile GIMP instance, autostart the plug-in bridge, run live smoke checks, then stop GIMP.
+    timeoutMs: 180000
+    category: test
+  compat-live-xvfb:
+    run: ["uv", "run", "python", "tests/live_gimp_324_smoke.py", "--spawn", "--xvfb", "--output", "compat.results.yml"]
+    description: Run the self-contained clean-profile live smoke under xvfb-run -a for headless environments.
+    timeoutMs: 180000
+    category: test
+  gimp-clean-profile:
+    run: ["scripts/gimp-clean-profile.sh"]
+    description: Prepare a clean XDG GIMP profile with the bundled MCP plug-in installed and autostart enabled.
+    timeoutMs: 30000
+    category: custom

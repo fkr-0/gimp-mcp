@@ -585,6 +585,26 @@ mcp_tool_contract:
     - No advertised tool fails due to missing GIMP 3.2.4 symbol, renamed PDB procedure, or invalid enum mapping.
 
 live_smoke_scenarios:
+  - id: C-000-spawn-gimp
+    required: true
+    title: Spawn clean-profile GIMP process
+    steps:
+      - Create or select an isolated GIMP profile directory.
+      - Install the plug-in into the profile with a canonical GIMP 3.0 plug-ins layout.
+      - Launch the selected GIMP 3.2.4 executable, optionally under Xvfb for CI/headless runs.
+    assertions:
+      - The spawned process PID, executable name, profile path, plug-in path and socket port are recorded.
+      - The profile is clean or explicitly named as a test profile.
+      - A failure to spawn is recorded as a compatibility failure, not as a verified claim.
+  - id: C-005-autostart-server
+    required: true
+    title: Plug-in autostart request before transport probe
+    steps:
+      - Request plug-in server autostart through the prepared profile/startup mechanism.
+      - Wait for the bridge socket before running transport and API checks.
+    assertions:
+      - Autostart is either directly observed or covered by a successful C-020 transport connection.
+      - If autostart is skipped, the result must explain which later check covers the same evidence.
   - id: C-001-env-introspection
     required: true
     title: Record exact runtime environment
@@ -777,6 +797,11 @@ live_smoke_scenarios:
       - README has a compatibility table with verified/unverified status and date.
       - setup.sh and README document one canonical plug-in install layout proven by C-010.
       - advertised tool count and section counts match runtime registry.
+  - id: C-900-stop-bridge
+    required: false
+    assertions:
+      - live smoke can request bridge shutdown after checks so spawned clean-profile GIMP processes do not leak.
+      - shutdown result is recorded as operational evidence, not as a public compatibility claim gate.
 
 static_checks:
   - id: S-001-yaml-validity

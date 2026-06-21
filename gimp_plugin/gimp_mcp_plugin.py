@@ -88,18 +88,25 @@ class MCPProPlugin(Gimp.PlugIn):
     # GIMP Plugin registration
     # ------------------------------------------------------------------
 
-    def do_init_procedures(self):
+    def _maybe_autostart(self, reason):
         if self.auto_start_done:
             return
-        self.auto_start_done = True
         if _env_flag("GIMP_MCP_AUTO_START") or _env_flag("GIMP_MCP_PRO_AUTOSTART"):
-            self._start_server_thread(reason="environment autostart")
+            self.auto_start_done = True
+            blocking = _env_flag("GIMP_MCP_BLOCKING_AUTOSTART") or _env_flag(
+                "GIMP_MCP_PRO_BLOCKING_AUTOSTART"
+            )
+            self._start_server_thread(reason=reason, blocking=blocking)
+
+    def do_init_procedures(self):
+        self._maybe_autostart(reason="environment autostart during init")
 
     def do_query_procedures(self):
+        self._maybe_autostart(reason="environment autostart during query")
         return ["plug-in-mcp-pro-server"]
 
     def do_create_procedure(self, name):
-        procedure = Gimp.ImageProcedure.new(self, name, Gimp.PDBProcType.PLUGIN, self.run, None)
+        procedure = Gimp.Procedure.new(self, name, Gimp.PDBProcType.PERSISTENT, self.run, None)
         procedure.set_menu_label(_("Start MCP Pro Server"))
         procedure.set_documentation(
             _("Starts the MCP Pro server for AI-assisted GIMP editing"),
@@ -110,11 +117,12 @@ class MCPProPlugin(Gimp.PlugIn):
         procedure.add_menu_path("<Image>/Tools/")
         return procedure
 
-    def run(self, procedure, run_mode, image, drawables, config, run_data):
-        self._start_server_thread(reason="procedure invocation")
+    def run(self, procedure, *args):
+        blocking = _env_flag("GIMP_MCP_BLOCKING_RUN") or _env_flag("GIMP_MCP_PRO_BLOCKING_RUN", "1")
+        self._start_server_thread(reason="procedure invocation", blocking=blocking)
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
 
-    def _start_server_thread(self, reason="manual"):
+    def _start_server_thread(self, reason="manual", blocking=False):
         if self.running:
             print("MCP Pro Server is already running")
             return
@@ -139,9 +147,12 @@ class MCPProPlugin(Gimp.PlugIn):
             self.server_socket = None
             return
 
-        self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
-        self.server_thread.start()
         print(f"GIMP MCP Pro server started on {self.host}:{self.port} ({reason})")
+        if blocking:
+            self._server_loop()
+            return
+        self.server_thread = threading.Thread(target=self._server_loop, daemon=False)
+        self.server_thread.start()
 
     def _server_loop(self):
         while self.running and self.server_socket is not None:
@@ -270,6 +281,7 @@ class MCPProPlugin(Gimp.PlugIn):
             "get_image_metadata": self._handle_get_metadata,
             "get_gimp_info": self._handle_get_gimp_info,
             "get_context_state": self._handle_get_context_state,
+            "shutdown": self._handle_shutdown,
             "exec": self._handle_exec,
         }
 
@@ -285,6 +297,11 @@ class MCPProPlugin(Gimp.PlugIn):
     # ------------------------------------------------------------------
     # Native handlers
     # ------------------------------------------------------------------
+
+    def _handle_shutdown(self, params):
+        """Request server shutdown after returning a success response."""
+        threading.Thread(target=self._shutdown, daemon=True).start()
+        return {"status": "success", "results": {"shutting_down": True}}
 
     def _handle_exec(self, params):
         """Execute Python code in GIMP's persistent context."""

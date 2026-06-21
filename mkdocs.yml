@@ -1,0 +1,76 @@
+site_name: GIMP MCP Pro
+site_description: Typed Model Context Protocol server and GIMP plug-in bridge documentation.
+site_url: https://fkr-0.github.io/gimp-mcp/
+repo_url: https://github.com/fkr-0/gimp-mcp
+repo_name: fkr-0/gimp-mcp
+strict: true
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_symbol_type_heading: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - README: readme.md
+  - Compatibility:
+      - GIMP 3.2.4 Runbook: gimp-3.2.4-compat.md
+      - Tool Docstring Audit: tool-docstring-audit.md
+  - Tool Reference:
+      - Overview: tools/index.md
+      - Color Adjustments: tools/color_tools.md
+      - Drawing and Text: tools/drawing_tools.md
+      - Filters and Effects: tools/filter_tools.md
+      - History: tools/history_tools.md
+      - Image Management: tools/image_tools.md
+      - Inspection: tools/inspect_tools.md
+      - Layer Operations: tools/layer_tools.md
+      - PDB and Escape Hatch: tools/pdb_tools.md
+      - Selections: tools/selection_tools.md
+      - Transforms: tools/transform_tools.md
+  - Architecture:
+      - Async Tool Architecture: async-tool-architecture.md
+  - Python API:
+      - Overview: api/index.md
+      - Configuration: api/config.md
+      - Bridge: api/bridge.md
+      - Async Bridge: api/async-bridge.md
+      - Server: api/server.md
+      - Common Models: api/models-common.md

@@ -2,7 +2,7 @@ schema: gimp-mcp.compat.results.v1
 project: gimp-mcp
 contract: compat.yml
 run_id: TEMPLATE-replace-with-utc-timestamp-or-ci-run-id
-run_started_at: '2026-06-21T17:34:08+00:00'
+run_started_at: '2026-06-21T18:38:49+00:00'
 run_finished_at: null
 tester: replace-me
 environment:
@@ -39,6 +39,14 @@ checks:
   evidence: not run yet
 - id: S-040-doc-claim-gate
   kind: static
+  status: skip
+  evidence: not run yet
+- id: C-000-spawn-gimp
+  kind: live_smoke
+  status: skip
+  evidence: not run yet
+- id: C-005-autostart-server
+  kind: live_smoke
   status: skip
   evidence: not run yet
 - id: C-001-env-introspection
@@ -101,7 +109,7 @@ summary:
   status: unverified
   passed: 0
   failed: 0
-  skipped: 19
+  skipped: 21
   waived: 0
   claim_allowed: false
   notes:

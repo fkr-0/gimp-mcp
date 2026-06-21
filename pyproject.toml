@@ -40,6 +40,9 @@ dev = [
     "mypy>=1.10",
     "PyYAML>=6.0",
     "types-PyYAML>=6.0",
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
 ]
 
 [project.scripts]
@@ -86,7 +89,18 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gimp_mcp_pro"]
+known-first-party = ["gimp_mcp_pro", "scripts"]
+
+[tool.ruff.lint.per-file-ignores]
+"gimp_plugin/*.py" = [
+    "E402",   # PyGObject plug-ins must call gi.require_version before gi.repository imports
+    "E722",   # legacy plug-in guard code keeps broad fallback handlers for GIMP runtime variance
+    "I001",   # keep GIMP plug-in import order close to upstream examples
+    "N802",   # GIMP translation helper name N_ is conventional
+    "SIM105", # broad fallback handlers remain explicit in plug-in code for now
+    "UP009",  # keep plug-in header compatible with GIMP plug-in conventions
+    "UP041",  # socket.timeout spelling is clearer for socket server code
+]
 
 [tool.mypy]
 python_version = "3.10"

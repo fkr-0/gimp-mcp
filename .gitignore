@@ -28,3 +28,9 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Agent/workspace metadata
+.ws-bridge/
+
+# Generated docs site
+site/

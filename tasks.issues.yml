@@ -42,20 +42,31 @@ issues:
       - async
       - bridge
       - mcp
+      - typing
+    status: implemented-static
+    docs:
+      - docs/async-tool-architecture.md
     goal: >-
       Add an asyncio-native bridge implementation while keeping the synchronous
-      bridge stable for existing callers.
+      bridge stable for existing callers, and make all MCP tool handlers async
+      coroutine functions.
     checklist:
       - Design AsyncGimpBridge around asyncio.open_connection, StreamReader, and StreamWriter.
       - Preserve length-prefixed framing semantics and maximum-message-size checks.
       - Add async send_command, execute_python, evaluate_python, get_image_bitmap, and context helpers.
       - Provide cancellation-safe timeout handling and clean connection teardown.
-      - Add tests for concurrent commands, timeout cancellation, oversized responses, server disconnects, and reconnect behavior.
-      - Decide whether MCP tool handlers stay synchronous wrappers or become fully async.
+      - Convert all @mcp.tool handlers to async def.
+      - Route all MCP tool bridge calls through async bridge methods.
+      - Type tool modules against AsyncToolBridge and MCPToolRegistrar protocols rather than concrete implementations.
+      - Add tests for concurrent commands, timeout cancellation, oversized responses, server disconnects, reconnect behavior, and async tool registration.
+      - Use AsyncGimpBridge for MCP server tool execution while keeping GimpBridge for CLI/legacy callers.
     acceptance:
       - Async bridge tests pass without requiring GIMP.
       - Sync bridge behavior remains covered and unchanged.
+      - All 75 registered MCP tools are coroutine functions.
+      - Static tests reject direct sync bridge calls inside tool modules.
       - Public API documentation shows sync and async usage patterns.
+      - Full uv-backed project quality gate passes.
 
   - id: GIMP-MCP-003
     title: Introduce Pydantic settings and environment loading

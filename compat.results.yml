@@ -1,0 +1,136 @@
+schema: gimp-mcp.compat.results.v1
+project: gimp-mcp
+contract: compat.yml
+run_id: live-smoke-1782067869
+run_started_at: '2026-06-21T18:50:57+00:00'
+run_finished_at: '2026-06-21T18:51:09+00:00'
+tester: archlinux
+environment:
+  os: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+  desktop_session: x11
+  gimp_executable: gimp-3.2
+  gimp_version: 3.2.4
+  gimp_verbose_version: unknown
+  python_version_inside_gimp: 3.14.5
+  pygobject_version_inside_gimp: unknown
+  libgimp_api_version: '3.0'
+  libgimp_library_version: 3.2.4
+  gegl_version: unknown
+  plugin_install_path: /tmp/gimp-mcp-live-0te5j9p1/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+  plugin_sha256: 423fc50e036eec2764cd3b6bdfabd74c1dd8605f4343ec955b603711bb8e48ca
+  mcp_server_revision: 2c58adb7c19df8fa4de35082df5e76def883b701
+  mcp_server_command: uv run gimp-mcp-pro serve
+  spawned_gimp: true
+  xvfb: true
+  xdg_config_home: /tmp/gimp-mcp-live-0te5j9p1/config
+  gimp3_directory: /tmp/gimp-mcp-live-0te5j9p1/config/GIMP/3.0
+  mcp_port: 53007
+checks:
+- id: C-000-spawn-gimp
+  status: pass
+  evidence:
+    pid: 3831692
+    gimp: gimp-3.2
+    xvfb: true
+    plugin_path: /tmp/gimp-mcp-live-0te5j9p1/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+    xdg_config_home: /tmp/gimp-mcp-live-0te5j9p1/config
+    gimp3_directory: /tmp/gimp-mcp-live-0te5j9p1/config/GIMP/3.0
+    mcp_port: 53007
+- id: C-005-autostart-server
+  status: skip
+  evidence: covered by C-020 transport; no pre-connect probe is used so the first
+    live plug-in process stays attached to the smoke run
+- id: C-020-transport
+  status: pass
+  evidence:
+    status: success
+    results:
+      session:
+        num_open_images: 0
+      gimp:
+        version: 3.2.4
+        resources_loaded: null
+        api_family: 3.x
+      system:
+        platform: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+        python_version: 3.14.5
+      capabilities:
+        mcp_pro_server: true
+        length_prefix_framing: true
+        persistent_connections: true
+        reports_version: true
+        reports_resources_loaded: true
+- id: C-001-env-introspection
+  status: pass
+  evidence:
+    status: success
+    results:
+    - 3.14.5
+    - 'True'
+    - 'True'
+    - 'True'
+    - 'True'
+    - 'True'
+    - 'True'
+    - 'True'
+- id: C-010-plugin-registration
+  status: pass
+  evidence:
+    pdb_probe: 'True'
+- id: C-100-pdb-contract
+  status: pass
+  evidence:
+    pdb_probe_values:
+    - 'True'
+    - 'True'
+    - 'True'
+- id: C-030-image-basics
+  status: pass
+  evidence: &id001
+    status: success
+    results:
+      basic:
+        width: 320
+        height: 240
+        base_type: RGB
+        resolution_x: null
+        resolution_y: null
+        is_dirty: true
+      structure:
+        num_layers: 1
+        layers:
+        - name: compat-layer
+          visible: true
+          opacity: 100.0
+          width: 320
+          height: 240
+          has_alpha: true
+          blend_mode: '28'
+      file: {}
+- id: C-040-layer-contract
+  status: pass
+  evidence: *id001
+- id: C-060-export-bitmap-contract
+  status: pass
+  evidence:
+    format: png
+    width: 160
+    height: 120
+    png_magic_ok: true
+    decoded_bytes: 285
+- id: C-120-error-contract
+  status: pass
+  evidence: 'Unknown command type: definitely_invalid_compat_command'
+- id: C-900-stop-bridge
+  status: pass
+  evidence: stop command accepted
+summary:
+  status: partial
+  passed: 10
+  failed: 0
+  skipped: 1
+  waived: 0
+  claim_allowed: false
+  notes:
+  - Partial live smoke only; full compat.yml matrix still required before a verified
+    claim.

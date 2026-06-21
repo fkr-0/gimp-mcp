@@ -8,9 +8,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.models.common import FillType, OperationResult
 from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, IMAGE_BASE_TYPE_MAP
 
@@ -26,11 +26,11 @@ def _get_active_image_code() -> list[str]:
     ]
 
 
-def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
+def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all image management tools with the MCP server."""
 
     @mcp.tool()
-    def create_image(
+    async def create_image(
         width: int,
         height: int,
         color_mode: str = "rgb",
@@ -84,7 +84,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
         ]
 
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="create_image",
                 message=f"Created {params.width}x{params.height} {params.color_mode.value} image",
@@ -102,7 +102,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             ).model_dump()
 
     @mcp.tool()
-    def list_images() -> dict[str, Any]:
+    async def list_images() -> dict[str, Any]:
         """List all currently open images in GIMP.
 
         WHEN TO USE: Before operations that need to target a specific image,
@@ -134,7 +134,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
         ]
 
         try:
-            result = bridge.execute_python(code)
+            result = await bridge.async_execute_python(code)
             outputs = result.get("results", [])
             # Parse the JSON output from the last print statement
             import json as _json
@@ -157,7 +157,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="list_images", error=str(e)).model_dump()
 
     @mcp.tool()
-    def get_image_info() -> dict[str, Any]:
+    async def get_image_info() -> dict[str, Any]:
         """Get detailed metadata about the active image (no bitmap data).
 
         WHEN TO USE: Before any operation, to understand the current canvas
@@ -172,7 +172,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             Comprehensive image metadata including layers, channels, file info.
         """
         try:
-            result = bridge.get_image_metadata()
+            result = await bridge.async_get_image_metadata()
             if result.get("status") == "success":
                 return OperationResult.ok(
                     operation="get_image_info",
@@ -188,7 +188,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="get_image_info", error=str(e)).model_dump()
 
     @mcp.tool()
-    def export_image(
+    async def export_image(
         file_path: str,
         format: str | None = None,
         quality: int = 85,
@@ -253,7 +253,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
         code.append(f"print('Exported to {params.file_path}')")
 
         try:
-            bridge.execute_python(code, timeout=60.0)
+            await bridge.async_execute_python(code, timeout=60.0)
             return OperationResult.ok(
                 operation="export_image",
                 message=f"Exported to {params.file_path}",
@@ -263,7 +263,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="export_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def flatten_image() -> dict[str, Any]:
+    async def flatten_image() -> dict[str, Any]:
         """Flatten all layers into a single layer.
 
         WHEN TO USE: Before final export when you want to merge all layers,
@@ -281,7 +281,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print('Image flattened')",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="flatten_image",
                 message="All layers flattened into one",
@@ -290,7 +290,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             return OperationResult.fail(operation="flatten_image", error=str(e)).model_dump()
 
     @mcp.tool()
-    def duplicate_image() -> dict[str, Any]:
+    async def duplicate_image() -> dict[str, Any]:
         """Duplicate the entire active image (all layers, channels, paths).
 
         WHEN TO USE: Creating a copy to experiment on without affecting
@@ -306,7 +306,7 @@ def register_image_tools(mcp: Any, bridge: GimpBridge) -> None:
             "print(f'{new_image.get_width()}x{new_image.get_height()}')",
         ]
         try:
-            bridge.execute_python(code)
+            await bridge.async_execute_python(code)
             return OperationResult.ok(
                 operation="duplicate_image",
                 message="Image duplicated",
