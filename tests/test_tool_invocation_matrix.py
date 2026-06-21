@@ -1,0 +1,422 @@
+"""Behavioral invocation matrix for the async MCP tool surface.
+
+These tests do not require GIMP. They exercise each public async tool handler
+against a scripted bridge so the tool-level validation, generated-code dispatch,
+and OperationResult shaping remain covered while live 3.2.4 smoke tests stay
+separate.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Awaitable, Callable
+from typing import Any
+
+import pytest
+
+from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse, ToolResult
+from gimp_mcp_pro.tools.color_tools import register_color_tools
+from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
+from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+from gimp_mcp_pro.tools.history_tools import register_history_tools
+from gimp_mcp_pro.tools.image_tools import register_image_tools
+from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
+from gimp_mcp_pro.tools.layer_tools import register_layer_tools
+from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
+from gimp_mcp_pro.tools.selection_tools import register_selection_tools
+from gimp_mcp_pro.tools.transform_tools import register_transform_tools
+from gimp_mcp_pro.tools.types import AsyncToolBridge
+from gimp_mcp_pro.utils.errors import GimpCommandError
+
+AsyncRegisteredTool = Callable[..., Awaitable[ToolResult]]
+
+
+class CaptureMCP:
+    """Small FastMCP-compatible registrar used for direct tool invocation."""
+
+    def __init__(self) -> None:
+        self.tools: dict[str, AsyncRegisteredTool] = {}
+
+    def tool(
+        self, *args: Any, **kwargs: Any
+    ) -> Callable[[AsyncRegisteredTool], AsyncRegisteredTool]:
+        """Return a decorator that records a tool coroutine by function name."""
+
+        def decorator(fn: AsyncRegisteredTool) -> AsyncRegisteredTool:
+            self.tools[fn.__name__] = fn
+            return fn
+
+        return decorator
+
+
+class ScriptedToolBridge:
+    """Async bridge fake with result payloads tailored to parser branches."""
+
+    def __init__(self) -> None:
+        self.execute_calls: list[list[str]] = []
+        self.command_calls: list[tuple[str, CommandParams | None, float | None]] = []
+        self.bitmap_calls: list[dict[str, object]] = []
+
+    async def async_send_command(
+        self,
+        command_type: str,
+        params: CommandParams | None = None,
+        timeout: float | None = None,
+    ) -> PluginResponse:
+        self.command_calls.append((command_type, params, timeout))
+        return {
+            "status": "success",
+            "results": {"command_type": command_type, "params": params or {}},
+        }
+
+    async def async_execute_python(
+        self,
+        code_lines: list[str],
+        timeout: float | None = None,
+    ) -> PluginResponse:
+        del timeout
+        self.execute_calls.append(code_lines)
+        source = "\n".join(code_lines)
+
+        if "for img in images" in source and "json.dumps(result)" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        [
+                            {
+                                "width": 320,
+                                "height": 200,
+                                "base_type": "RGB",
+                                "num_layers": 2,
+                                "is_dirty": False,
+                            }
+                        ]
+                    )
+                ],
+            }
+        if "for i, layer in enumerate(layers)" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        [
+                            {
+                                "index": 0,
+                                "name": "Layer 1",
+                                "visible": True,
+                                "opacity": 100.0,
+                                "width": 320,
+                                "height": 200,
+                                "has_alpha": True,
+                            }
+                        ]
+                    )
+                ],
+            }
+        if "result['foreground']" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "foreground": {"r": 0.1, "g": 0.2, "b": 0.3, "a": 1.0},
+                            "background": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0},
+                        }
+                    )
+                ],
+            }
+        if "drawable.get_pixel" in source:
+            return {
+                "status": "success",
+                "results": [json.dumps({"r": 0.25, "g": 0.5, "b": 0.75, "a": 1.0})],
+            }
+        if "json.dumps(results)" in source and "lookup_procedure" in source:
+            return {"status": "success", "results": [json.dumps(["gimp-blur", "plug-in-blur"])]}
+        if "print(target.get_name())" in source or "print(dup.get_name())" in source:
+            return {"status": "success", "results": ["Layer 1"]}
+        if "print(json.dumps(result))" in source:
+            return {"status": "success", "results": [json.dumps({"ok": True})]}
+        return {"status": "success", "results": ["ok"]}
+
+    async def async_evaluate_python(
+        self,
+        expressions: list[str],
+        timeout: float | None = None,
+    ) -> PluginResponse:
+        del timeout
+        return {"status": "success", "results": [f"value:{expr}" for expr in expressions]}
+
+    async def async_get_image_bitmap(
+        self,
+        max_width: int | None = None,
+        max_height: int | None = None,
+        region: BitmapRegion | None = None,
+    ) -> PluginResponse:
+        self.bitmap_calls.append(
+            {"max_width": max_width, "max_height": max_height, "region": region}
+        )
+        return {
+            "status": "success",
+            "results": {
+                "image_data": "iVBORw0KGgo=",
+                "width": max_width or 320,
+                "height": max_height or 200,
+                "original_width": 320,
+                "original_height": 200,
+            },
+        }
+
+    async def async_get_image_metadata(self) -> PluginResponse:
+        return {
+            "status": "success",
+            "results": {
+                "basic": {"width": 320, "height": 200, "base_type": "RGB"},
+                "layers": [{"name": "Layer 1", "visible": True}],
+            },
+        }
+
+    async def async_get_context_state(self) -> PluginResponse:
+        return {
+            "status": "success",
+            "results": {
+                "foreground": "#000000",
+                "background": "#ffffff",
+                "brush": "2. Hardness 050",
+            },
+        }
+
+    async def async_get_gimp_info(self) -> PluginResponse:
+        return {
+            "status": "success",
+            "results": {
+                "gimp": {"version": "3.2.4", "api_namespace": "3.0"},
+                "pdb": {"file-png-export": True, "file-jpeg-export": True},
+            },
+        }
+
+
+class FailingExecuteBridge(ScriptedToolBridge):
+    """Bridge fake that raises for generated Python execution."""
+
+    async def async_execute_python(
+        self,
+        code_lines: list[str],
+        timeout: float | None = None,
+    ) -> PluginResponse:
+        del code_lines, timeout
+        raise GimpCommandError("script failed", command="exec", traceback="Traceback")
+
+
+class FailingInspectBridge(ScriptedToolBridge):
+    """Bridge fake that returns transport-level failures for inspection methods."""
+
+    async def async_get_image_bitmap(
+        self,
+        max_width: int | None = None,
+        max_height: int | None = None,
+        region: BitmapRegion | None = None,
+    ) -> PluginResponse:
+        del max_width, max_height, region
+        return {"status": "error", "error": "bitmap unavailable"}
+
+    async def async_get_image_metadata(self) -> PluginResponse:
+        return {"status": "error", "error": "metadata unavailable"}
+
+    async def async_get_context_state(self) -> PluginResponse:
+        return {"status": "error", "error": "context unavailable"}
+
+    async def async_get_gimp_info(self) -> PluginResponse:
+        return {"status": "error", "error": "info unavailable"}
+
+
+def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
+    """Register all tool groups against a bridge fake."""
+    mcp = CaptureMCP()
+    for register in [
+        register_image_tools,
+        register_layer_tools,
+        register_selection_tools,
+        register_drawing_tools,
+        register_inspect_tools,
+        register_history_tools,
+        register_pdb_tools,
+        register_transform_tools,
+        register_filter_tools,
+        register_color_tools,
+    ]:
+        register(mcp, bridge)
+    return mcp.tools
+
+
+TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
+    "add_alpha_channel": ((), {"layer_index": 0}),
+    "add_text": (("hello",), {"x": 1, "y": 2, "color": "#ff0000"}),
+    "adjust_brightness_contrast": ((), {"brightness": 12, "contrast": -6}),
+    "adjust_curves": (([0.0, 0.0, 1.0, 1.0],), {}),
+    "adjust_hue_saturation": ((), {"hue": 10, "saturation": 5, "lightness": -3}),
+    "adjust_levels": ((), {"input_low": 10, "input_high": 240, "gamma": 1.1}),
+    "apply_drop_shadow": ((), {"offset_x": 2, "offset_y": 3}),
+    "apply_edge_detect": ((), {"method": "sobel", "amount": 1.2}),
+    "apply_emboss": ((), {"azimuth": 300, "elevation": 40, "depth": 3}),
+    "apply_gaussian_blur": ((), {"radius_x": 2.5, "radius_y": 1.5}),
+    "apply_median": ((), {"radius": 2}),
+    "apply_noise": ((), {"amount": 0.1}),
+    "apply_pixelize": ((), {"block_width": 8, "block_height": 6}),
+    "apply_threshold": ((), {"low": 64, "high": 192}),
+    "apply_unsharp_mask": ((), {"amount": 0.4, "radius": 2.0}),
+    "auto_white_balance": ((), {}),
+    "autocrop_image": ((), {}),
+    "begin_undo_group": ((), {"name": "matrix"}),
+    "color_to_alpha": ((), {"color": "white"}),
+    "create_image": ((320, 200), {"color_mode": "rgb", "fill": "white"}),
+    "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
+    "crop_image": ((1, 2, 100, 80), {}),
+    "crop_to_selection": ((), {}),
+    "delete_layer": ((), {"layer_index": 0}),
+    "desaturate": ((), {"method": "luminosity"}),
+    "draw_brush_stroke": (([0, 0, 10, 10, 20, 5],), {"tool": "pencil"}),
+    "draw_ellipse": ((2, 3, 40, 20), {"filled": False, "color": "blue"}),
+    "draw_line": ((0, 0, 20, 10), {"color": "black", "brush_size": 3}),
+    "draw_polygon": (([0, 0, 10, 0, 5, 8],), {"filled": True}),
+    "draw_rectangle": ((1, 2, 30, 40), {"filled": True, "color": "#00ff00"}),
+    "duplicate_image": ((), {}),
+    "duplicate_layer": ((), {"layer_index": 0, "new_name": "Copy"}),
+    "edit_clear": ((), {}),
+    "end_undo_group": ((), {}),
+    "execute_python": ((["print('ok')"],), {"timeout_seconds": 1.0}),
+    "export_image": (("/tmp/gimp-mcp-test.png",), {"format": "png", "quality": 90}),
+    "fill_selection": ((), {"fill_type": "foreground", "color": "red"}),
+    "flatten_image": ((), {}),
+    "flip_image": ((), {"direction": "vertical"}),
+    "flip_layer": ((), {"direction": "horizontal", "layer_index": 0}),
+    "get_colors": ((), {}),
+    "get_context_state": ((), {}),
+    "get_gimp_info": ((), {}),
+    "get_image_bitmap": ((), {"max_width": 64, "max_height": 48}),
+    "get_image_info": ((), {}),
+    "get_image_metadata": ((), {}),
+    "invert_colors": ((), {}),
+    "list_images": ((), {}),
+    "list_layers": ((), {}),
+    "merge_visible_layers": ((), {}),
+    "offset_layer": ((5, -3), {"layer_index": 0}),
+    "posterize": ((), {"levels": 5}),
+    "redo": ((), {"steps": 1}),
+    "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
+    "rotate_image": ((90,), {}),
+    "rotate_layer": ((15.0,), {"layer_index": 0}),
+    "sample_color": ((4, 5), {"sample_merged": False}),
+    "scale_image": ((640, 480), {"interpolation": "cubic"}),
+    "scale_layer": ((128, 96), {"interpolation": "linear", "layer_index": 0}),
+    "search_pdb": (("blur",), {"max_results": 5}),
+    "select_all": ((), {}),
+    "select_ellipse": ((1, 2, 30, 40), {"operation": "replace"}),
+    "select_grow": ((3,), {}),
+    "select_invert": ((), {}),
+    "select_none": ((), {}),
+    "select_polygon": (([0, 0, 20, 0, 10, 12],), {}),
+    "select_rectangle": ((1, 2, 30, 40), {"feather_radius": 1.0}),
+    "select_shrink": ((2,), {}),
+    "set_active_layer": ((), {"layer_index": 0}),
+    "set_background_color": (("#ffffff",), {}),
+    "set_foreground_color": (("#000000",), {}),
+    "set_layer_opacity": ((75.0,), {"layer_index": 0}),
+    "set_layer_visibility": ((False,), {"layer_index": 0}),
+    "swap_colors": ((), {}),
+    "undo": ((), {"steps": 1}),
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("tool_name", sorted(TOOL_SUCCESS_CASES))
+async def test_all_async_tools_have_offline_success_path(tool_name: str) -> None:
+    """Exercise every async tool through its public MCP-facing coroutine."""
+    bridge = ScriptedToolBridge()
+    tools = registered_tools(bridge)
+    args, kwargs = TOOL_SUCCESS_CASES[tool_name]
+
+    result = await tools[tool_name](*args, **kwargs)
+
+    assert result["success"] is True
+    assert result["operation"] == tool_name
+    assert "message" in result
+
+
+def test_success_matrix_tracks_complete_tool_registry() -> None:
+    """Fail when a new tool is registered without an offline invocation case."""
+    tools = registered_tools(ScriptedToolBridge())
+
+    assert set(TOOL_SUCCESS_CASES) == set(tools)
+    assert len(TOOL_SUCCESS_CASES) == 75
+
+
+@pytest.mark.asyncio
+async def test_region_bitmap_invocation_passes_structured_region() -> None:
+    """Partial bitmap requests pass a complete structured region to the bridge."""
+    bridge = ScriptedToolBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["get_image_bitmap"](
+        region_x=1,
+        region_y=2,
+        region_width=30,
+        region_height=40,
+    )
+
+    assert result["success"] is True
+    assert bridge.bitmap_calls[-1]["region"] == {
+        "origin_x": 1,
+        "origin_y": 2,
+        "width": 30,
+        "height": 40,
+    }
+
+
+@pytest.mark.asyncio
+async def test_inspection_transport_errors_return_structured_failures() -> None:
+    """Inspection tools map error envelopes into OperationResult failures."""
+    tools = registered_tools(FailingInspectBridge())
+
+    for tool_name in [
+        "get_image_bitmap",
+        "get_image_metadata",
+        "get_context_state",
+        "get_gimp_info",
+    ]:
+        result = await tools[tool_name]()
+        assert result["success"] is False
+        assert result["operation"] == tool_name
+        assert result["error"]
+
+
+@pytest.mark.asyncio
+async def test_execute_python_failure_preserves_gimp_traceback() -> None:
+    """Raw Python escape-hatch failures retain GIMP traceback metadata."""
+    tools = registered_tools(FailingExecuteBridge())
+
+    result = await tools["execute_python"](["raise RuntimeError('boom')"])
+
+    assert result["success"] is False
+    assert result["operation"] == "execute_python"
+    assert result["data"] == {"gimp_traceback": "Traceback"}
+
+
+@pytest.mark.asyncio
+async def test_validation_failures_do_not_call_bridge() -> None:
+    """Fast validation failures return before crossing the bridge boundary."""
+    bridge = ScriptedToolBridge()
+    tools = registered_tools(bridge)
+
+    invalid_results = [
+        await tools["draw_polygon"]([0, 0, 1, 1]),
+        await tools["select_polygon"]([0, 0, 1, 1]),
+        await tools["get_image_bitmap"](region_x=1, region_y=2),
+        await tools["execute_python"]([]),
+        await tools["rotate_image"](45),
+        await tools["set_active_layer"](),
+    ]
+
+    assert all(result["success"] is False for result in invalid_results)
+    assert bridge.execute_calls == []
+    assert bridge.bitmap_calls == []
