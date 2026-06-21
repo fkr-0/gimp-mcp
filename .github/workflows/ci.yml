@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 3.2.4
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --extra dev --frozen
+
+      - name: Validate compatibility contract
+        run: uv run python scripts/compat.py validate
+
+      - name: Validate checked-in compatibility evidence
+        run: uv run python scripts/compat.py validate-results compat.results.yml
+
+      - name: Audit compatibility claim gate
+        run: uv run python scripts/compat.py audit
+
+      - name: Generate docs reference files
+        run: uv run python scripts/docs.py generate
+
+      - name: Audit docs reference files
+        run: uv run python scripts/docs.py audit
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Typecheck
+        run: uv run mypy
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Build docs strictly
+        run: uv run mkdocs build --strict
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --extra dev --frozen
+
+      - name: Build source distribution and wheel
+        run: uv build --sdist --wheel
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dist
+          path: dist/
+          if-no-files-found: error
