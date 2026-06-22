@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 import tempfile
-from pathlib import Path
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -478,6 +478,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "color_to_alpha": ((), {"color": "white"}),
     "create_image": ((320, 200), {"color_mode": "rgb", "fill": "white"}),
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
+    "create_layer_group": ((), {"name": "Group A", "position": 0}),
     "crop_image": ((1, 2, 100, 80), {}),
     "crop_to_selection": ((), {}),
     "deactivate_flow": (("prepare-product-image",), {}),
@@ -491,6 +492,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "duplicate_image": ((), {}),
     "duplicate_layer": ((), {"layer_index": 0, "new_name": "Copy"}),
     "edit_clear": ((), {}),
+    "edit_text_layer": ((), {"text": "updated", "layer_name": "Text", "font_size": 18.0}),
     "end_edit_transaction": ((), {}),
     "end_undo_group": ((), {}),
     "execute_python": ((["print('ok')"],), {"timeout_seconds": 1.0}),
@@ -510,12 +512,18 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "get_image_metadata": ((), {}),
     "get_layer_mask_info": ((), {"layer_index": 0}),
     "get_selection_info": ((), {}),
+    "gradient_fill": (
+        (0, 0, 64, 32),
+        {"gradient_type": "linear", "foreground_color": "black", "background_color": "white"},
+    ),
     "invert_colors": ((), {}),
     "list_flows": ((), {}),
     "list_images": ((), {}),
     "list_layers": ((), {}),
+    "list_channels": ((), {}),
     "list_paths": ((), {}),
     "merge_visible_layers": ((), {}),
+    "move_layer_to_group": ((), {"layer_index": 0, "group_name": "Group A", "position": 0}),
     "offset_layer": ((5, -3), {"layer_index": 0}),
     "pin_flow": (("prepare-product-image",), {}),
     "path_to_selection": ((), {"path_name": "Path 1"}),
@@ -533,6 +541,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "sample_color": ((4, 5), {"sample_merged": False}),
     "scale_image": ((640, 480), {"interpolation": "cubic"}),
     "scale_layer": ((128, 96), {"interpolation": "linear", "layer_index": 0}),
+    "save_selection_to_channel": ((), {"name": "Saved alpha"}),
     "search_pdb": (("blur",), {"max_results": 5}),
     "select_by_color": ((4, 5), {"threshold": 20.0}),
     "select_all": ((), {}),
@@ -552,11 +561,15 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "set_active_layer": ((), {"layer_index": 0}),
     "set_background_color": (("#ffffff",), {}),
     "set_foreground_color": (("#000000",), {}),
-    "set_layer_mask_state": ((), {"edit_mask": True, "show_mask": False, "apply_mask": True, "layer_index": 0}),
+    "set_layer_mask_state": (
+        (),
+        {"edit_mask": True, "show_mask": False, "apply_mask": True, "layer_index": 0},
+    ),
     "set_layer_mode": (("multiply",), {"layer_index": 0}),
     "set_layer_opacity": ((75.0,), {"layer_index": 0}),
     "set_layer_visibility": ((False,), {"layer_index": 0}),
     "stroke_path": ((), {"path_name": "Path 1", "color": "black", "brush_size": 2.0}),
+    "channel_to_selection": ((), {"channel_name": "Saved alpha", "operation": "add"}),
     "stroke_selection": ((), {"color": "black", "brush_size": 2.0}),
     "swap_colors": ((), {}),
     "validate_flow": (("prepare-product-image",), {}),
@@ -589,7 +602,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 111
+    assert len(TOOL_SUCCESS_CASES) == 118
 
 
 @pytest.mark.asyncio
@@ -677,7 +690,11 @@ async def test_mask_path_selection_tools_generate_valid_gimp_324_api_calls() -> 
 
     calls = [
         ("add_layer_mask", (), {"mask_type": "selection", "layer_name": "Layer 1"}),
-        ("set_layer_mask_state", (), {"edit_mask": True, "show_mask": True, "apply_mask": False, "layer_name": "Layer 1"}),
+        (
+            "set_layer_mask_state",
+            (),
+            {"edit_mask": True, "show_mask": True, "apply_mask": False, "layer_name": "Layer 1"},
+        ),
         ("remove_layer_mask", (), {"apply": True, "layer_name": "Layer 1"}),
         ("feather_selection", (3.5,), {}),
         ("border_selection", (2,), {}),

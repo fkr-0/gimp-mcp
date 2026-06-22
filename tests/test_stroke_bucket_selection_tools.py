@@ -118,3 +118,58 @@ async def test_selection_advancement_tools_expose_feather_border_grow_shrink() -
     assert "Gimp.Selection.border(images[0], 2)" in generated
     assert "Gimp.Selection.grow(images[0], 4)" in generated
     assert "Gimp.Selection.shrink(images[0], 1)" in generated
+
+
+@pytest.mark.asyncio
+async def test_gradient_fill_uses_drawable_gradient_api_with_colors() -> None:
+    bridge = ScriptedBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["gradient_fill"](
+        x1=0,
+        y1=0,
+        x2=100,
+        y2=50,
+        gradient_type="radial",
+        foreground_color="#000000",
+        background_color="#ffffff",
+        dither=True,
+    )
+
+    assert result["success"] is True
+    assert result["operation"] == "gradient_fill"
+    generated = generated_source(bridge)
+    assert "Gimp.context_set_foreground(Gegl.Color.new('#000000'))" in generated
+    assert "Gimp.context_set_background(Gegl.Color.new('#ffffff'))" in generated
+    assert (
+        "Gimp.Drawable.edit_gradient_fill(drawable, Gimp.GradientType.RADIAL, "
+        "0.0, False, 3, 0.2, True, 0, 0, 100, 50)" in generated
+    )
+    assert "Gimp.displays_flush()" in generated
+
+
+@pytest.mark.asyncio
+async def test_edit_text_layer_updates_content_font_size_color_and_alignment() -> None:
+    bridge = ScriptedBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["edit_text_layer"](
+        text="Revised caption",
+        layer_name="Caption",
+        font_name="Serif",
+        font_size=32.0,
+        color="#336699",
+        justification="center",
+    )
+
+    assert result["success"] is True
+    assert result["operation"] == "edit_text_layer"
+    generated = generated_source(bridge)
+    assert "layer = image.get_layer_by_name('Caption')" in generated
+    assert "text_layer = Gimp.TextLayer.get_by_id(layer.get_id())" in generated
+    assert "text_layer.set_text('Revised caption')" in generated
+    assert "font = Gimp.Font.get_by_name('Serif')" in generated
+    assert "text_layer.set_font(font)" in generated
+    assert "text_layer.set_font_size(32.0, Gimp.Unit.pixel())" in generated
+    assert "text_layer.set_color(Gegl.Color.new('#336699'))" in generated
+    assert "text_layer.set_justification(Gimp.TextJustification.CENTER)" in generated

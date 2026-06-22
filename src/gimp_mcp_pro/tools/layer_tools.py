@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import logging
 
-from gimp_mcp_pro.models.common import OperationResult, py_literal
+from gimp_mcp_pro.models.common import BlendMode, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
-from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP
+from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP, SELECTION_OP_MAP
 
 logger = logging.getLogger("gimp_mcp_pro.tools.layer")
 
@@ -45,6 +45,60 @@ def _layer_lookup_code(layer_name: str | None, layer_index: int | None) -> list[
             "sel = image.get_selected_layers()",
             "if not sel: raise RuntimeError('No active layer')",
             "target = sel[0]",
+        ]
+    return code
+
+
+def _selection_op_expr(operation: str) -> str:
+    """Convert selection operation text into a GIMP ChannelOps expression."""
+    return SELECTION_OP_MAP.get(SelectionOp(operation), "Gimp.ChannelOps.REPLACE")
+
+
+def _group_lookup_code(
+    group_name: str | None,
+    group_index: int | None,
+    *,
+    variable: str = "group",
+) -> list[str]:
+    """Generate Python code to look up a group layer by name or index."""
+    if group_name is not None:
+        return [
+            f"{variable} = image.get_layer_by_name({py_literal(group_name)})",
+            f"if {variable} is None or not {variable}.is_group(): "
+            f"raise RuntimeError({py_literal(f'Layer group {group_name!r} not found')})",
+        ]
+    if group_index is not None:
+        return [
+            "groups = [layer for layer in image.get_layers() if layer.is_group()]",
+            f"if {group_index} >= len(groups): raise RuntimeError('Layer group index {group_index} out of range')",
+            f"{variable} = groups[{group_index}]",
+        ]
+    return [f"{variable} = None"]
+
+
+def _channel_lookup_code(channel_name: str | None, channel_index: int | None) -> list[str]:
+    """Generate Python code to look up a channel by name or index."""
+    code = [
+        "images = Gimp.get_images()",
+        "if not images: raise RuntimeError('No images are open')",
+        "image = images[0]",
+    ]
+    if channel_name is not None:
+        code += [
+            f"target = image.get_channel_by_name({py_literal(channel_name)})",
+            f"if target is None: raise RuntimeError({py_literal(f'Channel {channel_name!r} not found')})",
+        ]
+    elif channel_index is not None:
+        code += [
+            "channels = image.get_channels()",
+            f"if {channel_index} >= len(channels): raise RuntimeError('Channel index {channel_index} out of range')",
+            f"target = channels[{channel_index}]",
+        ]
+    else:
+        code += [
+            "channels = image.get_channels()",
+            "if not channels: raise RuntimeError('No channels available')",
+            "target = channels[0]",
         ]
     return code
 
@@ -338,12 +392,10 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        from gimp_mcp_pro.models.common import BlendMode as _BM
-
         try:
-            bm = _BM(blend_mode)
+            bm = BlendMode(blend_mode)
         except ValueError:
-            valid = ", ".join(m.value for m in _BM)
+            valid = ", ".join(m.value for m in BlendMode)
             return OperationResult.fail(
                 operation="set_layer_mode",
                 error=f"Unknown blend mode '{blend_mode}'. Valid: {valid}",
@@ -427,7 +479,6 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="merge_visible_layers", error=str(e)).model_dump()
-
 
     @mcp.tool()
     async def add_layer_mask(
@@ -593,6 +644,236 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="remove_layer_mask", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def create_layer_group(
+        name: str = "Group",
+        position: int = 0,
+        parent_group_name: str | None = None,
+        parent_group_index: int | None = None,
+    ) -> ToolResult:
+        """Create a group layer in the active image.
+
+        Args:
+            name: Name for the new group layer.
+            position: Stack position inside the image or parent group.
+            parent_group_name: Optional parent group layer name.
+            parent_group_index: Optional parent group index when name is not supplied.
+
+        Returns:
+            Operation result dictionary with created group metadata.
+        """
+        if parent_group_name is not None and parent_group_index is not None:
+            return OperationResult.fail(
+                operation="create_layer_group",
+                error="Specify only one of parent_group_name or parent_group_index",
+            ).model_dump()
+        code = [
+            "from gi.repository import Gimp",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+        ]
+        code += _group_lookup_code(parent_group_name, parent_group_index, variable="parent")
+        code += [
+            f"group = Gimp.GroupLayer.new(image, {py_literal(name)})",
+            "if group is None: raise RuntimeError('Could not create layer group')",
+            f"if not image.insert_layer(group, parent, {position}): raise RuntimeError('Could not insert layer group')",
+            "image.set_selected_layers([group])",
+            "Gimp.displays_flush()",
+            "print(group.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            group_name = name
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    group_name = str(out).strip()
+            return OperationResult.ok(
+                operation="create_layer_group",
+                message=f"Created layer group '{group_name}'",
+                data={
+                    "name": group_name,
+                    "position": position,
+                    "parent_group_name": parent_group_name,
+                    "parent_group_index": parent_group_index,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="create_layer_group", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def move_layer_to_group(
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+        group_name: str | None = None,
+        group_index: int | None = None,
+        position: int = 0,
+    ) -> ToolResult:
+        """Move a layer or group under a target layer group.
+
+        Args:
+            layer_name: Layer name to move.
+            layer_index: Layer index to move. Uses active layer if neither layer selector is supplied.
+            group_name: Destination group layer name.
+            group_index: Destination group index when name is not supplied.
+            position: Position inside the destination group.
+
+        Returns:
+            Operation result dictionary with move metadata.
+        """
+        if group_name is None and group_index is None:
+            return OperationResult.fail(
+                operation="move_layer_to_group",
+                error="Specify group_name or group_index",
+            ).model_dump()
+        if group_name is not None and group_index is not None:
+            return OperationResult.fail(
+                operation="move_layer_to_group",
+                error="Specify only one of group_name or group_index",
+            ).model_dump()
+        code = _layer_lookup_code(layer_name, layer_index)
+        code += _group_lookup_code(group_name, group_index, variable="group")
+        code += [
+            f"if not image.reorder_item(target, group, {position}): raise RuntimeError('Could not move layer into group')",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="move_layer_to_group",
+                message="Layer moved into group",
+                data={
+                    "layer_name": layer_name,
+                    "layer_index": layer_index,
+                    "group_name": group_name,
+                    "group_index": group_index,
+                    "position": position,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="move_layer_to_group", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def list_channels() -> ToolResult:
+        """List custom channels in the active image.
+
+        Returns:
+            Operation result dictionary with channel names, indexes, visibility, and total count.
+        """
+        code = [
+            "import json",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "channels = image.get_channels()",
+            "result = []",
+            "for i, channel in enumerate(channels):\n"
+            "    info = {'index': i, 'id': channel.get_id(), 'name': channel.get_name(),\n"
+            "            'visible': channel.get_visible()}\n"
+            "    try: info['opacity'] = channel.get_opacity()\n"
+            "    except Exception: info['opacity'] = None\n"
+            "    result.append(info)",
+            "print(json.dumps(result))",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            channels_data = []
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        channels_data = _json.loads(str(out).strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            return OperationResult.ok(
+                operation="list_channels",
+                message=f"Found {len(channels_data)} channel(s)",
+                data={"channels": channels_data, "count": len(channels_data)},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="list_channels", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def save_selection_to_channel(name: str = "Selection") -> ToolResult:
+        """Save the current selection mask as a named custom channel.
+
+        Args:
+            name: Name for the created channel.
+
+        Returns:
+            Operation result dictionary with created channel metadata.
+        """
+        code = [
+            "from gi.repository import Gimp",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "channel = Gimp.Selection.save(image)",
+            "if channel is None: raise RuntimeError('Could not save selection to channel')",
+            f"channel.set_name({py_literal(name)})",
+            "Gimp.displays_flush()",
+            "print(channel.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            channel_name = name
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    channel_name = str(out).strip()
+            return OperationResult.ok(
+                operation="save_selection_to_channel",
+                message=f"Saved selection to channel '{channel_name}'",
+                data={"name": channel_name},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="save_selection_to_channel", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def channel_to_selection(
+        channel_name: str | None = None,
+        channel_index: int | None = None,
+        operation: str = "replace",
+    ) -> ToolResult:
+        """Convert a custom channel into the current selection.
+
+        Args:
+            channel_name: Channel name to select from.
+            channel_index: Channel index to select from. Uses the first channel if neither selector is supplied.
+            operation: Selection operation: "replace", "add", "subtract", or "intersect".
+
+        Returns:
+            Operation result dictionary with channel-to-selection metadata.
+        """
+        try:
+            op_expr = _selection_op_expr(operation)
+        except ValueError:
+            return OperationResult.fail(
+                operation="channel_to_selection",
+                error="operation must be one of: replace, add, subtract, intersect",
+            ).model_dump()
+        code = ["from gi.repository import Gimp"] + _channel_lookup_code(channel_name, channel_index)
+        code += [
+            f"image.select_item({op_expr}, target)",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="channel_to_selection",
+                message=f"Converted channel to selection using {operation}",
+                data={
+                    "channel_name": channel_name,
+                    "channel_index": channel_index,
+                    "operation": operation,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="channel_to_selection", error=str(e)).model_dump()
 
     @mcp.tool()
     async def add_alpha_channel(

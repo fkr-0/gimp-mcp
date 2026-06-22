@@ -161,7 +161,9 @@ async def test_runner_requires_confirmation_for_unsafe_flow() -> None:
     with pytest.raises(PermissionError, match="unsafe"):
         await FlowRunner(registry).run(flow, {"name": "x"})
 
-    assert (await FlowRunner(registry).run(flow, {"name": "x"}, confirm_unsafe=True))["status"] == "success"
+    assert (await FlowRunner(registry).run(flow, {"name": "x"}, confirm_unsafe=True))[
+        "status"
+    ] == "success"
 
 
 def test_runner_validation_reports_unknown_tools_and_arguments() -> None:

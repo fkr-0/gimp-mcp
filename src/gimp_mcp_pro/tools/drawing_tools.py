@@ -12,6 +12,29 @@ from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP
 logger = logging.getLogger("gimp_mcp_pro.tools.drawing")
 
 
+GRADIENT_TYPE_MAP: dict[str, str] = {
+    "linear": "Gimp.GradientType.LINEAR",
+    "bilinear": "Gimp.GradientType.BILINEAR",
+    "radial": "Gimp.GradientType.RADIAL",
+    "square": "Gimp.GradientType.SQUARE",
+    "conical_symmetric": "Gimp.GradientType.CONICAL_SYMMETRIC",
+    "conical-asymmetric": "Gimp.GradientType.CONICAL_ASYMMETRIC",
+    "conical_asymmetric": "Gimp.GradientType.CONICAL_ASYMMETRIC",
+    "shapeburst_angular": "Gimp.GradientType.SHAPEBURST_ANGULAR",
+    "shapeburst_spherical": "Gimp.GradientType.SHAPEBURST_SPHERICAL",
+    "shapeburst_dimpled": "Gimp.GradientType.SHAPEBURST_DIMPLED",
+    "spiral_clockwise": "Gimp.GradientType.SPIRAL_CLOCKWISE",
+    "spiral_anticlockwise": "Gimp.GradientType.SPIRAL_ANTICLOCKWISE",
+}
+
+TEXT_JUSTIFICATION_MAP: dict[str, str] = {
+    "left": "Gimp.TextJustification.LEFT",
+    "right": "Gimp.TextJustification.RIGHT",
+    "center": "Gimp.TextJustification.CENTER",
+    "fill": "Gimp.TextJustification.FILL",
+}
+
+
 def _set_color_code(color: Color | None, target: str = "foreground") -> list[str]:
     """Generate code to set foreground or background color."""
     if color is None:
@@ -488,6 +511,210 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="add_text", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def gradient_fill(
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
+        gradient_type: str = "linear",
+        foreground_color: str | None = None,
+        background_color: str | None = None,
+        offset: float = 0.0,
+        dither: bool = True,
+        supersample: bool = False,
+        supersample_max_depth: int = 3,
+        supersample_threshold: float = 0.2,
+    ) -> ToolResult:
+        """Fill the current drawable/selection with a gradient between two points.
+
+        Args:
+            x1, y1: Gradient start coordinate.
+            x2, y2: Gradient end coordinate.
+            gradient_type: linear, bilinear, radial, square, conical_symmetric,
+                conical_asymmetric, shapeburst_angular, shapeburst_spherical,
+                shapeburst_dimpled, spiral_clockwise, or spiral_anticlockwise.
+            foreground_color: Optional foreground color for FG/BG gradients.
+            background_color: Optional background color for FG/BG gradients.
+            offset: Mode-dependent gradient offset.
+            dither: Whether to dither to reduce banding.
+            supersample: Whether to use adaptive supersampling.
+            supersample_max_depth: Maximum supersampling recursion depth.
+            supersample_threshold: Supersampling threshold.
+
+        Returns:
+            Operation result dictionary with status, message, and gradient metadata.
+        """
+        gradient_key = gradient_type.lower().strip().replace("-", "_")
+        gradient_expr = GRADIENT_TYPE_MAP.get(gradient_key)
+        if gradient_expr is None:
+            return OperationResult.fail(
+                operation="gradient_fill",
+                error="gradient_type must be one of: " + ", ".join(sorted(GRADIENT_TYPE_MAP)),
+            ).model_dump()
+        if supersample_max_depth < 1:
+            return OperationResult.fail(
+                operation="gradient_fill", error="supersample_max_depth must be greater than 0"
+            ).model_dump()
+        if supersample_threshold < 0:
+            return OperationResult.fail(
+                operation="gradient_fill", error="supersample_threshold must be non-negative"
+            ).model_dump()
+
+        code = ["from gi.repository import Gimp, Gegl"]
+        if foreground_color:
+            try:
+                fg = Color(value=foreground_color)
+            except ValueError as exc:
+                return OperationResult.fail(operation="gradient_fill", error=str(exc)).model_dump()
+            code.append(f"Gimp.context_set_foreground({fg.to_gegl_code()})")
+        if background_color:
+            try:
+                bg = Color(value=background_color)
+            except ValueError as exc:
+                return OperationResult.fail(operation="gradient_fill", error=str(exc)).model_dump()
+            code.append(f"Gimp.context_set_background({bg.to_gegl_code()})")
+
+        code += _get_drawable_code() + [
+            f"Gimp.Drawable.edit_gradient_fill(drawable, {gradient_expr}, {offset}, {supersample}, {supersample_max_depth}, {supersample_threshold}, {dither}, {x1}, {y1}, {x2}, {y2})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="gradient_fill",
+                message=f"Applied {gradient_key} gradient from ({x1},{y1}) to ({x2},{y2})",
+                data={
+                    "x1": x1,
+                    "y1": y1,
+                    "x2": x2,
+                    "y2": y2,
+                    "gradient_type": gradient_key,
+                    "dither": dither,
+                    "supersample": supersample,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="gradient_fill", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def edit_text_layer(
+        text: str | None = None,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+        font_name: str | None = None,
+        font_size: float | None = None,
+        color: str | None = None,
+        justification: str | None = None,
+    ) -> ToolResult:
+        """Edit an existing text layer's content and core text properties.
+
+        Args:
+            text: New text content. Leave unset to keep existing text.
+            layer_name: Text layer name to edit.
+            layer_index: Text layer index to edit. Uses active layer if neither specified.
+            font_name: Optional new font name.
+            font_size: Optional new font size in pixels.
+            color: Optional text color.
+            justification: Optional alignment: left, right, center, or fill.
+
+        Returns:
+            Operation result dictionary with status, message, and edited fields.
+        """
+        if (
+            text is None
+            and font_name is None
+            and font_size is None
+            and color is None
+            and justification is None
+        ):
+            return OperationResult.fail(
+                operation="edit_text_layer",
+                error="provide at least one text property to change",
+            ).model_dump()
+        if font_size is not None and font_size <= 0:
+            return OperationResult.fail(
+                operation="edit_text_layer", error="font_size must be greater than 0"
+            ).model_dump()
+
+        justification_expr = None
+        if justification is not None:
+            justification_key = justification.lower().strip()
+            justification_expr = TEXT_JUSTIFICATION_MAP.get(justification_key)
+            if justification_expr is None:
+                return OperationResult.fail(
+                    operation="edit_text_layer",
+                    error="justification must be one of: left, right, center, fill",
+                ).model_dump()
+
+        color_expr = None
+        if color is not None:
+            try:
+                color_expr = Color(value=color).to_gegl_code()
+            except ValueError as exc:
+                return OperationResult.fail(
+                    operation="edit_text_layer", error=str(exc)
+                ).model_dump()
+
+        code = [
+            "from gi.repository import Gimp, Gegl",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+        ]
+        if layer_name is not None:
+            code += [
+                f"layer = image.get_layer_by_name({py_literal(layer_name)})",
+                f"if layer is None: raise RuntimeError({py_literal(f'Layer {layer_name!r} not found')})",
+            ]
+        elif layer_index is not None:
+            code += [
+                "layers = image.get_layers()",
+                f"if {layer_index} >= len(layers): raise RuntimeError('Layer index {layer_index} out of range')",
+                f"layer = layers[{layer_index}]",
+            ]
+        else:
+            code += [
+                "selected_layers = image.get_selected_layers()",
+                "if not selected_layers: raise RuntimeError('No active layer')",
+                "layer = selected_layers[0]",
+            ]
+        code += [
+            "text_layer = Gimp.TextLayer.get_by_id(layer.get_id())",
+            "if text_layer is None: raise RuntimeError('Target layer is not a text layer')",
+        ]
+        changed: list[str] = []
+        if text is not None:
+            code.append(f"text_layer.set_text({py_literal(text)})")
+            changed.append("text")
+        if font_name is not None:
+            code += [
+                f"font = Gimp.Font.get_by_name({py_literal(font_name)})",
+                f"if font is None: raise RuntimeError({py_literal(f'Font {font_name!r} not found')})",
+                "text_layer.set_font(font)",
+            ]
+            changed.append("font_name")
+        if font_size is not None:
+            code.append(f"text_layer.set_font_size({font_size}, Gimp.Unit.pixel())")
+            changed.append("font_size")
+        if color_expr is not None:
+            code.append(f"text_layer.set_color({color_expr})")
+            changed.append("color")
+        if justification_expr is not None:
+            code.append(f"text_layer.set_justification({justification_expr})")
+            changed.append("justification")
+        code.append("Gimp.displays_flush()")
+
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="edit_text_layer",
+                message="Edited text layer",
+                data={"changed": changed, "layer_name": layer_name, "layer_index": layer_index},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="edit_text_layer", error=str(e)).model_dump()
 
     @mcp.tool()
     async def edit_clear() -> ToolResult:

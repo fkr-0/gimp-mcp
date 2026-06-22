@@ -76,6 +76,13 @@ def test_plugin_discovers_and_registers_repeatable_flows() -> None:
     assert "add_int_argument" in source
     assert "add_double_argument" in source
     assert "add_string_argument" in source
+    assert "Gtk.SearchEntry" in source
+    assert "Gtk.ComboBoxText" in source
+    assert "_update_flow_lifecycle" in source
+    assert "_save_flow_json" in source
+    assert "_show_final_review" in source
+    assert '"Rollback"' in source
+    assert "image.undo()" in source
 
 
 def test_plugin_launches_flow_runner_without_shell() -> None:
@@ -90,6 +97,6 @@ def test_plugin_launches_flow_runner_without_shell() -> None:
 def test_compat_tool_extractor_counts_async_defs() -> None:
     names = compat.flatten_registry(compat.extract_source_tool_registry())
 
-    assert len(names) == 111
+    assert len(names) == 118
     assert "get_gimp_info" in names
     assert "get_image_bitmap" in names

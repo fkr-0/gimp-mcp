@@ -254,6 +254,7 @@ def build_registered_tools(bridge: Any) -> dict[str, Any]:
     from gimp_mcp_pro.tools.color_tools import register_color_tools
     from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
     from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+    from gimp_mcp_pro.tools.flow_tools import register_flow_tools
     from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
     from gimp_mcp_pro.tools.history_tools import register_history_tools
     from gimp_mcp_pro.tools.image_tools import register_image_tools
@@ -280,6 +281,7 @@ def build_registered_tools(bridge: Any) -> dict[str, Any]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
+        register_flow_tools,
     ):
         register(registrar, bridge)
     register_gimp_dev_tools(registrar, bridge, GimpDevAdapter(enabled=False))
@@ -687,7 +689,7 @@ def run_docs_check() -> dict[str, Any]:
     """Record README/doc compatibility-claim evidence."""
     try:
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        tool_count_ok = "111 typed" in readme or "111 tools" in readme
+        tool_count_ok = "118 typed" in readme or "118 tools" in readme
         stale_claim_absent = "GIMP 3.0.8 compatible" not in readme
         compatibility_table = "compatibility" in readme.lower() and "3.2.4" in readme
         ok = tool_count_ok and stale_claim_absent and compatibility_table
@@ -883,7 +885,7 @@ def _async_transport_check(config: ServerConfig) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - live compat evidence must preserve failures
         return make_check("C-025-async-transport", "fail", {"error": str(exc)})
     ok = (
-        evidence.get("registered_tool_total") == 86
+        evidence.get("registered_tool_total") == 118
         and not evidence.get("failed_tools")
         and isinstance(evidence.get("first_round_trip"), dict)
         and evidence["first_round_trip"].get("status") == "success"
@@ -988,7 +990,7 @@ if missing:
 
 def _registry_total_check(tools: dict[str, Any]) -> dict[str, Any]:
     """Check live captured MCP tool registry count."""
-    expected = 111
+    expected = 118
     names = sorted(tools)
     return make_check(
         "mcp-tools",
@@ -1003,8 +1005,8 @@ def _docs_contract_check() -> dict[str, Any]:
     failures: list[str] = []
     if "GIMP 3.0.8 compatible" in readme:
         failures.append("README contains stale GIMP 3.0.8 compatibility wording")
-    if "111 typed" not in readme:
-        failures.append("README does not advertise 111 typed tools")
+    if "118 typed" not in readme:
+        failures.append("README does not advertise 118 typed tools")
     if "gimp_mcp_plugin/gimp_mcp_plugin.py" not in readme:
         failures.append("README does not document the canonical GIMP plug-in directory/file layout")
     if "claim_allowed: false" not in readme and "claim_allowed: true" not in readme:
@@ -1084,11 +1086,11 @@ def run_smoke(
             ],
         )
         registry_evidence = {
-            "expected_total": 111,
+            "expected_total": 118,
             "actual_total": len(tools),
             "tools": sorted(tools),
         }
-        if len(tools) != 111:
+        if len(tools) != 118:
             image_check["status"] = "fail"
             image_check["evidence"]["failed_tools"].append("registry-count")
         image_check["evidence"]["registry"] = registry_evidence
@@ -1108,7 +1110,13 @@ def run_smoke(
                 tool_call("add_alpha_channel", layer_name="layer-contract"),
                 tool_call("add_layer_mask", mask_type="white", layer_name="layer-contract"),
                 tool_call("get_layer_mask_info", layer_name="layer-contract"),
-                tool_call("set_layer_mask_state", edit_mask=True, show_mask=False, apply_mask=True, layer_name="layer-contract"),
+                tool_call(
+                    "set_layer_mask_state",
+                    edit_mask=True,
+                    show_mask=False,
+                    apply_mask=True,
+                    layer_name="layer-contract",
+                ),
                 tool_call("remove_layer_mask", False, layer_name="layer-contract"),
                 tool_call("create_layer", name="delete-me", opacity=100.0, fill="transparent"),
                 tool_call("delete_layer", layer_name="delete-me"),
@@ -1135,12 +1143,14 @@ def run_smoke(
                 tool_call("select_invert"),
                 tool_call("select_none"),
                 tool_call("select_rectangle", 20, 70, 60, 40),
+                tool_call("get_selection_info"),
                 tool_call("select_grow", 2),
                 tool_call("select_shrink", 1),
                 tool_call("feather_selection", 2.0),
                 tool_call("border_selection", 2),
                 tool_call("stroke_selection", "blue", 2.0),
                 tool_call("bucket_fill", 30, 30, color="red", threshold=40.0, sample_merged=True),
+                tool_call("select_by_color", 30, 30, threshold=40.0, sample_merged=True),
                 tool_call("fill_selection", "foreground"),
                 tool_call("draw_line", 5, 5, 120, 80, "blue", 3.0),
                 tool_call("draw_brush_stroke", [10, 120, 60, 130, 90, 150], "pencil", "red", 2.0),
@@ -1161,7 +1171,9 @@ def run_smoke(
                 tool_call("create_layer", name="path-contract", opacity=100.0, fill="transparent"),
                 tool_call("set_active_layer", layer_name="path-contract"),
                 tool_call("set_foreground_color", "red"),
-                tool_call("create_path", [20, 20, 120, 20, 120, 90], name="triangle-path", closed=True),
+                tool_call(
+                    "create_path", [20, 20, 120, 20, 120, 90], name="triangle-path", closed=True
+                ),
                 tool_call("list_paths"),
                 tool_call("path_to_selection", path_name="triangle-path"),
                 tool_call("fill_selection", "foreground"),

@@ -286,7 +286,6 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_by_color", error=str(e)).model_dump()
 
-
     @mcp.tool()
     async def feather_selection(radius: float) -> ToolResult:
         """Feather the current selection by a radius in pixels.
@@ -374,7 +373,9 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             try:
                 color_expr = Color(value=color).to_gegl_code()
             except ValueError as exc:
-                return OperationResult.fail(operation="stroke_selection", error=str(exc)).model_dump()
+                return OperationResult.fail(
+                    operation="stroke_selection", error=str(exc)
+                ).model_dump()
 
         code = [
             "from gi.repository import Gegl",
@@ -418,7 +419,6 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="stroke_selection", error=str(e)).model_dump()
-
 
     @mcp.tool()
     async def bucket_fill(
@@ -492,7 +492,13 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.ok(
                 operation="bucket_fill",
                 message=f"Bucket-filled at ({x},{y})",
-                data={"x": x, "y": y, "color": color, "threshold": threshold, "sample_merged": sample_merged},
+                data={
+                    "x": x,
+                    "y": y,
+                    "color": color,
+                    "threshold": threshold,
+                    "sample_merged": sample_merged,
+                },
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="bucket_fill", error=str(e)).model_dump()
@@ -547,9 +553,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
                 data=sel_info,
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="get_selection_info", error=str(e)
-            ).model_dump()
+            return OperationResult.fail(operation="get_selection_info", error=str(e)).model_dump()
 
     @mcp.tool()
     async def select_grow(radius: int) -> ToolResult:

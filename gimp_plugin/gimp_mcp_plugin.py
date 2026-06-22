@@ -116,20 +116,13 @@ class MCPProPlugin(Gimp.PlugIn):
 
     def do_query_procedures(self):
         self._maybe_autostart(reason="environment autostart during query")
-        self.flow_specs = self._load_pinned_flows()
-        return [AUTOSTART_PROC, SERVER_PROC, BROWSE_PROC, MANAGE_PROC, *self.flow_specs]
+        return [AUTOSTART_PROC, SERVER_PROC]
 
     def do_create_procedure(self, name):
         if name == AUTOSTART_PROC:
-            return Gimp.Procedure.new(
-                self, name, Gimp.PDBProcType.PERSISTENT, self.run, None
-            )
+            return Gimp.Procedure.new(self, name, Gimp.PDBProcType.PERSISTENT, self.run, None)
         if name == SERVER_PROC:
             return self._create_server_procedure(name)
-        if name in {BROWSE_PROC, MANAGE_PROC}:
-            return self._create_flow_browser_procedure(name)
-        if name in self.flow_specs:
-            return self._create_flow_procedure(name, self.flow_specs[name])
         return None
 
     def _create_server_procedure(self, name):
@@ -146,7 +139,7 @@ class MCPProPlugin(Gimp.PlugIn):
 
     def _create_flow_browser_procedure(self, name):
         procedure = Gimp.ImageProcedure.new(
-            self, name, Gimp.PDBProcType.PLUGIN, self.run_flow_browser, None
+            self, name, Gimp.PDBProcType.TEMPORARY, self.run_flow_browser, None
         )
         label = "Browse All Flows" if name == BROWSE_PROC else "Manage Flows"
         procedure.set_menu_label(_(label))
@@ -157,7 +150,7 @@ class MCPProPlugin(Gimp.PlugIn):
 
     def _create_flow_procedure(self, name, flow):
         procedure = Gimp.ImageProcedure.new(
-            self, name, Gimp.PDBProcType.PLUGIN, self.run_flow, None
+            self, name, Gimp.PDBProcType.TEMPORARY, self.run_flow, None
         )
         procedure.set_menu_label(_(flow.get("title", flow.get("id", "Repeatable Flow"))))
         procedure.set_documentation(
@@ -207,7 +200,14 @@ class MCPProPlugin(Gimp.PlugIn):
         return os.path.join(config_home, "gimp-mcp-pro", "flows")
 
     def _load_pinned_flows(self):
-        flows = {}
+        return {
+            FLOW_PROC_PREFIX + flow["id"]: flow
+            for flow in self._load_all_flows()
+            if flow.get("state") == "active" and flow.get("ui", {}).get("pinned")
+        }
+
+    def _load_all_flows(self):
+        flows = []
         flow_dir = self._flow_dir()
         if not os.path.isdir(flow_dir):
             return flows
@@ -217,14 +217,41 @@ class MCPProPlugin(Gimp.PlugIn):
             try:
                 with open(os.path.join(flow_dir, filename), encoding="utf-8") as handle:
                     flow = json.load(handle)
-                if flow.get("state") != "active" or not flow.get("ui", {}).get("pinned"):
-                    continue
-                flow_id = flow.get("id", "")
-                if flow_id:
-                    flows[FLOW_PROC_PREFIX + flow_id] = flow
+                if flow.get("id") and flow.get("title"):
+                    flows.append(flow)
             except (OSError, ValueError) as exc:
                 print(f"Ignoring invalid repeatable flow {filename}: {exc}")
         return flows
+
+    def _save_flow_json(self, flow):
+        flow_dir = self._flow_dir()
+        os.makedirs(flow_dir, exist_ok=True)
+        path = os.path.join(flow_dir, flow["id"] + ".flow.json")
+        fd, temporary = tempfile.mkstemp(prefix=".flow-", suffix=".json", dir=flow_dir)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(flow, handle, indent=2, sort_keys=True)
+                handle.write("\n")
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
+    def _update_flow_lifecycle(self, flow, action):
+        if action == "toggle-active":
+            if flow.get("state") == "active":
+                flow["state"] = "validated"
+                flow.setdefault("ui", {})["pinned"] = False
+            elif flow.get("state") == "validated":
+                flow["state"] = "active"
+            else:
+                raise ValueError("Draft flows must be validated through MCP or CLI first")
+        elif action == "toggle-pin":
+            if flow.get("state") != "active":
+                raise ValueError("Only active flows can be pinned")
+            ui = flow.setdefault("ui", {})
+            ui["pinned"] = not bool(ui.get("pinned"))
+        self._save_flow_json(flow)
 
     def _runner_argv(self):
         config_path = os.path.join(os.path.dirname(self._flow_dir()), "runner.json")
@@ -259,6 +286,23 @@ class MCPProPlugin(Gimp.PlugIn):
             key = parameter.get("name", "")
             if key:
                 parameters[key] = config.get_property(key.replace("_", "-"))
+        self._launch_flow(flow, parameters, image=image)
+        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
+    def _capture_preview(self):
+        result = self._handle_get_bitmap({"max_width": 512, "max_height": 512})
+        payload = result.get("results", {})
+        encoded = payload.get("image_data") if isinstance(payload, dict) else None
+        if not encoded:
+            return None
+        fd, path = tempfile.mkstemp(prefix="gimp-flow-preview-", suffix=".png")
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(base64.b64decode(encoded))
+        return path
+
+    def _launch_flow(self, flow, parameters, image=None):
+        review = flow.get("review_policy", "final") == "final" and image is not None
+        before_preview = self._capture_preview() if review else None
         argv = [
             *self._runner_argv(),
             "flow",
@@ -269,23 +313,177 @@ class MCPProPlugin(Gimp.PlugIn):
             "--params-json",
             json.dumps(parameters),
         ]
-        subprocess.Popen(argv, start_new_session=True)
-        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+        process = subprocess.Popen(
+            argv,
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if review:
+
+            def check_finished():
+                if process.poll() is None:
+                    return GLib.SOURCE_CONTINUE
+                if process.returncode == 0:
+                    self._show_final_review(flow, image, before_preview)
+                else:
+                    Gimp.message(f"Flow '{flow.get('title')}' failed; inspect MCP logs.")
+                    if before_preview and os.path.exists(before_preview):
+                        os.unlink(before_preview)
+                return GLib.SOURCE_REMOVE
+
+            GLib.timeout_add(250, check_finished)
+
+    def _show_final_review(self, flow, image, before_preview):
+        gi.require_version("GimpUi", "3.0")
+        gi.require_version("Gtk", "3.0")
+        from gi.repository import GimpUi, Gtk
+
+        after_preview = self._capture_preview()
+        GimpUi.init("gimp-mcp-pro-flow-review")
+        dialog = Gtk.Dialog(title=f"Review: {flow.get('title', 'Repeatable Flow')}")
+        dialog.add_button(_("Commit"), Gtk.ResponseType.OK)
+        dialog.add_button(_("Rollback"), Gtk.ResponseType.REJECT)
+        dialog.add_button(_("Keep Open"), Gtk.ResponseType.CLOSE)
+        box = dialog.get_content_area()
+        box.set_spacing(8)
+        previews = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        for label_text, path in (("Before", before_preview), ("After", after_preview)):
+            column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            column.pack_start(Gtk.Label(label=label_text), False, False, 0)
+            if path and os.path.exists(path):
+                column.pack_start(Gtk.Image.new_from_file(path), True, True, 0)
+            previews.pack_start(column, True, True, 0)
+        box.pack_start(previews, True, True, 0)
+        box.pack_start(
+            Gtk.Label(label="The flow completed as grouped undo phases."), False, False, 0
+        )
+        dialog.show_all()
+        response = dialog.run()
+        dialog.destroy()
+        if response == Gtk.ResponseType.REJECT:
+            for _unused in flow.get("phases", [{}]):
+                try:
+                    image.undo()
+                except Exception as exc:
+                    Gimp.message(f"Rollback stopped: {exc}")
+                    break
+            Gimp.displays_flush()
+        for path in (before_preview, after_preview):
+            if path and os.path.exists(path):
+                os.unlink(path)
 
     def run_flow_browser(self, procedure, run_mode, image, drawables, config, run_data):
-        flow_dir = self._flow_dir()
-        message = f"Repeatable Flows are stored in {flow_dir}. Use MCP flow tools to manage them."
-        Gimp.message(message)
+        gi.require_version("GimpUi", "3.0")
+        gi.require_version("Gtk", "3.0")
+        from gi.repository import GimpUi, Gtk
+
+        GimpUi.init(procedure.get_name())
+        managing = procedure.get_name() == MANAGE_PROC
+        title = "Manage Repeatable Flows" if managing else "Browse Repeatable Flows"
+        dialog = Gtk.Dialog(title=title)
+        dialog.add_button(_("Close"), Gtk.ResponseType.CLOSE)
+        if managing:
+            dialog.add_button(_("Toggle Active"), Gtk.ResponseType.ACCEPT)
+            dialog.add_button(_("Toggle Pin"), Gtk.ResponseType.YES)
+        else:
+            dialog.add_button(_("Run"), Gtk.ResponseType.APPLY)
+
+        content = dialog.get_content_area()
+        content.set_spacing(8)
+        search = Gtk.SearchEntry()
+        search.set_placeholder_text(_("Search flows"))
+        content.pack_start(search, False, False, 0)
+        selector = Gtk.ComboBoxText()
+        content.pack_start(selector, False, False, 0)
+        details = Gtk.Label(xalign=0)
+        details.set_line_wrap(True)
+        content.pack_start(details, True, True, 0)
+        flows = self._load_all_flows()
+        visible = []
+
+        def refresh(*unused):
+            query = search.get_text().strip().lower()
+            selector.remove_all()
+            visible.clear()
+            for flow in flows:
+                haystack = " ".join(
+                    [flow.get("id", ""), flow.get("title", ""), flow.get("description", "")]
+                ).lower()
+                if query and query not in haystack:
+                    continue
+                visible.append(flow)
+                selector.append(flow["id"], flow["title"])
+            if visible:
+                selector.set_active(0)
+
+        def update_details(*unused):
+            flow_id = selector.get_active_id()
+            flow = next((item for item in visible if item.get("id") == flow_id), None)
+            if flow is None:
+                details.set_text(_("No matching flows"))
+                return
+            tags = ", ".join(flow.get("capabilities", [])) or "typed-tools"
+            details.set_text(
+                f"{flow.get('description', '')}\n\n"
+                f"State: {flow.get('state', 'draft')}  |  "
+                f"Pinned: {bool(flow.get('ui', {}).get('pinned'))}\nCapabilities: {tags}"
+            )
+
+        search.connect("search-changed", refresh)
+        selector.connect("changed", update_details)
+        refresh()
+        dialog.show_all()
+        response = dialog.run()
+        flow_id = selector.get_active_id()
+        selected = next((item for item in visible if item.get("id") == flow_id), None)
+        dialog.destroy()
+        try:
+            if selected is not None and response == Gtk.ResponseType.APPLY:
+                if selected.get("state") != "active":
+                    raise ValueError("Only active flows can run")
+                required_without_default = [
+                    item.get("name")
+                    for item in selected.get("parameters", [])
+                    if item.get("required") and item.get("default") is None
+                ]
+                if required_without_default:
+                    raise ValueError(
+                        "Pin this flow to open its parameter dialog; missing: "
+                        + ", ".join(required_without_default)
+                    )
+                parameters = {
+                    item["name"]: item.get("default")
+                    for item in selected.get("parameters", [])
+                    if item.get("name")
+                }
+                self._launch_flow(selected, parameters, image=image)
+            elif selected is not None and response == Gtk.ResponseType.ACCEPT:
+                self._update_flow_lifecycle(selected, "toggle-active")
+                Gimp.message("Flow state updated. Restart GIMP to refresh pinned menu entries.")
+            elif selected is not None and response == Gtk.ResponseType.YES:
+                self._update_flow_lifecycle(selected, "toggle-pin")
+                Gimp.message("Flow pin updated. Restart GIMP to refresh pinned menu entries.")
+        except (OSError, ValueError) as exc:
+            Gimp.message(str(exc))
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
 
     def run(self, procedure, *args):
         self._start_server_thread(reason="procedure invocation", blocking=False)
         if self.running:
+            self._register_flow_procedures()
             procedure.persistent_ready()
             self.persistent_enable()
             self.main_loop = GLib.MainLoop()
             self.main_loop.run()
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
+    def _register_flow_procedures(self):
+        self.flow_specs = self._load_pinned_flows()
+        for name in (BROWSE_PROC, MANAGE_PROC):
+            self.add_temp_procedure(self._create_flow_browser_procedure(name))
+        for name, flow in self.flow_specs.items():
+            self.add_temp_procedure(self._create_flow_procedure(name, flow))
 
     def _start_server_thread(self, reason="manual", blocking=False):
         if self.running:
@@ -540,9 +738,7 @@ class MCPProPlugin(Gimp.PlugIn):
             cur_w = region.get("width", orig_w)
             cur_h = region.get("height", orig_h)
 
-        needs_scale = bool(
-            max_width and max_height and (cur_w > max_width or cur_h > max_height)
-        )
+        needs_scale = bool(max_width and max_height and (cur_w > max_width or cur_h > max_height))
 
         export_image = None
         try:
@@ -590,9 +786,7 @@ class MCPProPlugin(Gimp.PlugIn):
                         pass
                     export_proc.run(cfg)
                 else:
-                    Gimp.file_save(
-                        Gimp.RunMode.NONINTERACTIVE, export_image, file_obj
-                    )
+                    Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, export_image, file_obj)
 
                 with open(temp_path, "rb") as f:
                     encoded = base64.b64encode(f.read()).decode("utf-8")

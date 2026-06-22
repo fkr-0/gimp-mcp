@@ -118,9 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     flow_run.add_argument("flow_id")
     flow_run.add_argument("--params-json", default="{}", help="JSON object of parameter values.")
     flow_run.add_argument("--confirm-unsafe", action="store_true")
-    flow_run.add_argument(
-        "--checkpoint-decision", choices=("commit", "rollback"), default="commit"
-    )
+    flow_run.add_argument("--checkpoint-decision", choices=("commit", "rollback"), default="commit")
     flow_run.set_defaults(func=cmd_flow_run)
 
     parser.set_defaults(func=cmd_serve, command="serve")

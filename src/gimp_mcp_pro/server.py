@@ -9,7 +9,16 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ModuleNotFoundError:  # pragma: no cover - exercised when optional test env lacks mcp
+
+    class FastMCP:  # type: ignore[no-redef]
+        """Import-time fallback so tests can monkeypatch FastMCP without mcp installed."""
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            raise RuntimeError("The 'mcp' package is required to create a real server")
+
 
 from gimp_mcp_pro.async_bridge import AsyncGimpBridge
 from gimp_mcp_pro.config import ServerConfig
