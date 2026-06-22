@@ -17,6 +17,7 @@ from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+from gimp_mcp_pro.tools.flow_tools import register_flow_tools
 from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
 from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
@@ -200,6 +201,7 @@ def register_functions() -> list[RegisterFn]:
         register_filter_tools,
         register_color_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
+        register_flow_tools,
     ]
 
 
@@ -259,7 +261,7 @@ def test_all_mcp_tool_handlers_return_tool_result_alias() -> None:
 def test_all_registered_tools_are_coroutine_functions() -> None:
     tools = registered_tools()
 
-    assert len(tools) == 102
+    assert len(tools) == 111
     assert all(inspect.iscoroutinefunction(tool) for tool in tools.values())
 
 
@@ -405,7 +407,7 @@ async def test_async_native_bridge_can_drive_registered_tool_surface() -> None:
     assert info_result["success"] is True
     assert bitmap_result["success"] is True
     assert gimp_result["success"] is True
-    assert len(tools) == 102
+    assert len(tools) == 111
     assert ("get_gimp_info", None) in bridge.calls
     assert (
         "get_image_bitmap",

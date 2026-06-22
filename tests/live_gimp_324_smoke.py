@@ -687,7 +687,7 @@ def run_docs_check() -> dict[str, Any]:
     """Record README/doc compatibility-claim evidence."""
     try:
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        tool_count_ok = "102 typed" in readme or "102 tools" in readme
+        tool_count_ok = "111 typed" in readme or "111 tools" in readme
         stale_claim_absent = "GIMP 3.0.8 compatible" not in readme
         compatibility_table = "compatibility" in readme.lower() and "3.2.4" in readme
         ok = tool_count_ok and stale_claim_absent and compatibility_table
@@ -988,7 +988,7 @@ if missing:
 
 def _registry_total_check(tools: dict[str, Any]) -> dict[str, Any]:
     """Check live captured MCP tool registry count."""
-    expected = 102
+    expected = 111
     names = sorted(tools)
     return make_check(
         "mcp-tools",
@@ -1003,8 +1003,8 @@ def _docs_contract_check() -> dict[str, Any]:
     failures: list[str] = []
     if "GIMP 3.0.8 compatible" in readme:
         failures.append("README contains stale GIMP 3.0.8 compatibility wording")
-    if "102 typed" not in readme:
-        failures.append("README does not advertise 102 typed tools")
+    if "111 typed" not in readme:
+        failures.append("README does not advertise 111 typed tools")
     if "gimp_mcp_plugin/gimp_mcp_plugin.py" not in readme:
         failures.append("README does not document the canonical GIMP plug-in directory/file layout")
     if "claim_allowed: false" not in readme and "claim_allowed: true" not in readme:
@@ -1084,11 +1084,11 @@ def run_smoke(
             ],
         )
         registry_evidence = {
-            "expected_total": 102,
+            "expected_total": 111,
             "actual_total": len(tools),
             "tools": sorted(tools),
         }
-        if len(tools) != 102:
+        if len(tools) != 111:
             image_check["status"] = "fail"
             image_check["evidence"]["failed_tools"].append("registry-count")
         image_check["evidence"]["registry"] = registry_evidence

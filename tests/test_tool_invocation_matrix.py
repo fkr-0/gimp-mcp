@@ -9,16 +9,22 @@ separate.
 from __future__ import annotations
 
 import json
+import tempfile
+from pathlib import Path
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 import pytest
 
+from gimp_mcp_pro.flows.models import FlowDefinition
+from gimp_mcp_pro.flows.operations import OperationRegistry
+from gimp_mcp_pro.flows.store import FlowStore
 from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse, ToolResult
 from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+from gimp_mcp_pro.tools.flow_tools import register_flow_tools
 from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
 from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
@@ -31,6 +37,7 @@ from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.tools.types import AsyncToolBridge
 from gimp_mcp_pro.utils.errors import GimpCommandError
+from tests.test_flow_models import flow_payload
 
 AsyncRegisteredTool = Callable[..., Awaitable[ToolResult]]
 
@@ -393,6 +400,31 @@ class FakeGimpDevAdapter:
         return GimpDevAdapter().summarize_catalog(catalog)
 
 
+def matrix_flow_registry_factory(_bridge: AsyncToolBridge) -> OperationRegistry:
+    """Return a small operation registry for offline flow execution tests."""
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def scale_image(width: int, height: int) -> dict[str, object]:
+        return {"status": "success", "data": {"width": width, "height": height}}
+
+    @registry.tool()
+    async def apply_unsharp_mask() -> dict[str, object]:
+        return {"status": "success"}
+
+    return registry
+
+
+def matrix_flow_store() -> FlowStore:
+    """Create an isolated active flow store for independent matrix tool calls."""
+    root = Path(tempfile.mkdtemp(prefix="gimp-mcp-flow-matrix-"))
+    store = FlowStore(root)
+    flow = FlowDefinition.model_validate(flow_payload())
+    flow.state = "active"
+    store.save(flow)
+    return store
+
+
 def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
     """Register all tool groups against a bridge fake."""
     mcp = CaptureMCP()
@@ -411,12 +443,16 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
         register_filter_tools,
         register_color_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
+        lambda mcp, bridge: register_flow_tools(
+            mcp, bridge, store=matrix_flow_store(), registry_factory=matrix_flow_registry_factory
+        ),
     ]:
         register(mcp, bridge)
     return mcp.tools
 
 
 TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
+    "activate_flow": (("prepare-product-image",), {}),
     "add_alpha_channel": ((), {"layer_index": 0}),
     "add_layer_mask": ((), {"mask_type": "white", "layer_index": 0}),
     "border_selection": ((2,), {}),
@@ -444,6 +480,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
     "crop_image": ((1, 2, 100, 80), {}),
     "crop_to_selection": ((), {}),
+    "deactivate_flow": (("prepare-product-image",), {}),
     "delete_layer": ((), {"layer_index": 0}),
     "desaturate": ((), {"method": "luminosity"}),
     "draw_brush_stroke": (([0, 0, 10, 10, 20, 5],), {"tool": "pencil"}),
@@ -462,6 +499,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "flatten_image": ((), {}),
     "flip_image": ((), {"direction": "vertical"}),
     "flip_layer": ((), {"direction": "horizontal", "layer_index": 0}),
+    "get_flow": (("prepare-product-image",), {}),
     "get_colors": ((), {}),
     "get_context_state": ((), {}),
     "get_gimp_info": ((), {}),
@@ -473,12 +511,15 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "get_layer_mask_info": ((), {"layer_index": 0}),
     "get_selection_info": ((), {}),
     "invert_colors": ((), {}),
+    "list_flows": ((), {}),
     "list_images": ((), {}),
     "list_layers": ((), {}),
     "list_paths": ((), {}),
     "merge_visible_layers": ((), {}),
     "offset_layer": ((5, -3), {"layer_index": 0}),
+    "pin_flow": (("prepare-product-image",), {}),
     "path_to_selection": ((), {"path_name": "Path 1"}),
+    "propose_flow": ((flow_payload(),), {}),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
     "remove_layer_mask": ((), {"apply": False, "layer_index": 0}),
@@ -486,6 +527,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "rollback_transaction": ((), {}),
     "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
     "create_path": (([0, 0, 20, 0, 20, 20],), {"name": "Path 1", "closed": True}),
+    "run_flow": (("prepare-product-image", {"width": 800, "image": 1, "sharpen": False}), {}),
     "rotate_image": ((90,), {}),
     "rotate_layer": ((15.0,), {"layer_index": 0}),
     "sample_color": ((4, 5), {"sample_merged": False}),
@@ -517,10 +559,12 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "stroke_path": ((), {"path_name": "Path 1", "color": "black", "brush_size": 2.0}),
     "stroke_selection": ((), {"color": "black", "brush_size": 2.0}),
     "swap_colors": ((), {}),
+    "validate_flow": (("prepare-product-image",), {}),
     "validate_targets": (
         ([{"kind": "layer", "id": 201}],),
         {"required_capabilities": ["visible", "editable"]},
     ),
+    "unpin_flow": (("prepare-product-image",), {}),
     "undo": ((), {"steps": 1}),
 }
 
@@ -545,7 +589,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 102
+    assert len(TOOL_SUCCESS_CASES) == 111
 
 
 @pytest.mark.asyncio

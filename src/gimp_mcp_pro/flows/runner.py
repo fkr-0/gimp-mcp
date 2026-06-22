@@ -67,7 +67,7 @@ class FlowRunner:
             "phases": [],
             "capabilities": flow.capabilities,
         }
-        for phase in flow.phases:
+        for phase_index, phase in enumerate(flow.phases):
             transaction_id = await self._begin_transaction(flow, phase.id)
             phase_log = {"id": phase.id, "transaction_id": transaction_id, "status": "active"}
             log["phases"].append(phase_log)
@@ -103,11 +103,20 @@ class FlowRunner:
                     )
                     return log
 
-            should_review = flow.review_policy == "phased" or phase.checkpoint
+            is_final_phase = phase_index == len(flow.phases) - 1
+            should_review = (
+                flow.review_policy == "phased"
+                or phase.checkpoint
+                or (flow.review_policy == "final" and is_final_phase)
+            )
             if should_review and checkpoint_decision == "rollback":
                 await self._rollback(transaction_id)
                 phase_log["status"] = "rolled-back"
-                log.update(status="rolled-back", duration_ms=round((time.monotonic() - started) * 1000, 3))
+                log.update(
+                    status="rolled-back",
+                    review={"policy": flow.review_policy, "decision": "rollback"},
+                    duration_ms=round((time.monotonic() - started) * 1000, 3),
+                )
                 return log
             await self._commit(transaction_id)
             phase_log["status"] = "committed"

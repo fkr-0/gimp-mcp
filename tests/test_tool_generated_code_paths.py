@@ -9,16 +9,22 @@ runs. Live symbol/API coverage remains in tests/live_gimp_324_smoke.py.
 from __future__ import annotations
 
 import inspect
+import tempfile
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+from gimp_mcp_pro.flows.models import FlowDefinition
+from gimp_mcp_pro.flows.operations import OperationRegistry
+from gimp_mcp_pro.flows.store import FlowStore
 from gimp_mcp_pro.protocol import BitmapRegion, CommandParams, PluginResponse
 from gimp_mcp_pro.tools.agent_tools import register_agent_tools
 from gimp_mcp_pro.tools.color_tools import register_color_tools
 from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+from gimp_mcp_pro.tools.flow_tools import register_flow_tools
 from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
 from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
@@ -30,6 +36,7 @@ from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.utils.errors import GimpCommandError
+from tests.test_flow_models import flow_payload
 
 Tool = Callable[..., Awaitable[dict[str, Any]]]
 
@@ -228,6 +235,44 @@ class FakeGimpDevAdapter:
         return GimpDevAdapter().summarize_catalog(catalog)
 
 
+FLOW_TOOL_NAMES = {
+    "propose_flow",
+    "list_flows",
+    "get_flow",
+    "validate_flow",
+    "activate_flow",
+    "deactivate_flow",
+    "pin_flow",
+    "unpin_flow",
+    "run_flow",
+}
+
+
+def generated_flow_registry_factory(_bridge: ScriptedBridge) -> OperationRegistry:
+    """Return a small operation registry for generated-code flow tests."""
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def scale_image(width: int, height: int) -> dict[str, object]:
+        return {"status": "success", "data": {"width": width, "height": height}}
+
+    @registry.tool()
+    async def apply_unsharp_mask() -> dict[str, object]:
+        return {"status": "success"}
+
+    return registry
+
+
+def generated_flow_store() -> FlowStore:
+    """Create an isolated active flow store for generated-code tests."""
+    root = Path(tempfile.mkdtemp(prefix="gimp-mcp-generated-flow-"))
+    store = FlowStore(root)
+    flow = FlowDefinition.model_validate(flow_payload())
+    flow.state = "active"
+    store.save(flow)
+    return store
+
+
 def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
     mcp = CaptureMCP()
     for register in [
@@ -245,12 +290,16 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
         register_filter_tools,
         register_color_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
+        lambda mcp, bridge: register_flow_tools(
+            mcp, bridge, store=generated_flow_store(), registry_factory=generated_flow_registry_factory
+        ),
     ]:
         register(mcp, bridge)
     return mcp.tools
 
 
 SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
+    "activate_flow": {"flow_id": "prepare-product-image"},
     "add_text": {"text": "hello 'quoted' world", "layer_name": "text-layer"},
     "add_layer_mask": {"mask_type": "white", "layer_index": 0},
     "border_selection": {"radius": 2},
@@ -260,6 +309,7 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "create_image": {"width": 64, "height": 48},
     "crop_image": {"x": 1, "y": 2, "width": 32, "height": 24},
     "delete_layer": {"layer_index": 0},
+    "deactivate_flow": {"flow_id": "prepare-product-image"},
     "draw_brush_stroke": {"points": [0, 0, 10, 10, 20, 0, 30, 10]},
     "draw_ellipse": {"x": 2, "y": 3, "width": 12, "height": 8},
     "draw_line": {"x1": 0, "y1": 0, "x2": 16, "y2": 16},
@@ -271,6 +321,7 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "gimp_dev_status": {},
     "gimp_dev_plugin_catalog": {"include_raw_catalog": True, "validate": False},
     "get_image_bitmap": {"max_width": 32, "max_height": 24},
+    "get_flow": {"flow_id": "prepare-product-image"},
     "get_layer_mask_info": {"layer_index": 0},
     "get_selection_info": {},
     "list_paths": {},
@@ -278,9 +329,15 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "observe_region": {"x": 0, "y": 0, "width": 16, "height": 16},
     "resize_canvas": {"new_width": 128, "new_height": 96},
     "path_to_selection": {"path_name": "Path 1"},
+    "pin_flow": {"flow_id": "prepare-product-image"},
+    "propose_flow": {"definition": flow_payload()},
     "remove_layer_mask": {"apply": False, "layer_index": 0},
     "remove_path": {"path_name": "Path 1"},
     "rollback_transaction": {},
+    "run_flow": {
+        "flow_id": "prepare-product-image",
+        "parameters": {"width": 640, "image": 1, "sharpen": False},
+    },
     "rotate_image": {"angle": 90},
     "rotate_layer": {"angle_degrees": 15.0},
     "sample_color": {"x": 2, "y": 3},
@@ -306,6 +363,8 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "set_layer_visibility": {"visible": False},
     "stroke_path": {"path_name": "Path 1", "color": "black", "brush_size": 2.0},
     "stroke_selection": {"color": "black", "brush_size": 2.0},
+    "unpin_flow": {"flow_id": "prepare-product-image"},
+    "validate_flow": {"flow_id": "prepare-product-image"},
 }
 
 
@@ -328,7 +387,7 @@ async def test_all_tools_have_fast_success_path(tool_name: str) -> None:
 
     assert result["success"] is True, f"{tool_name} returned {result!r}"
     assert inspect.iscoroutinefunction(tool)
-    if not tool_name.startswith("gimp_dev_"):
+    if not tool_name.startswith("gimp_dev_") and tool_name not in FLOW_TOOL_NAMES:
         assert bridge.calls, f"{tool_name} did not touch the async bridge"
 
 

@@ -113,6 +113,39 @@ async def test_runner_rolls_back_failed_phase() -> None:
 
 
 @pytest.mark.asyncio
+async def test_final_review_can_roll_back_before_commit() -> None:
+    calls: list[str] = []
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def begin_edit_transaction(label: str) -> dict[str, object]:
+        calls.append("begin")
+        return {"status": "success", "data": {"transaction_id": "txn-final"}}
+
+    @registry.tool()
+    async def record(payload: Any) -> dict[str, object]:
+        calls.append("step")
+        return {"status": "success"}
+
+    @registry.tool()
+    async def end_edit_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append("commit")
+        return {"status": "success"}
+
+    @registry.tool()
+    async def rollback_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append("rollback")
+        return {"status": "success"}
+
+    flow = make_flow({"tool": "record", "arguments": {"payload": "x"}})
+    flow.review_policy = "final"
+    result = await FlowRunner(registry).run(flow, {"name": "x"}, checkpoint_decision="rollback")
+
+    assert result["status"] == "rolled-back"
+    assert calls == ["begin", "step", "rollback"]
+
+
+@pytest.mark.asyncio
 async def test_runner_requires_confirmation_for_unsafe_flow() -> None:
     registry = OperationRegistry()
 

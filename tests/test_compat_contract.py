@@ -19,7 +19,7 @@ def test_source_tool_registry_current_total() -> None:
     registry = compat.extract_source_tool_registry()
     names = compat.flatten_registry(registry)
 
-    assert len(names) == 102
+    assert len(names) == 111
     assert "create_image" in names
     assert "apply_drop_shadow" in names
     assert "sample_color" in names
