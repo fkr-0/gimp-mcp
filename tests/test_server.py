@@ -49,11 +49,13 @@ def patch_tool_registrars(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "color_tools": "register_color_tools",
         "drawing_tools": "register_drawing_tools",
         "filter_tools": "register_filter_tools",
+        "flow_tools": "register_flow_tools",
         "gimp_dev_tools": "register_gimp_dev_tools",
         "history_tools": "register_history_tools",
         "image_tools": "register_image_tools",
         "inspect_tools": "register_inspect_tools",
         "layer_tools": "register_layer_tools",
+        "path_tools": "register_path_tools",
         "pdb_tools": "register_pdb_tools",
         "selection_tools": "register_selection_tools",
         "target_tools": "register_target_tools",
@@ -97,6 +99,7 @@ def test_create_server_wires_bridge_and_tool_registrars(monkeypatch: pytest.Monk
         "register_image_tools",
         "register_layer_tools",
         "register_selection_tools",
+        "register_path_tools",
         "register_drawing_tools",
         "register_inspect_tools",
         "register_history_tools",
@@ -106,6 +109,7 @@ def test_create_server_wires_bridge_and_tool_registrars(monkeypatch: pytest.Monk
         "register_filter_tools",
         "register_color_tools",
         "register_gimp_dev_tools",
+        "register_flow_tools",
     ]
 
 

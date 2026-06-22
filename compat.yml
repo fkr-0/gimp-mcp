@@ -98,7 +98,7 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 84
+    current_total: 102
     by_module:
       image_tools: 6
       layer_tools: 9
@@ -111,8 +111,8 @@ known_repo_observations:
       filter_tools: 8
       color_tools: 13
     reconciliation_required: >-
-      README currently advertises 67 typed tools while current code registers
-      84 unique MCP tool decorators. The compatibility gate MUST reconcile the public
+      README count is reconciled with current code registering
+      102 unique MCP tool decorators. The compatibility gate MUST reconcile the public
       count with the runtime registry before publishing a 3.2.4 support claim.
   plugin_entrypoint:
     source: gimp_plugin/gimp_mcp_plugin.py
@@ -528,7 +528,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 86
+  expected_registry_total: 102
   registry:
     image:
       - create_image
@@ -544,8 +544,13 @@ mcp_tool_contract:
       - delete_layer
       - set_layer_opacity
       - set_layer_visibility
+      - set_layer_mode
       - duplicate_layer
       - merge_visible_layers
+      - add_layer_mask
+      - get_layer_mask_info
+      - set_layer_mask_state
+      - remove_layer_mask
       - add_alpha_channel
     selection:
       - select_rectangle
@@ -554,8 +559,20 @@ mcp_tool_contract:
       - select_all
       - select_none
       - select_invert
+      - select_by_color
+      - feather_selection
+      - border_selection
+      - stroke_selection
+      - bucket_fill
+      - get_selection_info
       - select_grow
       - select_shrink
+    path:
+      - create_path
+      - list_paths
+      - path_to_selection
+      - stroke_path
+      - remove_path
     drawing:
       - set_foreground_color
       - set_background_color
@@ -748,6 +765,16 @@ live_smoke_scenarios:
       - drawing tools alter bitmap pixels in expected bounding boxes.
       - selection tools do not leak selection state after select_none.
       - text layer is created with expected text/name and visible pixels.
+  - id: C-055-path-contract
+    required: true
+    title: Vector path creation, selection conversion and stroking
+    steps:
+      - Create a clean image and editable layer.
+      - Create a named vector path from control points.
+      - Convert the path to a selection, fill it, stroke the path, remove it, and list paths.
+    assertions:
+      - Path tools return structured success results through the MCP tool registry.
+      - GIMP 3.2.4 path APIs are exercised through Gimp.Path.new, stroke_new_from_points, image.select_item and image.remove_path.
   - id: C-060-export-bitmap-contract
     required: true
     tools:

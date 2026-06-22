@@ -48,11 +48,13 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     from gimp_mcp_pro.tools.color_tools import register_color_tools
     from gimp_mcp_pro.tools.drawing_tools import register_drawing_tools
     from gimp_mcp_pro.tools.filter_tools import register_filter_tools
+    from gimp_mcp_pro.tools.flow_tools import register_flow_tools
     from gimp_mcp_pro.tools.gimp_dev_tools import register_gimp_dev_tools
     from gimp_mcp_pro.tools.history_tools import register_history_tools
     from gimp_mcp_pro.tools.image_tools import register_image_tools
     from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
     from gimp_mcp_pro.tools.layer_tools import register_layer_tools
+    from gimp_mcp_pro.tools.path_tools import register_path_tools
     from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
     from gimp_mcp_pro.tools.selection_tools import register_selection_tools
     from gimp_mcp_pro.tools.target_tools import register_target_tools
@@ -62,6 +64,7 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     register_image_tools(mcp, bridge)
     register_layer_tools(mcp, bridge)
     register_selection_tools(mcp, bridge)
+    register_path_tools(mcp, bridge)
     register_drawing_tools(mcp, bridge)
     register_inspect_tools(mcp, bridge)
     register_history_tools(mcp, bridge)
@@ -71,6 +74,7 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     register_filter_tools(mcp, bridge)
     register_color_tools(mcp, bridge)
     register_gimp_dev_tools(mcp, bridge, GimpDevAdapter.from_config(config))
+    register_flow_tools(mcp, bridge)
 
     logger.info("All tool modules registered")
 

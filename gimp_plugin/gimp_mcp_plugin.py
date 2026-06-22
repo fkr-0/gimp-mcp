@@ -25,15 +25,18 @@ gi.require_version("Gimp", "3.0")
 
 from gi.repository import Gimp
 from gi.repository import GLib
+from gi.repository import GObject
 
 import base64
 import io
 import json
 import os
 import platform
+import queue
 import signal
 import socket
 import struct
+import subprocess
 import sys
 import tempfile
 import threading
@@ -43,6 +46,11 @@ import traceback
 HEADER_SIZE = 4
 MAX_MESSAGE_SIZE = 100 * 1024 * 1024  # 100 MB
 USE_LENGTH_PREFIX = True  # Set False for backward compat with maorcc bridge
+AUTOSTART_PROC = "plug-in-mcp-pro-autostart"
+SERVER_PROC = "plug-in-mcp-pro-server"
+BROWSE_PROC = "plug-in-mcp-pro-browse-flows"
+MANAGE_PROC = "plug-in-mcp-pro-manage-flows"
+FLOW_PROC_PREFIX = "plug-in-mcp-pro-flow-"
 
 
 def N_(message):
@@ -79,7 +87,9 @@ class MCPProPlugin(Gimp.PlugIn):
         self.running = False
         self.server_socket = None
         self.server_thread = None
+        self.main_loop = None
         self.auto_start_done = False
+        self.flow_specs = {}
         # Persistent Python execution context
         self.exec_context = {}
         exec("from gi.repository import Gimp, Gegl", self.exec_context)
@@ -87,6 +97,9 @@ class MCPProPlugin(Gimp.PlugIn):
     # ------------------------------------------------------------------
     # GIMP Plugin registration
     # ------------------------------------------------------------------
+
+    def do_set_i18n(self, name):
+        return False, None, None
 
     def _maybe_autostart(self, reason):
         if self.auto_start_done:
@@ -103,9 +116,23 @@ class MCPProPlugin(Gimp.PlugIn):
 
     def do_query_procedures(self):
         self._maybe_autostart(reason="environment autostart during query")
-        return ["plug-in-mcp-pro-server"]
+        self.flow_specs = self._load_pinned_flows()
+        return [AUTOSTART_PROC, SERVER_PROC, BROWSE_PROC, MANAGE_PROC, *self.flow_specs]
 
     def do_create_procedure(self, name):
+        if name == AUTOSTART_PROC:
+            return Gimp.Procedure.new(
+                self, name, Gimp.PDBProcType.PERSISTENT, self.run, None
+            )
+        if name == SERVER_PROC:
+            return self._create_server_procedure(name)
+        if name in {BROWSE_PROC, MANAGE_PROC}:
+            return self._create_flow_browser_procedure(name)
+        if name in self.flow_specs:
+            return self._create_flow_procedure(name, self.flow_specs[name])
+        return None
+
+    def _create_server_procedure(self, name):
         procedure = Gimp.Procedure.new(self, name, Gimp.PDBProcType.PERSISTENT, self.run, None)
         procedure.set_menu_label(_("Start MCP Pro Server"))
         procedure.set_documentation(
@@ -114,12 +141,150 @@ class MCPProPlugin(Gimp.PlugIn):
             name,
         )
         procedure.set_attribution("GIMP MCP Pro", "GIMP MCP Pro Contributors", "2026")
-        procedure.add_menu_path("<Image>/Tools/")
+        procedure.add_menu_path("<Image>/Filters/Development/GIMP MCP Pro")
         return procedure
 
+    def _create_flow_browser_procedure(self, name):
+        procedure = Gimp.ImageProcedure.new(
+            self, name, Gimp.PDBProcType.PLUGIN, self.run_flow_browser, None
+        )
+        label = "Browse All Flows" if name == BROWSE_PROC else "Manage Flows"
+        procedure.set_menu_label(_(label))
+        procedure.set_documentation(_(label), _("Open the Repeatable Flows catalog"), name)
+        procedure.set_image_types("*")
+        procedure.add_menu_path("<Image>/Filters/Repeatable Flows/")
+        return procedure
+
+    def _create_flow_procedure(self, name, flow):
+        procedure = Gimp.ImageProcedure.new(
+            self, name, Gimp.PDBProcType.PLUGIN, self.run_flow, None
+        )
+        procedure.set_menu_label(_(flow.get("title", flow.get("id", "Repeatable Flow"))))
+        procedure.set_documentation(
+            _(flow.get("description") or flow.get("title", "Repeatable Flow")),
+            _("Run a declarative GIMP MCP Pro flow"),
+            name,
+        )
+        procedure.set_image_types("*")
+        procedure.add_menu_path("<Image>/Filters/Repeatable Flows/")
+        for parameter in flow.get("parameters", []):
+            self._add_flow_argument(procedure, parameter)
+        return procedure
+
+    def _add_flow_argument(self, procedure, parameter):
+        name = parameter.get("name", "parameter").replace("_", "-")
+        label = parameter.get("description") or parameter.get("name", name)
+        kind = parameter.get("type", "text")
+        default = parameter.get("default")
+        flags = GObject.ParamFlags.READWRITE
+        if kind == "boolean":
+            procedure.add_boolean_argument(name, label, label, bool(default), flags)
+        elif kind == "integer":
+            procedure.add_int_argument(
+                name,
+                label,
+                label,
+                int(parameter.get("minimum", -(2**31))),
+                int(parameter.get("maximum", 2**31 - 1)),
+                int(default or 0),
+                flags,
+            )
+        elif kind in {"number", "opacity", "angle"}:
+            procedure.add_double_argument(
+                name,
+                label,
+                label,
+                float(parameter.get("minimum", -1.0e12)),
+                float(parameter.get("maximum", 1.0e12)),
+                float(default or 0.0),
+                flags,
+            )
+        else:
+            procedure.add_string_argument(name, label, label, str(default or ""), flags)
+
+    def _flow_dir(self):
+        config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+        return os.path.join(config_home, "gimp-mcp-pro", "flows")
+
+    def _load_pinned_flows(self):
+        flows = {}
+        flow_dir = self._flow_dir()
+        if not os.path.isdir(flow_dir):
+            return flows
+        for filename in sorted(os.listdir(flow_dir)):
+            if not filename.endswith(".flow.json"):
+                continue
+            try:
+                with open(os.path.join(flow_dir, filename), encoding="utf-8") as handle:
+                    flow = json.load(handle)
+                if flow.get("state") != "active" or not flow.get("ui", {}).get("pinned"):
+                    continue
+                flow_id = flow.get("id", "")
+                if flow_id:
+                    flows[FLOW_PROC_PREFIX + flow_id] = flow
+            except (OSError, ValueError) as exc:
+                print(f"Ignoring invalid repeatable flow {filename}: {exc}")
+        return flows
+
+    def _runner_argv(self):
+        config_path = os.path.join(os.path.dirname(self._flow_dir()), "runner.json")
+        try:
+            with open(config_path, encoding="utf-8") as handle:
+                argv = json.load(handle).get("argv")
+            if isinstance(argv, list) and argv and all(isinstance(item, str) for item in argv):
+                return argv
+        except (OSError, ValueError, AttributeError):
+            pass
+        return ["gimp-mcp-pro"]
+
+    def run_flow(self, procedure, run_mode, image, drawables, config, run_data):
+        flow = self.flow_specs.get(procedure.get_name()) or self._load_pinned_flows().get(
+            procedure.get_name()
+        )
+        if flow is None:
+            return procedure.new_return_values(Gimp.PDBStatusType.CALLING_ERROR, GLib.Error())
+        if run_mode == Gimp.RunMode.INTERACTIVE and flow.get("parameters"):
+            gi.require_version("GimpUi", "3.0")
+            from gi.repository import GimpUi
+
+            GimpUi.init(procedure.get_name())
+            dialog = GimpUi.ProcedureDialog.new(procedure, config, flow.get("title"))
+            dialog.fill(None)
+            accepted = dialog.run()
+            dialog.destroy()
+            if not accepted:
+                return procedure.new_return_values(Gimp.PDBStatusType.CANCEL, GLib.Error())
+        parameters = {}
+        for parameter in flow.get("parameters", []):
+            key = parameter.get("name", "")
+            if key:
+                parameters[key] = config.get_property(key.replace("_", "-"))
+        argv = [
+            *self._runner_argv(),
+            "flow",
+            "--flow-dir",
+            self._flow_dir(),
+            "run",
+            flow["id"],
+            "--params-json",
+            json.dumps(parameters),
+        ]
+        subprocess.Popen(argv, start_new_session=True)
+        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
+    def run_flow_browser(self, procedure, run_mode, image, drawables, config, run_data):
+        flow_dir = self._flow_dir()
+        message = f"Repeatable Flows are stored in {flow_dir}. Use MCP flow tools to manage them."
+        Gimp.message(message)
+        return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
+
     def run(self, procedure, *args):
-        blocking = _env_flag("GIMP_MCP_BLOCKING_RUN") or _env_flag("GIMP_MCP_PRO_BLOCKING_RUN", "1")
-        self._start_server_thread(reason="procedure invocation", blocking=blocking)
+        self._start_server_thread(reason="procedure invocation", blocking=False)
+        if self.running:
+            procedure.persistent_ready()
+            self.persistent_enable()
+            self.main_loop = GLib.MainLoop()
+            self.main_loop.run()
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
 
     def _start_server_thread(self, reason="manual", blocking=False):
@@ -180,6 +345,8 @@ class MCPProPlugin(Gimp.PlugIn):
             except:
                 pass
             self.server_socket = None
+        if self.main_loop is not None and self.main_loop.is_running():
+            self.main_loop.quit()
 
     def do_quit(self):
         self._shutdown()
@@ -199,7 +366,7 @@ class MCPProPlugin(Gimp.PlugIn):
                     if request is None:
                         break
 
-                    response = self._dispatch(request)
+                    response = self._dispatch_on_gimp_thread(request)
                     self._send_message(client, response)
                 except (ConnectionError, BrokenPipeError, OSError):
                     break
@@ -219,6 +386,31 @@ class MCPProPlugin(Gimp.PlugIn):
             except:
                 pass
             print("Client disconnected")
+
+    def _dispatch_on_gimp_thread(self, request):
+        """Run a decoded request on the persistent GLib/GIMP thread."""
+        response_queue = queue.Queue(maxsize=1)
+
+        def dispatch_request():
+            try:
+                response_queue.put(self._dispatch(request))
+            except Exception as exc:
+                response_queue.put(
+                    {
+                        "status": "error",
+                        "error": str(exc),
+                        "traceback": traceback.format_exc(),
+                    }
+                )
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(dispatch_request)
+        while self.running:
+            try:
+                return response_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+        raise RuntimeError("GIMP MCP Pro server stopped before the request completed")
 
     def _receive_message(self, sock):
         """Receive a message using length-prefixed framing (or JSON fallback)."""
@@ -324,7 +516,11 @@ class MCPProPlugin(Gimp.PlugIn):
             return {"status": "success", "results": outputs}
 
     def _handle_get_bitmap(self, params):
-        """Get current image as base64 PNG — reuses maorcc's proven logic."""
+        """Get current image as base64 PNG.
+
+        Uses duplicate+flatten+crop instead of Image.new+edit_copy/paste to
+        avoid dangling internal refs that crash GIMP's memsize idle handler.
+        """
         images = Gimp.get_images()
         if not images:
             return {"status": "error", "error": "No images are open in GIMP"}
@@ -337,112 +533,94 @@ class MCPProPlugin(Gimp.PlugIn):
         orig_w = image.get_width()
         orig_h = image.get_height()
 
-        # Region extraction
-        working_image = image
-        should_delete = False
+        needs_region = bool(region)
+        cur_w = orig_w
+        cur_h = orig_h
+        if needs_region:
+            cur_w = region.get("width", orig_w)
+            cur_h = region.get("height", orig_h)
 
-        if region:
-            ox = region.get("origin_x", 0)
-            oy = region.get("origin_y", 0)
-            rw = region.get("width", orig_w)
-            rh = region.get("height", orig_h)
+        needs_scale = bool(
+            max_width and max_height and (cur_w > max_width or cur_h > max_height)
+        )
 
-            working_image = Gimp.Image.new(rw, rh, image.get_base_type())
-            should_delete = True
+        export_image = None
+        try:
+            if needs_region or needs_scale:
+                export_image = image.duplicate()
+                export_image.flatten_image()
 
-            image.select_rectangle(Gimp.ChannelOps.REPLACE, ox, oy, rw, rh)
-            orig_layers = image.get_layers()
-            if orig_layers:
-                new_layer = Gimp.Layer.new(
-                    working_image,
-                    "Region",
-                    rw,
-                    rh,
-                    Gimp.ImageType.RGBA_IMAGE,
-                    100,
-                    Gimp.LayerMode.NORMAL,
-                )
-                working_image.insert_layer(new_layer, None, 0)
-                Gimp.edit_copy([orig_layers[0]])
-                floating = Gimp.edit_paste(new_layer, True)[0]
-                Gimp.floating_sel_anchor(floating)
+                if needs_region:
+                    ox = region.get("origin_x", 0)
+                    oy = region.get("origin_y", 0)
+                    rw = region.get("width", orig_w)
+                    rh = region.get("height", orig_h)
+                    export_image.crop(rw, rh, ox, oy)
+
+                if needs_scale:
+                    ew = export_image.get_width()
+                    eh = export_image.get_height()
+                    aspect = ew / eh
+                    max_aspect = max_width / max_height
+                    if aspect > max_aspect:
+                        tw, th = max_width, int(max_width / aspect)
+                    else:
+                        th, tw = max_height, int(max_height * aspect)
+                    export_image.scale(tw, th)
+            else:
+                export_image = image.duplicate()
+                export_image.flatten_image()
+
+            fd, temp_path = tempfile.mkstemp(suffix=".png")
+            os.close(fd)
 
             try:
-                Gimp.Selection.none(image)
-            except:
-                pass
+                from gi.repository import Gio
 
-        # Scaling
-        final_image = working_image
-        should_delete_final = should_delete
-        cur_w = working_image.get_width()
-        cur_h = working_image.get_height()
+                file_obj = Gio.File.new_for_path(temp_path)
 
-        if max_width and max_height and (cur_w > max_width or cur_h > max_height):
-            aspect = cur_w / cur_h
-            max_aspect = max_width / max_height
-            if aspect > max_aspect:
-                tw, th = max_width, int(max_width / aspect)
-            else:
-                th, tw = max_height, int(max_height * aspect)
+                export_proc = Gimp.get_pdb().lookup_procedure("file-png-export")
+                if export_proc:
+                    cfg = export_proc.create_config()
+                    cfg.set_property("image", export_image)
+                    cfg.set_property("file", file_obj)
+                    try:
+                        cfg.set_property("drawables", export_image.get_layers())
+                    except Exception:
+                        pass
+                    export_proc.run(cfg)
+                else:
+                    Gimp.file_save(
+                        Gimp.RunMode.NONINTERACTIVE, export_image, file_obj
+                    )
 
-            final_image = working_image.duplicate()
-            should_delete_final = True
-            final_image.scale(tw, th)
+                with open(temp_path, "rb") as f:
+                    encoded = base64.b64encode(f.read()).decode("utf-8")
 
-        # Export to temp PNG
-        fd, temp_path = tempfile.mkstemp(suffix=".png")
-        os.close(fd)
+                fw = export_image.get_width()
+                fh = export_image.get_height()
 
-        try:
-            from gi.repository import Gio
-
-            file_obj = Gio.File.new_for_path(temp_path)
-
-            export_proc = Gimp.get_pdb().lookup_procedure("file-png-export")
-            if export_proc:
-                cfg = export_proc.create_config()
-                cfg.set_property("image", final_image)
-                cfg.set_property("file", file_obj)
-                try:
-                    cfg.set_property("drawables", final_image.get_layers())
-                except:
-                    pass
-                export_proc.run(cfg)
-            else:
-                Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, final_image, file_obj)
-
-            with open(temp_path, "rb") as f:
-                encoded = base64.b64encode(f.read()).decode("utf-8")
-
-            fw = final_image.get_width()
-            fh = final_image.get_height()
-
-            return {
-                "status": "success",
-                "results": {
-                    "image_data": encoded,
-                    "format": "png",
-                    "width": fw,
-                    "height": fh,
-                    "original_width": orig_w,
-                    "original_height": orig_h,
-                    "encoding": "base64",
-                },
-            }
+                return {
+                    "status": "success",
+                    "results": {
+                        "image_data": encoded,
+                        "format": "png",
+                        "width": fw,
+                        "height": fh,
+                        "original_width": orig_w,
+                        "original_height": orig_h,
+                        "encoding": "base64",
+                    },
+                }
+            finally:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
         finally:
-            if should_delete_final and final_image != working_image:
+            if export_image is not None:
                 try:
-                    final_image.delete()
-                except:
+                    export_image.delete()
+                except Exception:
                     pass
-            if should_delete and working_image != image:
-                try:
-                    working_image.delete()
-                except:
-                    pass
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
 
     def _handle_get_metadata(self, params):
         """Get image metadata without bitmap transfer."""

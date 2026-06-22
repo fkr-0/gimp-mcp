@@ -24,6 +24,7 @@ from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
 from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
+from gimp_mcp_pro.tools.path_tools import register_path_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
@@ -400,6 +401,7 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
         register_image_tools,
         register_layer_tools,
         register_selection_tools,
+        register_path_tools,
         register_drawing_tools,
         register_inspect_tools,
         register_history_tools,
@@ -416,6 +418,8 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
 
 TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "add_alpha_channel": ((), {"layer_index": 0}),
+    "add_layer_mask": ((), {"mask_type": "white", "layer_index": 0}),
+    "border_selection": ((2,), {}),
     "add_text": (("hello",), {"x": 1, "y": 2, "color": "#ff0000"}),
     "adjust_brightness_contrast": ((), {"brightness": 12, "contrast": -6}),
     "adjust_curves": (([0.0, 0.0, 1.0, 1.0],), {}),
@@ -434,6 +438,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "autocrop_image": ((), {}),
     "begin_edit_transaction": ((), {"label": "matrix", "capture_before_state": True}),
     "begin_undo_group": ((), {"name": "matrix"}),
+    "bucket_fill": ((10, 12), {"color": "red", "threshold": 51.0, "sample_merged": True}),
     "color_to_alpha": ((), {"color": "white"}),
     "create_image": ((320, 200), {"color_mode": "rgb", "fill": "white"}),
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
@@ -465,23 +470,32 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "gimp_dev_status": ((), {}),
     "get_image_info": ((), {}),
     "get_image_metadata": ((), {}),
+    "get_layer_mask_info": ((), {"layer_index": 0}),
+    "get_selection_info": ((), {}),
     "invert_colors": ((), {}),
     "list_images": ((), {}),
     "list_layers": ((), {}),
+    "list_paths": ((), {}),
     "merge_visible_layers": ((), {}),
     "offset_layer": ((5, -3), {"layer_index": 0}),
+    "path_to_selection": ((), {"path_name": "Path 1"}),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
+    "remove_layer_mask": ((), {"apply": False, "layer_index": 0}),
+    "remove_path": ((), {"path_name": "Path 1"}),
     "rollback_transaction": ((), {}),
     "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
+    "create_path": (([0, 0, 20, 0, 20, 20],), {"name": "Path 1", "closed": True}),
     "rotate_image": ((90,), {}),
     "rotate_layer": ((15.0,), {"layer_index": 0}),
     "sample_color": ((4, 5), {"sample_merged": False}),
     "scale_image": ((640, 480), {"interpolation": "cubic"}),
     "scale_layer": ((128, 96), {"interpolation": "linear", "layer_index": 0}),
     "search_pdb": (("blur",), {"max_results": 5}),
+    "select_by_color": ((4, 5), {"threshold": 20.0}),
     "select_all": ((), {}),
     "select_ellipse": ((1, 2, 30, 40), {"operation": "replace"}),
+    "feather_selection": ((2.5,), {}),
     "select_grow": ((3,), {}),
     "select_invert": ((), {}),
     "select_none": ((), {}),
@@ -496,8 +510,12 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "set_active_layer": ((), {"layer_index": 0}),
     "set_background_color": (("#ffffff",), {}),
     "set_foreground_color": (("#000000",), {}),
+    "set_layer_mask_state": ((), {"edit_mask": True, "show_mask": False, "apply_mask": True, "layer_index": 0}),
+    "set_layer_mode": (("multiply",), {"layer_index": 0}),
     "set_layer_opacity": ((75.0,), {"layer_index": 0}),
     "set_layer_visibility": ((False,), {"layer_index": 0}),
+    "stroke_path": ((), {"path_name": "Path 1", "color": "black", "brush_size": 2.0}),
+    "stroke_selection": ((), {"color": "black", "brush_size": 2.0}),
     "swap_colors": ((), {}),
     "validate_targets": (
         ([{"kind": "layer", "id": 201}],),
@@ -527,7 +545,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 86
+    assert len(TOOL_SUCCESS_CASES) == 102
 
 
 @pytest.mark.asyncio
@@ -598,8 +616,47 @@ async def test_validation_failures_do_not_call_bridge() -> None:
         await tools["observe_document_state"](max_preview_size=0),
         await tools["resolve_target"](""),
         await tools["validate_targets"]([]),
+        await tools["create_path"]([0, 0, 1, 1]),
+        await tools["set_layer_mask_state"](),
     ]
 
     assert all(result["success"] is False for result in invalid_results)
     assert bridge.execute_calls == []
     assert bridge.bitmap_calls == []
+
+
+@pytest.mark.asyncio
+async def test_mask_path_selection_tools_generate_valid_gimp_324_api_calls() -> None:
+    """New mask/path/selection helpers use GIMP 3.0 introspected APIs."""
+    bridge = ScriptedToolBridge()
+    tools = registered_tools(bridge)
+
+    calls = [
+        ("add_layer_mask", (), {"mask_type": "selection", "layer_name": "Layer 1"}),
+        ("set_layer_mask_state", (), {"edit_mask": True, "show_mask": True, "apply_mask": False, "layer_name": "Layer 1"}),
+        ("remove_layer_mask", (), {"apply": True, "layer_name": "Layer 1"}),
+        ("feather_selection", (3.5,), {}),
+        ("border_selection", (2,), {}),
+        ("stroke_selection", (), {"color": "#000000", "brush_size": 2.0}),
+        ("create_path", ([0, 0, 20, 0, 20, 20],), {"name": "Triangle", "closed": True}),
+        ("path_to_selection", (), {"path_name": "Triangle", "operation": "replace"}),
+        ("stroke_path", (), {"path_name": "Triangle", "color": "black", "brush_size": 2.0}),
+        ("remove_path", (), {"path_name": "Triangle"}),
+    ]
+    for name, args, kwargs in calls:
+        result = await tools[name](*args, **kwargs)
+        assert result["success"] is True, (name, result)
+
+    generated = "\n".join("\n".join(call) for call in bridge.execute_calls)
+    assert "target.create_mask(Gimp.AddMaskType.SELECTION)" in generated
+    assert "target.add_mask(mask)" in generated
+    assert "target.set_edit_mask(True)" in generated
+    assert "target.remove_mask(Gimp.MaskApplyMode.APPLY)" in generated
+    assert "Gimp.Selection.feather(images[0], 3.5)" in generated
+    assert "Gimp.Selection.border(images[0], 2)" in generated
+    assert "Gimp.Drawable.edit_stroke_selection(drawable)" in generated
+    assert "path = Gimp.Path.new(image, 'Triangle')" in generated
+    assert "path.stroke_new_from_points(Gimp.PathStrokeType.BEZIER" in generated
+    assert "image.select_item(Gimp.ChannelOps.REPLACE, target)" in generated
+    assert "drawable.edit_stroke_item(target)" in generated
+    assert "image.remove_path(target)" in generated

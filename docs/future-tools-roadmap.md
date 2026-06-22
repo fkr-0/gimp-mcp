@@ -1,6 +1,6 @@
 # Future MCP Tool Roadmap
 
-This planning page tracks candidate MCP tools that are **not** part of the verified runtime registry yet. The verified GIMP 3.2.4 compatibility contract remains `compat.yml` with 86 implemented tools. Future candidates live in `features.yml` until they have implementation, unit tests, live Xvfb coverage, and documentation.
+This planning page tracks candidate MCP tools that are **not** part of the implemented runtime registry yet. The current GIMP 3.2.4 compatibility contract remains `compat.yml` with 86 implemented tools and a fresh partial clean-profile/Xvfb smoke record in `compat.results.yml`. Future candidates live in `features.yml` until they have implementation, unit tests, live Xvfb coverage, documentation, and a full claim-eligible compatibility result.
 
 ## Why this roadmap exists
 

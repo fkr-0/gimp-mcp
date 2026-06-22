@@ -41,9 +41,55 @@ def test_plugin_get_gimp_info_reports_324_probe_fields() -> None:
     assert "reports_version" in source
 
 
+def test_plugin_menu_run_uses_gimp_persistent_lifecycle() -> None:
+    source = (PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py").read_text()
+
+    assert "procedure.persistent_ready()" in source
+    assert "self.persistent_enable()" in source
+    assert "GLib.MainLoop()" in source
+
+
+def test_plugin_registers_development_menu_path() -> None:
+    source = (PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py").read_text()
+
+    assert 'procedure.add_menu_path("<Image>/Filters/Development/GIMP MCP Pro")' in source
+
+
+def test_plugin_marshals_requests_to_gimp_thread() -> None:
+    source = (PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py").read_text()
+
+    assert "def _dispatch_on_gimp_thread" in source
+    assert "GLib.idle_add" in source
+    assert "queue.Queue" in source
+    assert "response = self._dispatch_on_gimp_thread(request)" in source
+
+
+def test_plugin_discovers_and_registers_repeatable_flows() -> None:
+    source = (PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py").read_text()
+
+    assert "plug-in-mcp-pro-autostart" in source
+    assert "_load_pinned_flows" in source
+    assert "<Image>/Filters/Repeatable Flows/" in source
+    assert "Browse All Flows" in source
+    assert "Manage Flows" in source
+    assert "add_boolean_argument" in source
+    assert "add_int_argument" in source
+    assert "add_double_argument" in source
+    assert "add_string_argument" in source
+
+
+def test_plugin_launches_flow_runner_without_shell() -> None:
+    source = (PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py").read_text()
+
+    assert "def _runner_argv" in source
+    assert "subprocess.Popen(" in source
+    assert '"--params-json"' in source
+    assert "shell=True" not in source
+
+
 def test_compat_tool_extractor_counts_async_defs() -> None:
     names = compat.flatten_registry(compat.extract_source_tool_registry())
 
-    assert len(names) == 86
+    assert len(names) == 111
     assert "get_gimp_info" in names
     assert "get_image_bitmap" in names

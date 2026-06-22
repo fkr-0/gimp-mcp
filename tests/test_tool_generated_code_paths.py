@@ -24,6 +24,7 @@ from gimp_mcp_pro.tools.history_tools import register_history_tools
 from gimp_mcp_pro.tools.image_tools import register_image_tools
 from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
+from gimp_mcp_pro.tools.path_tools import register_path_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
@@ -234,6 +235,7 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
         register_image_tools,
         register_layer_tools,
         register_selection_tools,
+        register_path_tools,
         register_drawing_tools,
         register_inspect_tools,
         register_history_tools,
@@ -250,8 +252,11 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
 
 SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "add_text": {"text": "hello 'quoted' world", "layer_name": "text-layer"},
+    "add_layer_mask": {"mask_type": "white", "layer_index": 0},
+    "border_selection": {"radius": 2},
     "adjust_curves": {"control_points": [0.0, 0.0, 1.0, 1.0]},
     "begin_edit_transaction": {"label": "generated", "capture_before_state": True},
+    "bucket_fill": {"x": 10, "y": 12, "color": "red", "threshold": 51.0, "sample_merged": True},
     "create_image": {"width": 64, "height": 48},
     "crop_image": {"x": 1, "y": 2, "width": 32, "height": 24},
     "delete_layer": {"layer_index": 0},
@@ -266,17 +271,26 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "gimp_dev_status": {},
     "gimp_dev_plugin_catalog": {"include_raw_catalog": True, "validate": False},
     "get_image_bitmap": {"max_width": 32, "max_height": 24},
+    "get_layer_mask_info": {"layer_index": 0},
+    "get_selection_info": {},
+    "list_paths": {},
     "offset_layer": {"offset_x": 4, "offset_y": 5},
     "observe_region": {"x": 0, "y": 0, "width": 16, "height": 16},
     "resize_canvas": {"new_width": 128, "new_height": 96},
+    "path_to_selection": {"path_name": "Path 1"},
+    "remove_layer_mask": {"apply": False, "layer_index": 0},
+    "remove_path": {"path_name": "Path 1"},
     "rollback_transaction": {},
     "rotate_image": {"angle": 90},
     "rotate_layer": {"angle_degrees": 15.0},
     "sample_color": {"x": 2, "y": 3},
+    "create_path": {"points": [0, 0, 20, 0, 20, 20], "name": "Path 1", "closed": True},
     "scale_image": {"new_width": 128, "new_height": 96},
     "scale_layer": {"new_width": 32, "new_height": 24},
     "search_pdb": {"query": "png"},
+    "select_by_color": {"x": 4, "y": 5, "threshold": 20.0},
     "select_ellipse": {"x": 2, "y": 3, "width": 12, "height": 8},
+    "feather_selection": {"radius": 2.5},
     "select_grow": {"radius": 2},
     "select_polygon": {"points": [0, 0, 20, 0, 20, 20]},
     "select_rectangle": {"x": 2, "y": 3, "width": 12, "height": 8},
@@ -284,10 +298,14 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "set_active_layer": {"layer_index": 0},
     "set_background_color": {"color": "#ffffff"},
     "set_foreground_color": {"color": "#000000"},
+    "set_layer_mask_state": {"edit_mask": True, "show_mask": False, "apply_mask": True, "layer_index": 0},
+    "set_layer_mode": {"blend_mode": "multiply", "layer_index": 0},
     "set_layer_opacity": {"opacity": 42},
     "resolve_target": {"query": "Background", "target_types": ["layer"]},
     "validate_targets": {"targets": [{"type": "layer", "name": "Background"}]},
     "set_layer_visibility": {"visible": False},
+    "stroke_path": {"path_name": "Path 1", "color": "black", "brush_size": 2.0},
+    "stroke_selection": {"color": "black", "brush_size": 2.0},
 }
 
 

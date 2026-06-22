@@ -12,6 +12,15 @@ from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP
 
 logger = logging.getLogger("gimp_mcp_pro.tools.layer")
 
+LAYER_MASK_TYPE_MAP: dict[str, str] = {
+    "white": "Gimp.AddMaskType.WHITE",
+    "black": "Gimp.AddMaskType.BLACK",
+    "alpha": "Gimp.AddMaskType.ALPHA",
+    "alpha_transfer": "Gimp.AddMaskType.ALPHA_TRANSFER",
+    "selection": "Gimp.AddMaskType.SELECTION",
+    "copy": "Gimp.AddMaskType.COPY",
+}
+
 
 def _layer_lookup_code(layer_name: str | None, layer_index: int | None) -> list[str]:
     """Generate Python code to look up a layer by name or index."""
@@ -310,6 +319,52 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="set_layer_visibility", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def set_layer_mode(
+        blend_mode: str,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Set a layer's blend mode (normal, multiply, screen, overlay, etc.).
+
+        Args:
+            blend_mode: Blend mode name — "normal", "dissolve", "multiply",
+                "screen", "overlay", "soft_light", "hard_light", "color_dodge",
+                "color_burn", "darken_only", "lighten_only", "difference",
+                "exclusion", "hue", "saturation", "color", "luminosity",
+                "addition", "subtract", "grain_extract", "grain_merge", "divide"
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
+        """
+        from gimp_mcp_pro.models.common import BlendMode as _BM
+
+        try:
+            bm = _BM(blend_mode)
+        except ValueError:
+            valid = ", ".join(m.value for m in _BM)
+            return OperationResult.fail(
+                operation="set_layer_mode",
+                error=f"Unknown blend mode '{blend_mode}'. Valid: {valid}",
+            ).model_dump()
+
+        mode_expr = BLEND_MODE_MAP.get(bm, "Gimp.LayerMode.NORMAL")
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            f"target.set_mode({mode_expr})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="set_layer_mode",
+                message=f"Layer blend mode set to '{blend_mode}'",
+                data={"blend_mode": blend_mode},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="set_layer_mode", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def duplicate_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -372,6 +427,172 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="merge_visible_layers", error=str(e)).model_dump()
+
+
+    @mcp.tool()
+    async def add_layer_mask(
+        mask_type: str = "white",
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Add a layer mask to a layer.
+
+        Args:
+            mask_type: "white", "black", "alpha", "alpha_transfer", "selection", or "copy".
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result with mask metadata.
+        """
+        mask_expr = LAYER_MASK_TYPE_MAP.get(mask_type)
+        if mask_expr is None:
+            valid = ", ".join(sorted(LAYER_MASK_TYPE_MAP))
+            return OperationResult.fail(
+                operation="add_layer_mask",
+                error=f"Unknown mask_type '{mask_type}'. Valid: {valid}",
+            ).model_dump()
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            "if target.get_mask() is not None: raise RuntimeError('Layer already has a mask')",
+            f"mask = target.create_mask({mask_expr})",
+            "if mask is None: raise RuntimeError('Could not create layer mask')",
+            "if not target.add_mask(mask): raise RuntimeError('Could not add layer mask')",
+            "Gimp.displays_flush()",
+            "print(target.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            name = layer_name or ""
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    name = str(out).strip()
+            return OperationResult.ok(
+                operation="add_layer_mask",
+                message=f"Added {mask_type} layer mask",
+                data={"layer_name": name or None, "mask_type": mask_type},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="add_layer_mask", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def get_layer_mask_info(
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Get layer mask status for a layer.
+
+        Args:
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with layer mask status metadata.
+        """
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            "import json",
+            "mask = target.get_mask()",
+            "info = {'layer_name': target.get_name(), 'has_mask': mask is not None}",
+            "if mask is not None:\n"
+            "    info.update({'mask_name': mask.get_name(), 'edit_mask': target.get_edit_mask(),\n"
+            "                 'show_mask': target.get_show_mask(), 'apply_mask': target.get_apply_mask()})",
+            "print(json.dumps(info))",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            info: dict[str, object] = {}
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        info = _json.loads(str(out).strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            return OperationResult.ok(
+                operation="get_layer_mask_info",
+                message="Layer has a mask" if info.get("has_mask") else "Layer has no mask",
+                data=info,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="get_layer_mask_info", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def set_layer_mask_state(
+        edit_mask: bool | None = None,
+        show_mask: bool | None = None,
+        apply_mask: bool | None = None,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Set layer mask editing/display/apply flags.
+
+        Args:
+            edit_mask: If True, painting/editing targets the mask.
+            show_mask: If True, display the mask itself.
+            apply_mask: If True, layer renders with the mask applied.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with the updated mask state metadata.
+        """
+        if edit_mask is None and show_mask is None and apply_mask is None:
+            return OperationResult.fail(
+                operation="set_layer_mask_state",
+                error="Specify at least one of edit_mask, show_mask, or apply_mask",
+            ).model_dump()
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            "if target.get_mask() is None: raise RuntimeError('Layer has no mask')",
+        ]
+        if edit_mask is not None:
+            code.append(f"target.set_edit_mask({edit_mask})")
+        if show_mask is not None:
+            code.append(f"target.set_show_mask({show_mask})")
+        if apply_mask is not None:
+            code.append(f"target.set_apply_mask({apply_mask})")
+        code += ["Gimp.displays_flush()"]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="set_layer_mask_state",
+                message="Layer mask state updated",
+                data={"edit_mask": edit_mask, "show_mask": show_mask, "apply_mask": apply_mask},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="set_layer_mask_state", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def remove_layer_mask(
+        apply: bool = False,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Remove a layer mask, optionally applying it first.
+
+        Args:
+            apply: True applies the mask to the layer; False discards it.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with removal/apply status metadata.
+        """
+        mode_expr = "Gimp.MaskApplyMode.APPLY" if apply else "Gimp.MaskApplyMode.DISCARD"
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            "if target.get_mask() is None: raise RuntimeError('Layer has no mask')",
+            f"target.remove_mask({mode_expr})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="remove_layer_mask",
+                message="Layer mask applied and removed" if apply else "Layer mask discarded",
+                data={"applied": apply},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="remove_layer_mask", error=str(e)).model_dump()
 
     @mcp.tool()
     async def add_alpha_channel(

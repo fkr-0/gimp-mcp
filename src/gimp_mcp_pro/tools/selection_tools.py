@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from gimp_mcp_pro.models.common import OperationResult, SelectionOp
+from gimp_mcp_pro.models.common import Color, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import SELECTION_OP_MAP
@@ -213,6 +213,343 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_invert", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def select_by_color(
+        x: float,
+        y: float,
+        threshold: float = 15.0,
+        operation: str = "replace",
+        sample_merged: bool = False,
+    ) -> ToolResult:
+        """Select all pixels similar in color to the sampled point.
+
+        Notes:
+            Useful for selecting uniform backgrounds, solid-color regions, or
+            isolating objects by their surrounding color.
+
+        Args:
+            x: Sample point X coordinate (pixel to sample color from)
+            y: Sample point Y coordinate
+            threshold: Color similarity threshold 0-255 (lower = more exact match,
+                higher = more tolerance). Default 15.
+            operation: "replace", "add", "subtract", or "intersect"
+            sample_merged: If True, sample color from all visible layers merged.
+                If False (default), sample from active layer only.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
+        """
+        code = [
+            "import json",
+            "from gi.repository import GObject",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "sel = image.get_selected_layers()",
+            "if not sel: raise RuntimeError('No active layer')",
+            "drawable = sel[0]",
+            f"Gimp.context_set_sample_threshold({threshold / 255.0})",
+            f"Gimp.context_set_sample_merged({sample_merged})",
+            f"Gimp.get_pdb().run_procedure('gimp-by-color-select', ["
+            f"  GObject.Value(Gimp.Drawable, drawable),"
+            f"  GObject.Value(float, {x}),"
+            f"  GObject.Value(float, {y}),"
+            f"  GObject.Value(float, {threshold}),"
+            f"  GObject.Value(Gimp.ChannelOps, {_op_expr(operation)}),"
+            f"  GObject.Value(bool, {sample_merged}),"
+            f"  GObject.Value(bool, False),"
+            f"  GObject.Value(float, 0.0),"
+            f"])",
+            "Gimp.displays_flush()",
+            "non_empty, x1, y1, x2, y2 = Gimp.Selection.bounds(image)",
+            "print(json.dumps({'has_selection': bool(non_empty), "
+            "'bounds': {'x': x1, 'y': y1, 'width': x2 - x1, 'height': y2 - y1}}))",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            sel_info = {}
+            for out in result.get("results", []):
+                if out and out.strip():
+                    try:
+                        sel_info = _json.loads(out.strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            return OperationResult.ok(
+                operation="select_by_color",
+                message=f"Selected by color at ({x},{y}) threshold={threshold}",
+                data=sel_info,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="select_by_color", error=str(e)).model_dump()
+
+
+    @mcp.tool()
+    async def feather_selection(radius: float) -> ToolResult:
+        """Feather the current selection by a radius in pixels.
+
+        Args:
+            radius: Feather radius. Use 0 for no feather; positive values soften edges.
+
+        Returns:
+            Operation result dictionary with status, message, and radius metadata.
+        """
+        if radius < 0:
+            return OperationResult.fail(
+                operation="feather_selection", error="radius must be non-negative"
+            ).model_dump()
+        code = [
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            f"Gimp.Selection.feather(images[0], {radius})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="feather_selection",
+                message=f"Selection feathered by {radius}px",
+                data={"radius": radius},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="feather_selection", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def border_selection(radius: int) -> ToolResult:
+        """Replace the current selection with its border.
+
+        Args:
+            radius: Border radius in pixels. Must be greater than 0.
+
+        Returns:
+            Operation result dictionary with status, message, and radius metadata.
+        """
+        if radius <= 0:
+            return OperationResult.fail(
+                operation="border_selection", error="radius must be greater than 0"
+            ).model_dump()
+        code = [
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            f"Gimp.Selection.border(images[0], {radius})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="border_selection",
+                message=f"Selection border created with radius {radius}px",
+                data={"radius": radius},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="border_selection", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def stroke_selection(
+        color: str | None = None,
+        brush_size: float | None = None,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Stroke the current selection onto a layer.
+
+        Args:
+            color: Optional foreground color to use for the stroke.
+            brush_size: Optional stroke line width in pixels.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and stroke metadata.
+        """
+        if brush_size is not None and brush_size <= 0:
+            return OperationResult.fail(
+                operation="stroke_selection", error="brush_size must be greater than 0"
+            ).model_dump()
+        color_expr = None
+        if color is not None:
+            try:
+                color_expr = Color(value=color).to_gegl_code()
+            except ValueError as exc:
+                return OperationResult.fail(operation="stroke_selection", error=str(exc)).model_dump()
+
+        code = [
+            "from gi.repository import Gegl",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+        ]
+        if layer_name is not None:
+            from gimp_mcp_pro.models.common import py_literal as _py_literal
+
+            code += [
+                f"drawable = image.get_layer_by_name({_py_literal(layer_name)})",
+                f"if drawable is None: raise RuntimeError({_py_literal(f'Layer {layer_name!r} not found')})",
+            ]
+        elif layer_index is not None:
+            code += [
+                "layers = image.get_layers()",
+                f"if {layer_index} >= len(layers): raise RuntimeError('Layer index {layer_index} out of range')",
+                f"drawable = layers[{layer_index}]",
+            ]
+        else:
+            code += [
+                "sel = image.get_selected_layers()",
+                "if not sel: raise RuntimeError('No active layer')",
+                "drawable = sel[0]",
+            ]
+        if color_expr is not None:
+            code.append(f"Gimp.context_set_foreground({color_expr})")
+        if brush_size is not None:
+            code.append(f"Gimp.context_set_line_width({brush_size})")
+        code += [
+            "Gimp.Drawable.edit_stroke_selection(drawable)",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="stroke_selection",
+                message="Selection stroked",
+                data={"color": color, "brush_size": brush_size},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="stroke_selection", error=str(e)).model_dump()
+
+
+    @mcp.tool()
+    async def bucket_fill(
+        x: float,
+        y: float,
+        color: str | None = None,
+        threshold: float = 15.0,
+        sample_merged: bool = False,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Bucket-fill a contiguous region from a seed point.
+
+        Args:
+            x: Seed point X coordinate.
+            y: Seed point Y coordinate.
+            color: Optional foreground color to use before filling.
+            threshold: Color similarity threshold 0-255.
+            sample_merged: If True, sample from merged visible layers.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and fill metadata.
+        """
+        if not 0 <= threshold <= 255:
+            return OperationResult.fail(
+                operation="bucket_fill", error="threshold must be between 0 and 255"
+            ).model_dump()
+        color_expr = None
+        if color is not None:
+            try:
+                color_expr = Color(value=color).to_gegl_code()
+            except ValueError as exc:
+                return OperationResult.fail(operation="bucket_fill", error=str(exc)).model_dump()
+
+        code = [
+            "from gi.repository import Gegl",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+        ]
+        if layer_name is not None:
+            code += [
+                f"drawable = image.get_layer_by_name({py_literal(layer_name)})",
+                f"if drawable is None: raise RuntimeError({py_literal(f'Layer {layer_name!r} not found')})",
+            ]
+        elif layer_index is not None:
+            code += [
+                "layers = image.get_layers()",
+                f"if {layer_index} >= len(layers): raise RuntimeError('Layer index {layer_index} out of range')",
+                f"drawable = layers[{layer_index}]",
+            ]
+        else:
+            code += [
+                "sel = image.get_selected_layers()",
+                "if not sel: raise RuntimeError('No active layer')",
+                "drawable = sel[0]",
+            ]
+        if color_expr is not None:
+            code.append(f"Gimp.context_set_foreground({color_expr})")
+        code += [
+            f"Gimp.context_set_sample_threshold({threshold / 255.0})",
+            f"Gimp.context_set_sample_merged({sample_merged})",
+            "drawable = locals().get('drawable', locals().get('target'))",
+            f"Gimp.Drawable.edit_bucket_fill(drawable, Gimp.FillType.FOREGROUND, {x}, {y})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="bucket_fill",
+                message=f"Bucket-filled at ({x},{y})",
+                data={"x": x, "y": y, "color": color, "threshold": threshold, "sample_merged": sample_merged},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="bucket_fill", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def get_selection_info() -> ToolResult:
+        """Get information about the current selection (bounds, whether it exists).
+
+        Notes:
+            Use this to check whether a selection is active and where it is
+            before performing fill, stroke, or other selection-dependent operations.
+
+        Returns:
+            Selection info: has_selection, bounds (x, y, width, height),
+            and whether it covers the full image.
+        """
+        code = [
+            "import json",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "non_empty, x1, y1, x2, y2 = Gimp.Selection.bounds(image)",
+            "iw, ih = image.get_width(), image.get_height()",
+            "is_all = non_empty and x1 == 0 and y1 == 0 and x2 == iw and y2 == ih",
+            "print(json.dumps({"
+            "'has_selection': bool(non_empty),"
+            "'is_all': bool(is_all),"
+            "'bounds': {'x': x1, 'y': y1, 'width': x2 - x1, 'height': y2 - y1},"
+            "'image_size': {'width': iw, 'height': ih}"
+            "}))",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            sel_info = {}
+            for out in result.get("results", []):
+                if out and out.strip():
+                    try:
+                        sel_info = _json.loads(out.strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            has = sel_info.get("has_selection", False)
+            msg = "Selection active" if has else "No selection"
+            if has and not sel_info.get("is_all"):
+                b = sel_info.get("bounds", {})
+                msg += f" — bounds ({b.get('x')},{b.get('y')}) {b.get('width')}x{b.get('height')}"
+            return OperationResult.ok(
+                operation="get_selection_info",
+                message=msg,
+                data=sel_info,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="get_selection_info", error=str(e)
+            ).model_dump()
 
     @mcp.tool()
     async def select_grow(radius: int) -> ToolResult:

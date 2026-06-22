@@ -46,3 +46,13 @@ def test_ci_release_job_publishes_packages_and_github_release() -> None:
     assert "softprops/action-gh-release@v2" in text
     assert "id-token: write" in text
     assert "contents: write" in text
+
+
+def test_ci_does_not_require_live_compatibility_claim() -> None:
+    """Normal CI must not fail just because live GIMP evidence is stale or absent."""
+    text = workflow_text()
+
+    assert "scripts/compat.py validate" in text
+    assert "scripts/compat.py validate-results compat.results.yml" not in text
+    assert "scripts/compat.py audit" not in text
+    assert "Release claims must be gated by a fresh live GIMP run" in text

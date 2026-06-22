@@ -13,6 +13,9 @@ from pydantic import ValidationError
 
 from gimp_mcp_pro.bridge import GimpBridge
 from gimp_mcp_pro.config import ServerConfig
+from gimp_mcp_pro.flows.operations import build_operation_registry
+from gimp_mcp_pro.flows.runner import FlowRunner
+from gimp_mcp_pro.flows.store import FlowStore
 from gimp_mcp_pro.utils.errors import GimpMCPError
 from gimp_mcp_pro.utils.logging import setup_logging
 
@@ -97,6 +100,28 @@ def build_parser() -> argparse.ArgumentParser:
         "repl", parents=[common], help="Interactive bridge REPL for a live GIMP plugin."
     )
     repl.set_defaults(func=cmd_repl)
+
+    flow = subparsers.add_parser(
+        "flow", parents=[common], help="List, validate, inspect, or run repeatable flows."
+    )
+    flow.add_argument("--flow-dir", default=None, help="Override the user flow directory.")
+    flow_commands = flow.add_subparsers(dest="flow_command", required=True)
+    flow_list = flow_commands.add_parser("list", help="List stored flows.")
+    flow_list.set_defaults(func=cmd_flow_list)
+    flow_show = flow_commands.add_parser("show", help="Print one flow definition.")
+    flow_show.add_argument("flow_id")
+    flow_show.set_defaults(func=cmd_flow_show)
+    flow_validate = flow_commands.add_parser("validate", help="Validate one flow.")
+    flow_validate.add_argument("flow_id")
+    flow_validate.set_defaults(func=cmd_flow_validate)
+    flow_run = flow_commands.add_parser("run", help="Execute one validated flow.")
+    flow_run.add_argument("flow_id")
+    flow_run.add_argument("--params-json", default="{}", help="JSON object of parameter values.")
+    flow_run.add_argument("--confirm-unsafe", action="store_true")
+    flow_run.add_argument(
+        "--checkpoint-decision", choices=("commit", "rollback"), default="commit"
+    )
+    flow_run.set_defaults(func=cmd_flow_run)
 
     parser.set_defaults(func=cmd_serve, command="serve")
     return parser
@@ -187,6 +212,93 @@ def cmd_repl(args: argparse.Namespace, config: ServerConfig) -> int:
 def cmd_async_repl(args: argparse.Namespace, config: ServerConfig) -> int:
     """Run the asyncio-native bridge REPL."""
     return asyncio.run(_run_async_repl(args, config))
+
+
+def _flow_store(args: argparse.Namespace) -> FlowStore:
+    return FlowStore(args.flow_dir)
+
+
+def cmd_flow_list(args: argparse.Namespace, config: ServerConfig) -> int:
+    """Print all stored flow definitions as JSON summaries."""
+    del config
+    flows = _flow_store(args).list()
+    summaries = [
+        {
+            "id": flow.id,
+            "title": flow.title,
+            "state": flow.state,
+            "pinned": flow.ui.pinned,
+            "capabilities": flow.capabilities,
+        }
+        for flow in flows
+    ]
+    print(json.dumps(summaries, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_flow_show(args: argparse.Namespace, config: ServerConfig) -> int:
+    """Print one complete flow definition."""
+    del config
+    try:
+        flow = _flow_store(args).get(args.flow_id)
+    except KeyError as exc:
+        print(json.dumps({"error": str(exc)}))
+        return 2
+    print(json.dumps(flow.model_dump(mode="json"), indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_flow_validate(args: argparse.Namespace, config: ServerConfig) -> int:
+    """Validate one flow against the production operation registry."""
+    from gimp_mcp_pro.async_bridge import AsyncGimpBridge
+
+    try:
+        flow = _flow_store(args).get(args.flow_id)
+    except KeyError as exc:
+        print(json.dumps({"valid": False, "errors": [str(exc)]}, indent=2))
+        return 2
+    bridge = AsyncGimpBridge(**config.bridge_kwargs())
+    errors = FlowRunner(build_operation_registry(bridge)).validate(flow)
+    print(json.dumps({"valid": not errors, "errors": errors}, indent=2, sort_keys=True))
+    return 0 if not errors else 2
+
+
+def cmd_flow_run(args: argparse.Namespace, config: ServerConfig) -> int:
+    """Execute one flow with JSON parameter bindings."""
+    try:
+        parameters = json.loads(args.params_json)
+        if not isinstance(parameters, dict):
+            raise ValueError("params must be a JSON object")
+    except (json.JSONDecodeError, ValueError) as exc:
+        print(f"invalid params JSON: {exc}", file=sys.stderr)
+        return 2
+    return asyncio.run(_run_flow(args, config, parameters))
+
+
+async def _run_flow(
+    args: argparse.Namespace, config: ServerConfig, parameters: dict[str, Any]
+) -> int:
+    from gimp_mcp_pro.async_bridge import AsyncGimpBridge
+
+    bridge = AsyncGimpBridge(**config.bridge_kwargs())
+    try:
+        flow = _flow_store(args).get(args.flow_id)
+        if flow.state == "draft":
+            print(json.dumps({"status": "error", "error": "flow is not validated"}, indent=2))
+            return 2
+        result = await FlowRunner(build_operation_registry(bridge)).run(
+            flow,
+            parameters,
+            confirm_unsafe=args.confirm_unsafe,
+            checkpoint_decision=args.checkpoint_decision,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0 if result.get("status") == "success" else 2
+    except (KeyError, ValueError, PermissionError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}, indent=2))
+        return 2
+    finally:
+        await bridge.disconnect()
 
 
 async def _run_async_repl(args: argparse.Namespace, config: ServerConfig) -> int:

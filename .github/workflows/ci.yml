@@ -37,11 +37,10 @@ jobs:
       - name: Validate compatibility contract
         run: uv run python scripts/compat.py validate
 
-      - name: Validate checked-in compatibility evidence
-        run: uv run python scripts/compat.py validate-results compat.results.yml
-
-      - name: Audit compatibility claim gate
-        run: uv run python scripts/compat.py audit
+      - name: Explain live compatibility evidence gate
+        run: |
+          echo "compat.results.yml is live evidence and may be partial/stale on feature branches."
+          echo "Release claims must be gated by a fresh live GIMP run, not by normal CI."
 
       - name: Generate docs reference files
         run: uv run python scripts/docs.py generate

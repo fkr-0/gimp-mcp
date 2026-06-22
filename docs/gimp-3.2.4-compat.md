@@ -5,13 +5,22 @@ This document is the human-facing runbook for `compat.yml`. The YAML contract is
 ## Status
 
 ```yaml
-status: unverified
+status: partial-live-smoke-pass
 claim_allowed: false
 contract: compat.yml
-results_file_required_before_claim: compat.results.yml
+latest_results: compat.results.yml
+run_id: live-smoke-1782081764
+run_started_at: '2026-06-21T22:42:41+00:00'
+run_finished_at: '2026-06-21T22:42:44+00:00'
+checks_passed: 18
+checks_failed: 0
+registered_tools: 86
+clean_profile: true
+xvfb: true
+revision: 951ec6afd5c5766c610c795342a6889fcf7ab9ef
 ```
 
-Do not publish a verified GIMP 3.2.4 support claim until `compat.results.yml` records a passing clean-profile run or explicit waivers with linked follow-up issues.
+A fresh clean-profile GIMP 3.2.4 run under Xvfb passed the smoke record with zero failed checks and confirmed the 86-tool runtime registry. This is useful release evidence, but it is still intentionally non-claiming because the result summary says `claim_allowed: false`. Do not publish a verified GIMP 3.2.4 support claim until the full matrix records `claim_allowed: true` or explicit waivers with linked follow-up issues.
 
 ## Static contract checks
 
@@ -25,11 +34,15 @@ uv run python scripts/compat.py validate-results compat.results.yml
 Expected right now:
 
 ```yaml
-compat_validate: should_pass
+compat_validate: pass
+validate_results: pass
 compat_audit: expected_to_fail_until:
-  - README tool count is reconciled with the source-derived registry
-  - stale GIMP 3.0.8 wording is removed or moved into a historical note
-  - compat.results.yml exists with live GIMP 3.2.4 evidence
+  - compat.results.yml contains a full-matrix result with summary.claim_allowed: true
+current_live_record:
+  status: partial-live-smoke-pass
+  checks_passed: 18
+  checks_failed: 0
+  registered_tools: 86
 ```
 
 ## Result template
@@ -40,6 +53,27 @@ cp compat.results.template.yml compat.results.yml
 ```
 
 Only fill `compat.results.yml` with real values after a run. The template is intentionally non-claiming.
+
+## Latest clean-profile evidence
+
+```yaml
+run_id: live-smoke-1782081764
+run_started_at: '2026-06-21T22:42:41+00:00'
+run_finished_at: '2026-06-21T22:42:44+00:00'
+revision: 951ec6afd5c5766c610c795342a6889fcf7ab9ef
+gimp_version: 3.2.4
+libgimp_api_version: '3.0'
+libgimp_library_version: 3.2.4
+spawned_gimp: true
+xvfb: true
+mcp_port: 55491
+checks_passed: 18
+checks_failed: 0
+registered_tools: 86
+claim_allowed: false
+```
+
+The current record verifies transport, async transport, plug-in registration, runtime introspection, the 86-tool registry, representative image/layer/selection/drawing/export/transform/color/filter/history/PDB/error scenarios, and documentation-count consistency. It does **not** by itself flip the public compatibility claim because the live runner still marks this as a partial smoke rather than a full `compat.yml` matrix.
 
 
 ## Optional capability result shape

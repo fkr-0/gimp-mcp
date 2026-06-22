@@ -2,16 +2,16 @@
 
 **Production-grade Model Context Protocol server for GIMP 3.0+**
 
-> 86 typed tools • reliable communication • AI-friendly workflows
+> 111 typed tools • reliable communication • AI-friendly workflows
 
 GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structured, typed MCP tools — creating images, managing layers, drawing shapes, applying filters, adjusting colors, and more.
 
 ## Features
 
-- **86 typed MCP tools** across 13 tool modules — image management, layers, selections, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, gimp.dev discovery, and agent workflow helpers
+- **111 typed MCP tools** across 15 tool modules — image management, layers, selections, vector paths, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, repeatable flows, gimp.dev discovery, and agent workflow helpers
 - **Reliable communication** — length-prefixed socket framing (no more JSON boundary guessing)
 - **Persistent connections** — one TCP connection, kept alive, with automatic reconnection
-- **GIMP 3.2.4 verification in progress** — compatibility is gated by `compat.yml` and must not be claimed as verified until `compat.results.yml` contains a passing clean-profile live run
+- **Fresh GIMP 3.2.4 clean-profile smoke recorded** — `compat.results.yml` currently records 18 passing live checks and 0 failures for the 86-tool registry, while the public compatibility claim remains gated until the full matrix sets `claim_allowed: true`
 - **Undo groups** — multi-step AI workflows as a single undo step
 - **Pydantic validation** — inputs validated before reaching GIMP
 - **AI guidance prompts** — best practices and iterative workflow documentation
@@ -23,14 +23,21 @@ GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structu
 
 ```yaml
 gimp_3_2_4:
-  status: verification-in-progress
+  status: partial-live-smoke-pass
   contract: compat.yml
-  evidence_template: compat.results.template.yml
-  required_live_results: compat.results.yml
+  latest_live_results: compat.results.yml
+  run_id: live-smoke-1782081764
+  run_started_at: '2026-06-21T22:42:41+00:00'
+  run_finished_at: '2026-06-21T22:42:44+00:00'
+  checks_passed: 18
+  checks_failed: 0
+  registered_tools: 86
+  clean_profile: true
+  xvfb: true
   claim_allowed: false
 ```
 
-This branch keeps the public compatibility claim deliberately conservative. Static contract validation passes, but verified GIMP 3.2.4 support requires a clean-profile live run recorded in `compat.results.yml`. See `docs/gimp-3.2.4-compat.md` for the runbook.
+This branch keeps the public compatibility claim deliberately conservative. Static contract validation and the fresh clean-profile/Xvfb smoke record pass, including the 86-tool runtime registry check. The release claim is still not enabled because `compat.results.yml` is a partial live-smoke record with `claim_allowed: false`; run the full matrix before publishing verified support. See `docs/gimp-3.2.4-compat.md` for the runbook.
 
 For practical agent prompts and step-by-step editing patterns, see `docs/agent-workflows.md`.
 
@@ -45,7 +52,7 @@ AI Assistant  ←→  MCP Server (gimp-mcp-pro)  ←→  GIMP Plugin
 
 Two processes: the MCP server runs outside GIMP and communicates with a plugin running inside GIMP's Python process via TCP with length-prefixed framing.
 
-The MCP server registers all 86 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
+The MCP server registers all 111 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
 
 ## Project tooling
 
