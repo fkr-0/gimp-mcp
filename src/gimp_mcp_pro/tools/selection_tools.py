@@ -242,7 +242,6 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         """
         code = [
             "import json",
-            "from gi.repository import GObject",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
@@ -251,18 +250,13 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             "drawable = sel[0]",
             f"Gimp.context_set_sample_threshold({threshold / 255.0})",
             f"Gimp.context_set_sample_merged({sample_merged})",
-            f"Gimp.get_pdb().run_procedure('gimp-by-color-select', ["
-            f"  GObject.Value(Gimp.Drawable, drawable),"
-            f"  GObject.Value(float, {x}),"
-            f"  GObject.Value(float, {y}),"
-            f"  GObject.Value(float, {threshold}),"
-            f"  GObject.Value(Gimp.ChannelOps, {_op_expr(operation)}),"
-            f"  GObject.Value(bool, {sample_merged}),"
-            f"  GObject.Value(bool, False),"
-            f"  GObject.Value(float, 0.0),"
-            f"])",
+            f"Gimp.Image.select_contiguous_color(image, {_op_expr(operation)}, drawable, {x}, {y})",
             "Gimp.displays_flush()",
-            "non_empty, x1, y1, x2, y2 = Gimp.Selection.bounds(image)",
+            "bounds = Gimp.Selection.bounds(image)",
+            "if len(bounds) == 6:",
+            "    _, non_empty, x1, y1, x2, y2 = bounds",
+            "else:",
+            "    non_empty, x1, y1, x2, y2 = bounds",
             "print(json.dumps({'has_selection': bool(non_empty), "
             "'bounds': {'x': x1, 'y': y1, 'width': x2 - x1, 'height': y2 - y1}}))",
         ]
@@ -520,7 +514,11 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            "non_empty, x1, y1, x2, y2 = Gimp.Selection.bounds(image)",
+            "bounds = Gimp.Selection.bounds(image)",
+            "if len(bounds) == 6:",
+            "    _, non_empty, x1, y1, x2, y2 = bounds",
+            "else:",
+            "    non_empty, x1, y1, x2, y2 = bounds",
             "iw, ih = image.get_width(), image.get_height()",
             "is_all = non_empty and x1 == 0 and y1 == 0 and x2 == iw and y2 == ih",
             "print(json.dumps({"

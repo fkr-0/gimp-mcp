@@ -121,7 +121,9 @@ async def test_selection_advancement_tools_expose_feather_border_grow_shrink() -
 
 
 @pytest.mark.asyncio
-async def test_select_by_color_uses_gimp_3_2_contiguous_color_api_without_removed_pdb_run_procedure() -> None:
+async def test_select_by_color_uses_gimp_3_2_contiguous_color_api_without_removed_pdb_run_procedure() -> (
+    None
+):
     bridge = ScriptedBridge()
     tools = registered_tools(bridge)
 

@@ -744,7 +744,7 @@ class MCPProPlugin(Gimp.PlugIn):
         try:
             if needs_region or needs_scale:
                 export_image = image.duplicate()
-                export_image.flatten_image()
+                export_image.flatten()
 
                 if needs_region:
                     ox = region.get("origin_x", 0)
@@ -765,7 +765,7 @@ class MCPProPlugin(Gimp.PlugIn):
                     export_image.scale(tw, th)
             else:
                 export_image = image.duplicate()
-                export_image.flatten_image()
+                export_image.flatten()
 
             fd, temp_path = tempfile.mkstemp(suffix=".png")
             os.close(fd)
