@@ -455,9 +455,11 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "activate_flow": (("prepare-product-image",), {}),
     "add_alpha_channel": ((), {"layer_index": 0}),
     "add_layer_mask": ((), {"mask_type": "white", "layer_index": 0}),
+    "add_guide": ((), {"orientation": "vertical", "position": 42}),
     "border_selection": ((2,), {}),
     "add_text": (("hello",), {"x": 1, "y": 2, "color": "#ff0000"}),
     "adjust_brightness_contrast": ((), {"brightness": 12, "contrast": -6}),
+    "adjust_color_balance": ((), {"range": "shadows", "cyan_red": 10.0, "magenta_green": -5.0}),
     "adjust_curves": (([0.0, 0.0, 1.0, 1.0],), {}),
     "adjust_hue_saturation": ((), {"hue": 10, "saturation": 5, "lightness": -3}),
     "adjust_levels": ((), {"input_low": 10, "input_high": 240, "gamma": 1.1}),
@@ -466,6 +468,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "apply_emboss": ((), {"azimuth": 300, "elevation": 40, "depth": 3}),
     "apply_gaussian_blur": ((), {"radius_x": 2.5, "radius_y": 1.5}),
     "apply_median": ((), {"radius": 2}),
+    "apply_motion_blur": (
+        (),
+        {"blur_type": "linear", "length": 24.0, "angle": 37.5, "layer_name": "Speed"},
+    ),
     "apply_noise": ((), {"amount": 0.1}),
     "apply_pixelize": ((), {"block_width": 8, "block_height": 6}),
     "apply_threshold": ((), {"low": 64, "high": 192}),
@@ -483,6 +489,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "crop_to_selection": ((), {}),
     "deactivate_flow": (("prepare-product-image",), {}),
     "delete_layer": ((), {"layer_index": 0}),
+    "delete_guide": ((7,), {}),
     "desaturate": ((), {"method": "luminosity"}),
     "draw_brush_stroke": (([0, 0, 10, 10, 20, 5],), {"tool": "pencil"}),
     "draw_ellipse": ((2, 3, 40, 20), {"filled": False, "color": "blue"}),
@@ -518,6 +525,8 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     ),
     "invert_colors": ((), {}),
     "list_flows": ((), {}),
+    "list_gimp_resources": ((), {"resource_type": "all", "limit": 5}),
+    "list_guides": ((), {}),
     "list_images": ((), {}),
     "list_layers": ((), {}),
     "list_channels": ((), {}),
@@ -527,6 +536,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "offset_layer": ((5, -3), {"layer_index": 0}),
     "pin_flow": (("prepare-product-image",), {}),
     "path_to_selection": ((), {"path_name": "Path 1"}),
+    "perspective_layer": (
+        (0, 4, 80, 0, 8, 60, 72, 64),
+        {"interpolation": "cubic", "resize": "adjust", "layer_name": "Photo"},
+    ),
     "propose_flow": ((flow_payload(),), {}),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
@@ -559,6 +572,26 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "resolve_target": (("Layer 1",), {"target_types": ["layer"], "require_unique": True}),
     "session_capabilities": ((), {}),
     "set_active_layer": ((), {"layer_index": 0}),
+    "set_image_grid": (
+        (),
+        {
+            "xspacing": 16.0,
+            "yspacing": 24.0,
+            "xoffset": 2.0,
+            "yoffset": 3.0,
+            "style": "intersections",
+        },
+    ),
+    "shear_layer": (
+        (),
+        {
+            "direction": "vertical",
+            "magnitude": -12.5,
+            "interpolation": "linear",
+            "resize": "clip",
+            "layer_index": 0,
+        },
+    ),
     "set_background_color": (("#ffffff",), {}),
     "set_foreground_color": (("#000000",), {}),
     "set_layer_mask_state": (
@@ -602,7 +635,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 118
+    assert len(TOOL_SUCCESS_CASES) == 127
 
 
 @pytest.mark.asyncio

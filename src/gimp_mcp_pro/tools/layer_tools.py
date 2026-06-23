@@ -856,7 +856,9 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 operation="channel_to_selection",
                 error="operation must be one of: replace, add, subtract, intersect",
             ).model_dump()
-        code = ["from gi.repository import Gimp"] + _channel_lookup_code(channel_name, channel_index)
+        code = ["from gi.repository import Gimp"] + _channel_lookup_code(
+            channel_name, channel_index
+        )
         code += [
             f"image.select_item({op_expr}, target)",
             "Gimp.displays_flush()",

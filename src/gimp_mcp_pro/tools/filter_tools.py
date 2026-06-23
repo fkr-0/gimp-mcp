@@ -126,6 +126,87 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
             return OperationResult.fail(operation="apply_gaussian_blur", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def apply_motion_blur(
+        blur_type: str = "linear",
+        length: float = 10.0,
+        angle: float = 0.0,
+        center_x: float = 0.0,
+        center_y: float = 0.0,
+        factor: float = 0.1,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Apply linear, circular, or zoom motion blur to a layer.
+
+        Args:
+            blur_type: "linear", "circular", or "zoom".
+            length: Linear blur length in pixels.
+            angle: Linear/circular blur angle in degrees.
+            center_x: Circular/zoom blur center X coordinate.
+            center_y: Circular/zoom blur center Y coordinate.
+            factor: Zoom blur factor.
+            layer_name: Target layer. Uses active layer if not specified.
+            layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and applied blur settings.
+        """
+        blur_key = blur_type.lower().strip().replace("-", "_")
+        code = _filter_preamble(layer_name, layer_index)
+        if blur_key == "zoom":
+            applied = {
+                "blur_type": "zoom",
+                "center_x": float(center_x),
+                "center_y": float(center_y),
+                "factor": float(factor),
+            }
+            code += _apply_drawable_filter(
+                "gegl:motion-blur-zoom",
+                {
+                    "center-x": str(applied["center_x"]),
+                    "center-y": str(applied["center_y"]),
+                    "factor": str(applied["factor"]),
+                },
+            )
+        elif blur_key == "circular":
+            applied = {
+                "blur_type": "circular",
+                "center_x": float(center_x),
+                "center_y": float(center_y),
+                "angle": float(angle),
+            }
+            code += _apply_drawable_filter(
+                "gegl:motion-blur-circular",
+                {
+                    "center-x": str(applied["center_x"]),
+                    "center-y": str(applied["center_y"]),
+                    "angle": str(applied["angle"]),
+                },
+            )
+        else:
+            applied = {
+                "blur_type": "linear",
+                "length": float(length),
+                "angle": float(angle),
+            }
+            code += _apply_drawable_filter(
+                "gegl:motion-blur-linear",
+                {
+                    "length": str(applied["length"]),
+                    "angle": str(applied["angle"]),
+                },
+            )
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="apply_motion_blur",
+                message=f"{applied['blur_type'].title()} motion blur applied",
+                data=applied,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="apply_motion_blur", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def apply_unsharp_mask(
         amount: float = 0.5,
         radius: float = 3.0,

@@ -26,6 +26,33 @@ def _img_preamble() -> list[str]:
     ]
 
 
+def _interpolation_expr(interpolation: str) -> tuple[str, str]:
+    """Return resolved interpolation key and generated GIMP enum expression."""
+    key = interpolation.lower().strip().replace("-", "")
+    interpolation_map = {
+        "none": "Gimp.InterpolationType.NONE",
+        "linear": "Gimp.InterpolationType.LINEAR",
+        "cubic": "Gimp.InterpolationType.CUBIC",
+        "nohalo": "Gimp.InterpolationType.NOHALO",
+        "lohalo": "Gimp.InterpolationType.LOHALO",
+    }
+    resolved = key if key in interpolation_map else "cubic"
+    return resolved, interpolation_map[resolved]
+
+
+def _transform_resize_expr(resize: str) -> tuple[str, str]:
+    """Return resolved transform-resize key and generated GIMP enum expression."""
+    key = resize.lower().strip().replace("-", "_").replace(" ", "_")
+    resize_map = {
+        "adjust": "Gimp.TransformResize.ADJUST",
+        "clip": "Gimp.TransformResize.CLIP",
+        "crop": "Gimp.TransformResize.CROP",
+        "crop_with_aspect": "Gimp.TransformResize.CROP_WITH_ASPECT",
+    }
+    resolved = key if key in resize_map else "adjust"
+    return resolved, resize_map[resolved]
+
+
 def _layer_target(layer_name: str | None, layer_index: int | None) -> list[str]:
     """Code to resolve a layer target."""
     if layer_name is not None:
@@ -234,6 +261,124 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="rotate_layer", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def perspective_layer(
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
+        x3: float,
+        y3: float,
+        interpolation: str = "cubic",
+        resize: str = "adjust",
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Perspective-transform a layer by remapping its four bounding-box corners.
+
+        Args:
+            x0, y0: New upper-left corner.
+            x1, y1: New upper-right corner.
+            x2, y2: New lower-left corner.
+            x3, y3: New lower-right corner.
+            interpolation: "none", "linear", "cubic", "nohalo", or "lohalo".
+            resize: Transform resize policy: "adjust", "clip", "crop", or "crop_with_aspect".
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and applied corner coordinates.
+        """
+        corners = [float(v) for v in (x0, y0, x1, y1, x2, y2, x3, y3)]
+        resolved_interpolation, interp_expr = _interpolation_expr(interpolation)
+        resolved_resize, resize_expr = _transform_resize_expr(resize)
+
+        code = (
+            _img_preamble()
+            + _layer_target(layer_name, layer_index)
+            + [
+                f"Gimp.context_set_interpolation({interp_expr})",
+                f"Gimp.context_set_transform_resize({resize_expr})",
+                "Gimp.Item.transform_perspective(target, "
+                f"{corners[0]}, {corners[1]}, {corners[2]}, {corners[3]}, "
+                f"{corners[4]}, {corners[5]}, {corners[6]}, {corners[7]})",
+                "Gimp.displays_flush()",
+            ]
+        )
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="perspective_layer",
+                message="Layer perspective transform applied",
+                data={
+                    "corners": corners,
+                    "interpolation": resolved_interpolation,
+                    "resize": resolved_resize,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="perspective_layer", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def shear_layer(
+        direction: str = "horizontal",
+        magnitude: float = 0.0,
+        interpolation: str = "cubic",
+        resize: str = "adjust",
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Shear a layer horizontally or vertically by a pixel magnitude.
+
+        Args:
+            direction: "horizontal"/"h" or "vertical"/"v".
+            magnitude: Shear magnitude in pixels; may be negative.
+            interpolation: "none", "linear", "cubic", "nohalo", or "lohalo".
+            resize: Transform resize policy: "adjust", "clip", "crop", or "crop_with_aspect".
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and applied shear settings.
+        """
+        direction_key = direction.lower().strip()
+        resolved_direction = "vertical" if direction_key in {"v", "vertical"} else "horizontal"
+        shear_expr = (
+            "Gimp.OrientationType.VERTICAL"
+            if resolved_direction == "vertical"
+            else "Gimp.OrientationType.HORIZONTAL"
+        )
+        magnitude = float(magnitude)
+        resolved_interpolation, interp_expr = _interpolation_expr(interpolation)
+        resolved_resize, resize_expr = _transform_resize_expr(resize)
+
+        code = (
+            _img_preamble()
+            + _layer_target(layer_name, layer_index)
+            + [
+                f"Gimp.context_set_interpolation({interp_expr})",
+                f"Gimp.context_set_transform_resize({resize_expr})",
+                f"Gimp.Item.transform_shear(target, {shear_expr}, {magnitude})",
+                "Gimp.displays_flush()",
+            ]
+        )
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="shear_layer",
+                message=f"Layer sheared {resolved_direction} by {magnitude}px",
+                data={
+                    "direction": resolved_direction,
+                    "magnitude": magnitude,
+                    "interpolation": resolved_interpolation,
+                    "resize": resolved_resize,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="shear_layer", error=str(e)).model_dump()
 
     @mcp.tool()
     async def flip_image(direction: str = "horizontal") -> ToolResult:

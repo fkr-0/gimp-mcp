@@ -121,6 +121,45 @@ async def test_selection_advancement_tools_expose_feather_border_grow_shrink() -
 
 
 @pytest.mark.asyncio
+async def test_select_by_color_uses_gimp_3_2_contiguous_color_api_without_removed_pdb_run_procedure() -> None:
+    bridge = ScriptedBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["select_by_color"](
+        x=30,
+        y=30,
+        threshold=40.0,
+        operation="add",
+        sample_merged=True,
+    )
+
+    assert result["success"] is True
+    assert result["operation"] == "select_by_color"
+    generated = generated_source(bridge)
+    assert "run_procedure" not in generated
+    assert "Gimp.Image.select_contiguous_color(" in generated
+    assert "Gimp.ChannelOps.ADD" in generated
+    assert "Gimp.context_set_sample_threshold(" in generated
+    assert "Gimp.context_set_sample_merged(True)" in generated
+
+
+@pytest.mark.asyncio
+async def test_selection_info_and_color_selection_handle_gimp_3_2_bounds_return_shape() -> None:
+    bridge = ScriptedBridge()
+    tools = registered_tools(bridge)
+
+    await tools["get_selection_info"]()
+    await tools["select_by_color"](x=4, y=5)
+
+    generated = generated_source(bridge)
+    assert "bounds = Gimp.Selection.bounds(image)" in generated
+    assert "if len(bounds) == 6:" in generated
+    assert "_, non_empty, x1, y1, x2, y2 = bounds" in generated
+    assert "else:" in generated
+    assert "non_empty, x1, y1, x2, y2 = bounds" in generated
+
+
+@pytest.mark.asyncio
 async def test_gradient_fill_uses_drawable_gradient_api_with_colors() -> None:
     bridge = ScriptedBridge()
     tools = registered_tools(bridge)

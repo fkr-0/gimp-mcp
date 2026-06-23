@@ -8,11 +8,12 @@ created_at: 2026-06-21
 status: unverified
 contract:
   title: Verify and certify GIMP 3.2.4 compatibility
-  scope: Verify that this fork's MCP server, bundled GIMP plug-in, bridge protocol, advertised tools,
-    and setup documentation are compatible with GIMP 3.2.4 through the GObject-introspection Python interface.
-  claim_gate: The project MUST NOT claim verified GIMP 3.2.4 compatibility until every required check
-    in this file is passed, or until every non-passing check has an explicit waiver with a linked follow-up
-    issue and README caveat.
+  scope: Verify that this fork's MCP server, bundled GIMP plug-in, bridge protocol,
+    advertised tools, and setup documentation are compatible with GIMP 3.2.4 through
+    the GObject-introspection Python interface.
+  claim_gate: The project MUST NOT claim verified GIMP 3.2.4 compatibility until every
+    required check in this file is passed, or until every non-passing check has an
+    explicit waiver with a linked follow-up issue and README caveat.
   result_file: compat.results.yml
   primary_runtime:
     gimp_application_version: 3.2.4
@@ -32,8 +33,9 @@ contract:
     - from gi.repository import GimpUi
     - from gi.repository import GObject
     - from gi.repository import Gtk
-    important_note: GIMP 3.2.4 is verified through the libgimp 3.0 API namespace. The code MUST keep gi.require_version('Gimp',
-      '3.0'); there is no separate gi.require_version('Gimp', '3.2') contract here.
+    important_note: GIMP 3.2.4 is verified through the libgimp 3.0 API namespace.
+      The code MUST keep gi.require_version('Gimp', '3.0'); there is no separate gi.require_version('Gimp',
+      '3.2') contract here.
   evidence_sources:
     official_libgimp_api:
       url: https://developer.gimp.org/api/3.0/libgimp/
@@ -89,10 +91,10 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 118
+    current_total: 127
     by_module:
       agent_tools: 3
-      image_tools: 6
+      image_tools: 10
       layer_tools: 19
       selection_tools: 14
       path_tools: 5
@@ -101,14 +103,14 @@ known_repo_observations:
       history_tools: 4
       pdb_tools: 2
       target_tools: 2
-      transform_tools: 11
-      filter_tools: 8
-      color_tools: 13
+      transform_tools: 13
+      filter_tools: 9
+      color_tools: 15
       gimp_dev_tools: 2
       flow_tools: 9
-    reconciliation_required: README count is reconciled with current code registering 118 unique MCP tool
-      decorators. The compatibility gate MUST reconcile the public count with the runtime registry before
-      publishing a 3.2.4 support claim.
+    reconciliation_required: README count is reconciled with current code registering
+      126 unique MCP tool decorators. The compatibility gate MUST reconcile the public
+      count with the runtime registry before publishing a 3.2.4 support claim.
   plugin_entrypoint:
     source: gimp_plugin/gimp_mcp_plugin.py
     procedure_name: plug-in-mcp-pro-server
@@ -166,7 +168,8 @@ compatibility_matrix:
   gimp_builds:
     flatpak:
       required: false
-      notes: Verify actual plug-in path and sandbox networking if this is the local install mode.
+      notes: Verify actual plug-in path and sandbox networking if this is the local
+        install mode.
     distro_package:
       required: false
       notes: Record package name/version and Python/PyGObject versions.
@@ -176,8 +179,9 @@ compatibility_matrix:
   profiles:
     clean_profile:
       required: true
-      requirement: Use a fresh GIMP user profile with only this plug-in installed, so menu registration,
-        PDB discovery, and script-fu dependencies are not hidden by existing local state.
+      requirement: Use a fresh GIMP user profile with only this plug-in installed,
+        so menu registration, PDB discovery, and script-fu dependencies are not hidden
+        by existing local state.
     existing_profile:
       required: false
       requirement: Useful as a secondary regression run only.
@@ -230,19 +234,21 @@ plugin_install_contract:
       directory_name: gimp_mcp_plugin
       executable_file: gimp_mcp_plugin.py
       linux_path: ${XDG_CONFIG_HOME:-$HOME/.config}/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-      rationale: Official GIMP plug-in file architecture says the plug-in directory and Python file stem
-        should match, with .py appended to the file.
+      rationale: Official GIMP plug-in file architecture says the plug-in directory
+        and Python file stem should match, with .py appended to the file.
     keep_public_bundle_name:
       directory_name: gimp-mcp-pro
       executable_file: gimp-mcp-pro.py
       linux_path: ${XDG_CONFIG_HOME:-$HOME/.config}/GIMP/3.0/plug-ins/gimp-mcp-pro/gimp-mcp-pro.py
-      rationale: Use this only if setup.sh installs or generates a wrapper/renamed copy matching GIMP
-        discovery semantics.
+      rationale: Use this only if setup.sh installs or generates a wrapper/renamed
+        copy matching GIMP discovery semantics.
   forbidden_ambiguity:
-  - README/setup MUST NOT document a path whose directory stem and executable file stem disagree unless
-    a live GIMP 3.2.4 run proves that specific layout is discovered on every claimed OS.
-  - README/setup MUST NOT silently copy gimp_mcp_plugin.py to an extensionless file unless that exact
-    extensionless layout is proven discoverable by GIMP 3.2.4 on the claimed OS.
+  - README/setup MUST NOT document a path whose directory stem and executable file
+    stem disagree unless a live GIMP 3.2.4 run proves that specific layout is discovered
+    on every claimed OS.
+  - README/setup MUST NOT silently copy gimp_mcp_plugin.py to an extensionless file
+    unless that exact extensionless layout is proven discoverable by GIMP 3.2.4 on
+    the claimed OS.
   permissions:
     linux_macos: executable bit MUST be set on the installed Python plug-in file.
     windows: executable bit is not applicable, but file must be readable by GIMP.
@@ -258,26 +264,27 @@ python_plugin_lifecycle_contract:
   - class MUST subclass Gimp.PlugIn.
   - do_query_procedures MUST return ['plug-in-mcp-pro-server'].
   - do_create_procedure MUST return a Gimp.ImageProcedure for plug-in-mcp-pro-server.
-  - Gimp.ImageProcedure.new MUST be called with Gimp.PDBProcType.PERSISTENT for the long-lived bridge
-    server procedure.
+  - Gimp.ImageProcedure.new MUST be called with Gimp.PDBProcType.PERSISTENT for the
+    long-lived bridge server procedure.
   - procedure.set_menu_label MUST set Start MCP Pro Server.
   - procedure.set_documentation MUST be populated.
   - procedure.set_attribution MUST be populated.
   - procedure.add_menu_path MUST include '<Image>/Tools/'.
   - run callback MUST accept procedure, run_mode, image, drawables, config, run_data.
-  - run callback MUST return procedure.new_return_values with Gimp.PDBStatusType.SUCCESS on clean shutdown/start
-    success.
+  - run callback MUST return procedure.new_return_values with Gimp.PDBStatusType.SUCCESS
+    on clean shutdown/start success.
   - process entrypoint MUST call Gimp.main(MCPProPlugin.__gtype__, sys.argv).
   introspection_probe:
     transport: execute_python pyGObject-eval
     expressions:
     - Gimp.PlugIn is not None
     - Gimp.ImageProcedure is not None
-    - Gimp.PDBProcType.PERSISTENT.value_nick if hasattr(Gimp.PDBProcType.PERSISTENT, 'value_nick') else
-      str(Gimp.PDBProcType.PERSISTENT)
+    - Gimp.PDBProcType.PERSISTENT.value_nick if hasattr(Gimp.PDBProcType.PERSISTENT,
+      'value_nick') else str(Gimp.PDBProcType.PERSISTENT)
     - Gimp.PDBStatusType.SUCCESS is not None
   pass_criteria:
-  - All required lifecycle interfaces execute without AttributeError or TypeError under GIMP 3.2.4.
+  - All required lifecycle interfaces execute without AttributeError or TypeError
+    under GIMP 3.2.4.
   - No deprecation/migration warning is severe enough to prevent registration or invocation.
 bridge_protocol_contract:
   id: bridge-protocol
@@ -292,8 +299,8 @@ bridge_protocol_contract:
       header: 4 byte unsigned big-endian payload length
       payload: UTF-8 JSON object
       max_payload_bytes: 104857600
-      legacy_mode: raw JSON boundary detection MAY be supported but MUST NOT be the default for 3.2.4
-        verification.
+      legacy_mode: raw JSON boundary detection MAY be supported but MUST NOT be the
+        default for 3.2.4 verification.
   request_schema:
     required_fields:
       id: integer
@@ -446,7 +453,8 @@ core_gimp_api_contract:
   pass_criteria:
   - Every symbol used by code or smoke tests exists in GIMP 3.2.4.
   - Every method call used by a tool has a live smoke assertion or a waived follow-up.
-  - Any API migration from previous GIMP versions is captured as a code issue, not ignored.
+  - Any API migration from previous GIMP versions is captured as a code issue, not
+    ignored.
 pdb_contract:
   id: pdb
   required: true
@@ -462,10 +470,11 @@ pdb_contract:
       capability: non_empty_string
       procedure: pdb_or_script_fu_procedure_name_when_known
       recommendation: human_readable_fallback_when_available
-    policy: Optional GIMP 3.2.4 capabilities may be absent in a clean profile, but their tools MUST return
-      machine-readable optional-capability metadata. The live smoke runner prefers this structured shape
-      over fragile string matching and treats it as a passing optional-capability limitation, not as a
-      transport or core API failure.
+    policy: Optional GIMP 3.2.4 capabilities may be absent in a clean profile, but
+      their tools MUST return machine-readable optional-capability metadata. The live
+      smoke runner prefers this structured shape over fragile string matching and
+      treats it as a passing optional-capability limitation, not as a transport or
+      core API failure.
   optional_procedures:
     gimp-image-undo:
       required_for_tool: undo
@@ -473,16 +482,18 @@ pdb_contract:
       expected_result_fields:
         procedure: gimp-image-undo
         optional_capability: true
-      pass_policy: If unavailable in a clean 3.2.4 profile, undo MUST return a structured optional-capability
-        result that explains the limitation instead of crashing the bridge.
+      pass_policy: If unavailable in a clean 3.2.4 profile, undo MUST return a structured
+        optional-capability result that explains the limitation instead of crashing
+        the bridge.
     gimp-image-redo:
       required_for_tool: redo
       expected_error_code: optional_capability_unavailable
       expected_result_fields:
         procedure: gimp-image-redo
         optional_capability: true
-      pass_policy: If unavailable in a clean 3.2.4 profile, redo MUST return a structured optional-capability
-        result that explains the limitation instead of crashing the bridge.
+      pass_policy: If unavailable in a clean 3.2.4 profile, redo MUST return a structured
+        optional-capability result that explains the limitation instead of crashing
+        the bridge.
   conditional_procedures:
     script-fu-drop-shadow:
       required_for_tool: apply_drop_shadow
@@ -490,9 +501,9 @@ pdb_contract:
       expected_result_fields:
         procedure: script-fu-drop-shadow
         optional_capability: true
-      pass_policy: If unavailable in a clean 3.2.4 profile, apply_drop_shadow MUST either be reimplemented
-        with DrawableFilter/GEGL or return a structured optional-capability result accepted by the live
-        smoke runner.
+      pass_policy: If unavailable in a clean 3.2.4 profile, apply_drop_shadow MUST
+        either be reimplemented with DrawableFilter/GEGL or return a structured optional-capability
+        result accepted by the live smoke runner.
   search_contract:
     tool: search_pdb
     required_behavior:
@@ -509,10 +520,14 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 118
+  expected_registry_total: 127
   registry:
     image:
     - create_image
+    - add_guide
+    - delete_guide
+    - list_guides
+    - set_image_grid
     - list_images
     - get_image_info
     - export_image
@@ -604,6 +619,8 @@ mcp_tool_contract:
     - scale_layer
     - rotate_image
     - rotate_layer
+    - perspective_layer
+    - shear_layer
     - flip_image
     - flip_layer
     - crop_to_selection
@@ -614,6 +631,7 @@ mcp_tool_contract:
     filters:
     - apply_gaussian_blur
     - apply_unsharp_mask
+    - apply_motion_blur
     - apply_pixelize
     - apply_edge_detect
     - apply_emboss
@@ -623,6 +641,7 @@ mcp_tool_contract:
     color:
     - adjust_brightness_contrast
     - adjust_hue_saturation
+    - adjust_color_balance
     - adjust_levels
     - adjust_curves
     - desaturate
@@ -631,6 +650,7 @@ mcp_tool_contract:
     - posterize
     - color_to_alpha
     - auto_white_balance
+    - list_gimp_resources
     - get_colors
     - swap_colors
     - sample_color
@@ -648,8 +668,8 @@ mcp_tool_contract:
   - Runtime server registers every expected tool exactly once.
   - README/tool reference total and section counts match runtime registry.
   - Every tool returns OperationResult-like structured output on success/failure.
-  - No advertised tool fails due to missing GIMP 3.2.4 symbol, renamed PDB procedure, or invalid enum
-    mapping.
+  - No advertised tool fails due to missing GIMP 3.2.4 symbol, renamed PDB procedure,
+    or invalid enum mapping.
 live_smoke_scenarios:
 - id: C-000-spawn-gimp
   required: true
@@ -657,9 +677,11 @@ live_smoke_scenarios:
   steps:
   - Create or select an isolated GIMP profile directory.
   - Install the plug-in into the profile with a canonical GIMP 3.0 plug-ins layout.
-  - Launch the selected GIMP 3.2.4 executable, optionally under Xvfb for CI/headless runs.
+  - Launch the selected GIMP 3.2.4 executable, optionally under Xvfb for CI/headless
+    runs.
   assertions:
-  - The spawned process PID, executable name, profile path, plug-in path and socket port are recorded.
+  - The spawned process PID, executable name, profile path, plug-in path and socket
+    port are recorded.
   - The profile is clean or explicitly named as a test profile.
   - A failure to spawn is recorded as a compatibility failure, not as a verified claim.
 - id: C-005-autostart-server
@@ -669,8 +691,10 @@ live_smoke_scenarios:
   - Request plug-in server autostart through the prepared profile/startup mechanism.
   - Wait for the bridge socket before running transport and API checks.
   assertions:
-  - Autostart is either directly observed or covered by a successful C-020 transport connection.
-  - If autostart is skipped, the result must explain which later check covers the same evidence.
+  - Autostart is either directly observed or covered by a successful C-020 transport
+    connection.
+  - If autostart is skipped, the result must explain which later check covers the
+    same evidence.
 - id: C-001-env-introspection
   required: true
   title: Record exact runtime environment
@@ -679,7 +703,8 @@ live_smoke_scenarios:
   - Start plug-in from Tools -> Start MCP Pro Server.
   - Run get_gimp_info and execute_python introspection probes.
   assertions:
-  - gimp application version is exactly 3.2.4 or build metadata clearly identifies 3.2.4.
+  - gimp application version is exactly 3.2.4 or build metadata clearly identifies
+    3.2.4.
   - gi.require_version('Gimp', '3.0') succeeds.
   - libgimp library version reports or documents 3.2.4.
   - Python, PyGObject, GEGL and platform are recorded.
@@ -692,7 +717,8 @@ live_smoke_scenarios:
   assertions:
   - PDB procedure exists after GIMP restart.
   - Menu item appears in Tools.
-  - Starting twice does not spawn duplicate listeners and returns success/already-running gracefully.
+  - Starting twice does not spawn duplicate listeners and returns success/already-running
+    gracefully.
 - id: C-020-transport
   required: true
   title: TCP length-prefix protocol
@@ -707,7 +733,8 @@ live_smoke_scenarios:
   assertions:
   - AsyncGimpBridge performs a length-prefixed get_gimp_info round-trip.
   - AsyncGimpBridge can register the complete 84-tool MCP surface.
-  - Representative image, layer, metadata, and bitmap tools succeed through actual async tool handlers.
+  - Representative image, layer, metadata, and bitmap tools succeed through actual
+    async tool handlers.
   - The async bridge closes its stream cleanly after the scenario.
 - id: C-030-image-basics
   required: true
@@ -747,8 +774,8 @@ live_smoke_scenarios:
   assertions:
   - layer names, visibility, opacity and alpha state are observable in metadata.
   - active layer selection drives subsequent drawing/filter operations.
-  - layer mask add, inspect, edit/show/apply state, and remove paths return structured success through
-    the live MCP tool registry.
+  - layer mask add, inspect, edit/show/apply state, and remove paths return structured
+    success through the live MCP tool registry.
   - deletion removes only the selected/targeted layer.
 - id: C-050-selection-drawing-contract
   required: true
@@ -780,10 +807,10 @@ live_smoke_scenarios:
   - edit_clear
   assertions:
   - drawing tools alter bitmap pixels in expected bounding boxes.
-  - selection tools create, inspect, grow, shrink, feather, border, stroke, fill, and clear current selection
-    state without leaking state after select_none.
-  - select_by_color and bucket_fill exercise point-sampled contiguous color workflows against an editable
-    drawable.
+  - selection tools create, inspect, grow, shrink, feather, border, stroke, fill,
+    and clear current selection state without leaking state after select_none.
+  - select_by_color and bucket_fill exercise point-sampled contiguous color workflows
+    against an editable drawable.
   - text layer is created with expected text/name and visible pixels.
 - id: C-055-path-contract
   required: true
@@ -797,14 +824,16 @@ live_smoke_scenarios:
   steps:
   - Create a clean image and editable layer.
   - Create a named vector path from control points.
-  - Convert the path to a selection, fill it, stroke the path, remove it, and list paths.
+  - Convert the path to a selection, fill it, stroke the path, remove it, and list
+    paths.
   assertions:
   - Path tools return structured success results through the MCP tool registry.
-  - Path creation/listing/removal is observable through list_paths before and after removal.
-  - Path-to-selection and stroke_path exercise path, selection, and drawable interaction in one live e2e
-    chain.
-  - GIMP 3.2.4 path APIs are exercised through Gimp.Path.new, stroke_new_from_points, image.select_item
-    and image.remove_path.
+  - Path creation/listing/removal is observable through list_paths before and after
+    removal.
+  - Path-to-selection and stroke_path exercise path, selection, and drawable interaction
+    in one live e2e chain.
+  - GIMP 3.2.4 path APIs are exercised through Gimp.Path.new, stroke_new_from_points,
+    image.select_item and image.remove_path.
 - id: C-060-export-bitmap-contract
   required: true
   tools:
@@ -852,7 +881,8 @@ live_smoke_scenarios:
   - sample_color
   assertions:
   - foreground/background color values round-trip through context state.
-  - every color operation returns success and produces measurable pixel delta unless input is degenerate.
+  - every color operation returns success and produces measurable pixel delta unless
+    input is degenerate.
   - sample_color returns a parseable color at a known painted coordinate.
 - id: C-090-filter-contract
   required: true
@@ -879,15 +909,16 @@ live_smoke_scenarios:
   - filter.get_config exposes all properties being set by the tool.
   - append_filter/merge_filter path succeeds without crashing GIMP 3.2.4.
   - each filter produces a measurable pixel delta or a documented neutral/no-op reason.
-  - drop shadow is either supported via script-fu-drop-shadow or returns a structured optional-capability
-    error without failing the bridge transport smoke.
+  - drop shadow is either supported via script-fu-drop-shadow or returns a structured
+    optional-capability error without failing the bridge transport smoke.
 - id: C-100-pdb-contract
   required: true
   tools:
   - search_pdb
   - execute_python
   assertions:
-  - search_pdb('png') includes file-png-export or an equivalent current 3.2.4 export procedure.
+  - search_pdb('png') includes file-png-export or an equivalent current 3.2.4 export
+    procedure.
   - execute_python can import Gimp/Gegl/Gio/GLib and create/use variables across calls.
   - Python exceptions return structured errors including traceback text.
 - id: C-110-history-contract
@@ -898,40 +929,47 @@ live_smoke_scenarios:
   - undo
   - redo
   assertions:
-  - undo group wraps a multi-step draw operation into one undo unit where GIMP exposes that behavior.
-  - undo and redo alter bitmap/metadata state when GIMP exposes PDB procedures for them.
-  - if undo/redo PDB procedures are unavailable, the tools return structured optional-capability errors
-    without crashing the bridge.
+  - undo group wraps a multi-step draw operation into one undo unit where GIMP exposes
+    that behavior.
+  - undo and redo alter bitmap/metadata state when GIMP exposes PDB procedures for
+    them.
+  - if undo/redo PDB procedures are unavailable, the tools return structured optional-capability
+    errors without crashing the bridge.
 - id: C-120-error-contract
   required: true
   assertions:
   - no-image operations fail cleanly with structured MCP error results.
   - invalid layer name/index fails cleanly with explicit target error.
-  - invalid enum string fails before or inside GIMP with actionable message, not silent wrong behavior.
+  - invalid enum string fails before or inside GIMP with actionable message, not silent
+    wrong behavior.
   - timeout disconnects bridge and permits later reconnect.
 - id: C-130-docs-contract
   required: true
   assertions:
-  - README no longer calls GIMP 3.0.8 the current verified release after 3.2.4 certification work starts.
+  - README no longer calls GIMP 3.0.8 the current verified release after 3.2.4 certification
+    work starts.
   - README has a compatibility table with verified/unverified status and date.
   - setup.sh and README document one canonical plug-in install layout proven by C-010.
   - advertised tool count and section counts match runtime registry.
 - id: C-900-stop-bridge
   required: false
   assertions:
-  - live smoke can request bridge shutdown after checks so spawned clean-profile GIMP processes do not
-    leak.
-  - shutdown result is recorded as operational evidence, not as a public compatibility claim gate.
+  - live smoke can request bridge shutdown after checks so spawned clean-profile GIMP
+    processes do not leak.
+  - shutdown result is recorded as operational evidence, not as a public compatibility
+    claim gate.
 static_checks:
 - id: S-001-yaml-validity
   required: true
   command: python -c "import yaml; yaml.safe_load(open('compat.yml'))"
-  pass_criteria: compat.yml parses without duplicate-key-sensitive parser warnings where available.
+  pass_criteria: compat.yml parses without duplicate-key-sensitive parser warnings
+    where available.
 - id: S-010-tool-registry-count
   required: true
   command: python scripts/project.py list-tools
   fallback_command: python - <<'PY'
-  pass_criteria: output total equals mcp_tool_contract.expected_registry_total and README count matches.
+  pass_criteria: output total equals mcp_tool_contract.expected_registry_total and
+    README count matches.
 - id: S-020-unit-suite
   required: true
   command: uv run pytest --no-cov
@@ -942,19 +980,22 @@ static_checks:
   pass_criteria: format-check, lint, typecheck and tests pass.
 - id: S-040-doc-claim-gate
   required: true
-  command: grep -R "GIMP 3.0.8 compatible" README.md CHANGELOG.md pyproject.toml || true
-  pass_criteria: no stale 3.0.8 compatibility claim remains after 3.2.4 verification is accepted.
+  command: grep -R "GIMP 3.0.8 compatible" README.md CHANGELOG.md pyproject.toml ||
+    true
+  pass_criteria: no stale 3.0.8 compatibility claim remains after 3.2.4 verification
+    is accepted.
 acceptance:
   required_to_close_source_issue:
   - compat.yml exists and is committed.
   - tasks.issues.yml references compat.yml instead of duplicating the detailed checklist.
   - compat.results.yml has at least one passing clean-profile Linux GIMP 3.2.4 run.
-  - All required live smoke scenarios pass or have explicit waivers with linked follow-up issues.
+  - All required live smoke scenarios pass or have explicit waivers with linked follow-up
+    issues.
   - Tool registry count, README count and runtime registration are reconciled.
   - README compatibility table states exact status: verified, partial, or unverified.
-  allowed_partial_status: The issue may be marked partial only if GIMP 3.2.4 starts, plug-in registration
-    works, transport works, and every remaining failure is tied to a concrete API migration or environment
-    follow-up.
+  allowed_partial_status: The issue may be marked partial only if GIMP 3.2.4 starts,
+    plug-in registration works, transport works, and every remaining failure is tied
+    to a concrete API migration or environment follow-up.
   forbidden_acceptance_shortcuts:
   - claiming support based only on import success
   - claiming support based only on pytest without live GIMP

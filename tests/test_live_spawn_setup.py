@@ -69,6 +69,13 @@ def test_plugin_server_autostart_is_static_registered() -> None:
     assert "def do_quit" in source
 
 
+def test_bitmap_export_uses_gimp_3_2_image_flatten_api() -> None:
+    source = live.PLUGIN_SOURCE.read_text(encoding="utf-8")
+
+    assert ".flatten_image()" not in source
+    assert ".flatten()" in source
+
+
 def test_existing_server_mode_does_not_spawn_by_default() -> None:
     parser = live.build_parser()
     args = parser.parse_args([])

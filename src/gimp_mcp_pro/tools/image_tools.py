@@ -103,6 +103,170 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
 
     @mcp.tool()
+    async def add_guide(
+        orientation: str = "horizontal",
+        position: int = 0,
+    ) -> ToolResult:
+        """Add a horizontal or vertical guide to the active image.
+
+        Args:
+            orientation: "horizontal"/"h" or "vertical"/"v".
+            position: Pixel position from the top for horizontal guides or from the left for vertical guides.
+
+        Returns:
+            Operation result dictionary with guide orientation and position.
+        """
+        orientation_key = orientation.lower().strip()
+        resolved_orientation = "vertical" if orientation_key in {"v", "vertical"} else "horizontal"
+        position = max(0, int(position))
+        add_call = "image.add_vguide" if resolved_orientation == "vertical" else "image.add_hguide"
+
+        code = [
+            "from gi.repository import Gimp",
+            *_get_active_image_code(),
+            f"guide_id = {add_call}({position})",
+            "Gimp.displays_flush()",
+            "print(guide_id)",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="add_guide",
+                message=f"Added {resolved_orientation} guide at {position}px",
+                data={"orientation": resolved_orientation, "position": position},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="add_guide", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def delete_guide(guide_id: int) -> ToolResult:
+        """Delete a guide from the active image by guide ID.
+
+        Args:
+            guide_id: GIMP guide ID returned by add_guide or list_guides.
+
+        Returns:
+            Operation result dictionary with the deleted guide ID.
+        """
+        guide_id = max(1, int(guide_id))
+        code = [
+            "from gi.repository import Gimp",
+            *_get_active_image_code(),
+            f"image.delete_guide({guide_id})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="delete_guide",
+                message=f"Deleted guide {guide_id}",
+                data={"guide_id": guide_id},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="delete_guide", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def list_guides() -> ToolResult:
+        """List guides on the active image with ID, orientation, and position.
+
+        Returns:
+            Operation result dictionary containing a guides list and count.
+        """
+        code = [
+            "import json",
+            "from gi.repository import Gimp",
+            *_get_active_image_code(),
+            "guides = []",
+            "guide_id = image.find_next_guide(0)",
+            "while guide_id:\n"
+            "    orientation = image.get_guide_orientation(guide_id)\n"
+            "    position = image.get_guide_position(guide_id)\n"
+            "    orientation_name = str(orientation).split('.')[-1].lower()\n"
+            "    guides.append({'id': guide_id, 'orientation': orientation_name, 'position': position})\n"
+            "    guide_id = image.find_next_guide(guide_id)",
+            "print(json.dumps({'guides': guides, 'count': len(guides)}))",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            guides_data: dict[str, Any] = {"guides": [], "count": 0}
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        guides_data = _json.loads(str(out).strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            return OperationResult.ok(
+                operation="list_guides",
+                message=f"Found {guides_data.get('count', 0)} guide(s)",
+                data=guides_data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="list_guides", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def set_image_grid(
+        xspacing: float = 10.0,
+        yspacing: float = 10.0,
+        xoffset: float = 0.0,
+        yoffset: float = 0.0,
+        style: str = "intersections",
+    ) -> ToolResult:
+        """Configure grid spacing, offset, and visual style on the active image.
+
+        Args:
+            xspacing: Horizontal grid spacing in pixels.
+            yspacing: Vertical grid spacing in pixels.
+            xoffset: Horizontal grid offset in pixels.
+            yoffset: Vertical grid offset in pixels.
+            style: Grid style such as dots, intersections, on_off_dash, double_dash, or solid.
+
+        Returns:
+            Operation result dictionary with applied grid settings.
+        """
+        xspacing = max(0.1, float(xspacing))
+        yspacing = max(0.1, float(yspacing))
+        xoffset = max(0.0, float(xoffset))
+        yoffset = max(0.0, float(yoffset))
+        style_key = style.lower().strip().replace("-", "_").replace(" ", "_")
+        style_map = {
+            "dots": "Gimp.GridStyle.DOTS",
+            "intersections": "Gimp.GridStyle.INTERSECTIONS",
+            "crosshairs": "Gimp.GridStyle.INTERSECTIONS",
+            "on_off_dash": "Gimp.GridStyle.ON_OFF_DASH",
+            "double_dash": "Gimp.GridStyle.DOUBLE_DASH",
+            "solid": "Gimp.GridStyle.SOLID",
+        }
+        resolved_style = style_key if style_key in style_map else "intersections"
+        style_expr = style_map[resolved_style]
+
+        code = [
+            "from gi.repository import Gimp",
+            *_get_active_image_code(),
+            f"image.grid_set_spacing({xspacing}, {yspacing})",
+            f"image.grid_set_offset({xoffset}, {yoffset})",
+            f"image.grid_set_style({style_expr})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="set_image_grid",
+                message="Image grid configured",
+                data={
+                    "xspacing": xspacing,
+                    "yspacing": yspacing,
+                    "xoffset": xoffset,
+                    "yoffset": yoffset,
+                    "style": resolved_style,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="set_image_grid", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def list_images() -> ToolResult:
         """List all currently open images in GIMP.
 

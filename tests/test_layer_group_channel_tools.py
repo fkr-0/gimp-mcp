@@ -121,7 +121,9 @@ async def test_save_selection_to_channel_uses_selection_save() -> None:
     assert result["operation"] == "save_selection_to_channel"
     generated = generated_source(bridge)
     assert "channel = Gimp.Selection.save(image)" in generated
-    assert "if channel is None: raise RuntimeError('Could not save selection to channel')" in generated
+    assert (
+        "if channel is None: raise RuntimeError('Could not save selection to channel')" in generated
+    )
     assert "channel.set_name('Saved alpha')" in generated
     assert "Gimp.displays_flush()" in generated
 

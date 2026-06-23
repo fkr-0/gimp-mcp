@@ -127,6 +127,75 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
 
     @mcp.tool()
+    async def adjust_color_balance(
+        range: str = "midtones",
+        cyan_red: float = 0.0,
+        magenta_green: float = 0.0,
+        yellow_blue: float = 0.0,
+        preserve_luminosity: bool = True,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Adjust shadows, midtones, or highlights color balance for a layer.
+
+        Args:
+            range: Tonal range to adjust: "shadows", "midtones", or "highlights".
+            cyan_red: Cyan-to-red shift (-100 to 100, 0 = no change).
+            magenta_green: Magenta-to-green shift (-100 to 100, 0 = no change).
+            yellow_blue: Yellow-to-blue shift (-100 to 100, 0 = no change).
+            preserve_luminosity: Keep luminance stable while shifting colors.
+            layer_name: Target layer. Uses active layer if not specified.
+            layer_index: Target layer by index.
+
+        Returns:
+            Operation result dictionary with status, message, and tool-specific data or error details.
+        """
+        range_key = range.lower().strip().replace("-", "_")
+        range_map = {
+            "shadows": "Gimp.TransferMode.SHADOWS",
+            "shadow": "Gimp.TransferMode.SHADOWS",
+            "midtones": "Gimp.TransferMode.MIDTONES",
+            "midtone": "Gimp.TransferMode.MIDTONES",
+            "highlights": "Gimp.TransferMode.HIGHLIGHTS",
+            "highlight": "Gimp.TransferMode.HIGHLIGHTS",
+        }
+        transfer_expr = range_map.get(range_key, "Gimp.TransferMode.MIDTONES")
+        resolved_range = {
+            "Gimp.TransferMode.SHADOWS": "shadows",
+            "Gimp.TransferMode.MIDTONES": "midtones",
+            "Gimp.TransferMode.HIGHLIGHTS": "highlights",
+        }[transfer_expr]
+
+        cyan_red = max(-100.0, min(100.0, cyan_red))
+        magenta_green = max(-100.0, min(100.0, magenta_green))
+        yellow_blue = max(-100.0, min(100.0, yellow_blue))
+
+        code = _color_preamble(layer_name, layer_index) + [
+            "Gimp.Drawable.color_balance("
+            f"drawable, {transfer_expr}, {preserve_luminosity}, "
+            f"{cyan_red / 100.0}, {magenta_green / 100.0}, {yellow_blue / 100.0})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="adjust_color_balance",
+                message=(
+                    f"Color balance adjusted for {resolved_range}: "
+                    f"cyan_red={cyan_red}, magenta_green={magenta_green}, yellow_blue={yellow_blue}"
+                ),
+                data={
+                    "range": resolved_range,
+                    "cyan_red": cyan_red,
+                    "magenta_green": magenta_green,
+                    "yellow_blue": yellow_blue,
+                    "preserve_luminosity": preserve_luminosity,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="adjust_color_balance", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def adjust_levels(
         input_low: int = 0,
         input_high: int = 255,
@@ -453,6 +522,87 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="auto_white_balance", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def list_gimp_resources(
+        resource_type: str = "all",
+        limit: int = 100,
+    ) -> ToolResult:
+        """List available GIMP brushes, patterns, fonts, and gradients.
+
+        Args:
+            resource_type: One of "all", "brushes", "patterns", "fonts", or "gradients".
+            limit: Maximum number of names returned per resource category.
+
+        Returns:
+            Operation result dictionary with status, message, and resource name lists.
+        """
+        resource_key = resource_type.lower().strip().replace("-", "_")
+        aliases = {
+            "brush": "brushes",
+            "brushes": "brushes",
+            "pattern": "patterns",
+            "patterns": "patterns",
+            "font": "fonts",
+            "fonts": "fonts",
+            "gradient": "gradients",
+            "gradients": "gradients",
+            "all": "all",
+        }
+        selected = aliases.get(resource_key, "all")
+        limit = max(1, min(1000, limit))
+        resource_calls = {
+            "brushes": "Gimp.brushes_get_list('')",
+            "patterns": "Gimp.patterns_get_list('')",
+            "fonts": "Gimp.fonts_get_list('')",
+            "gradients": "Gimp.gradients_get_list('')",
+        }
+        selected_calls = (
+            resource_calls if selected == "all" else {selected: resource_calls[selected]}
+        )
+
+        code = [
+            "import json",
+            "from gi.repository import Gimp",
+            "resources = {}",
+            (
+                "def _resource_names(value):\n"
+                "    if isinstance(value, tuple):\n"
+                "        for part in reversed(value):\n"
+                "            if isinstance(part, (list, tuple)):\n"
+                "                value = part\n"
+                "                break\n"
+                "    names = []\n"
+                "    for item in (value or []):\n"
+                "        get_name = getattr(item, 'get_name', None)\n"
+                "        names.append(str(get_name() if get_name else item))\n"
+                "    return names"
+            ),
+        ]
+        for kind, call_expr in selected_calls.items():
+            code.append(f"resources[{py_literal(kind)}] = _resource_names({call_expr})[:{limit}]")
+        code.append("print(json.dumps(resources))")
+
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            resources: dict[str, object] = {}
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        resources = _json.loads(str(out).strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            total = sum(len(v) for v in resources.values() if isinstance(v, list))
+            return OperationResult.ok(
+                operation="list_gimp_resources",
+                message=f"Listed {total} GIMP resources",
+                data=resources,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="list_gimp_resources", error=str(e)).model_dump()
 
     @mcp.tool()
     async def get_colors() -> ToolResult:
