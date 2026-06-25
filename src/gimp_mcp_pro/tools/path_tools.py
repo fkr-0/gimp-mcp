@@ -6,6 +6,7 @@ import logging
 
 from gimp_mcp_pro.models.common import Color, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+from gimp_mcp_pro.tools.roadmap_tools import SUPPORTED_PATH_ACTIONS, _execute_json_tool
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import SELECTION_OP_MAP
 
@@ -280,3 +281,9 @@ def register_path_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="remove_path", error=str(e)).model_dump()
+
+
+
+
+
+

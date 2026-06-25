@@ -117,6 +117,7 @@ def _validate_positive_size(width: object, height: object) -> tuple[int, int]:
 def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register remaining roadmap feature tools with the MCP server."""
 
+
     @mcp.tool()
     async def edit_channels(
         action: str,
@@ -152,6 +153,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             payload=payload,
             message="Channel operation prepared",
         )
+
 
     @mcp.tool()
     async def manage_channels(
@@ -192,6 +194,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Channel management action prepared",
         )
 
+
     @mcp.tool()
     async def edit_paths(
         action: str,
@@ -230,6 +233,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             payload=payload,
             message="Path operation prepared",
         )
+
 
     @mcp.tool()
     async def create_and_edit_paths(
@@ -273,6 +277,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Path create/edit action prepared",
         )
 
+
     @mcp.tool()
     async def stroke_or_fill_path(
         path_ref: dict[str, Any] | str,
@@ -308,6 +313,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             payload=payload,
             message="Path stroke/fill action prepared",
         )
+
 
     @mcp.tool()
     async def palette_create_or_update(
@@ -349,6 +355,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Palette operation prepared",
         )
 
+
     @mcp.tool()
     async def import_as_layer_with_metadata(
         source: str,
@@ -379,6 +386,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             payload=payload,
             message="Import as layer prepared",
         )
+
 
     @mcp.tool()
     async def batch_export_variants(
@@ -417,6 +425,11 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Batch export variants prepared",
         )
 
+    # ROADMAP-REVIEW[pdb_introspect_typed]
+    # target: src/gimp_mcp_pro/tools/pdb_tools.py
+    # implementation instructions: Move into pdb_tools and return real typed PDB metadata from Gimp.get_pdb() instead of placeholder lists.
+    # native GIMP backend: Collect argument/return specs, deprecated/unavailable markers, and procedure existence with bounded result counts.
+    # async tests: Add async tests for query filtering, deprecated toggle, max_results bounds, and live introspection of known procedures.
     @mcp.tool()
     async def pdb_introspect_typed(
         query: str,
@@ -449,6 +462,11 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Typed PDB metadata inspected",
         )
 
+    # ROADMAP-REVIEW[safe_python_eval]
+    # target: src/gimp_mcp_pro/tools/pdb_tools.py
+    # implementation instructions: Move into a diagnostics/script module only after implementing a real restricted evaluator rather than generated placeholder JSON.
+    # native GIMP backend: Gate behind explicit debug configuration, constrain builtins/imports, enforce timeout, and capture stdout/stderr safely.
+    # async tests: Add async tests for default disabled state, allowed expression, rejected import/mutation, timeout, and error serialization.
     @mcp.tool()
     async def safe_python_eval(
         code: str,
@@ -493,6 +511,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Safe diagnostic Python evaluated",
         )
 
+
     @mcp.tool()
     async def manage_guides_and_grid(
         action: str = "list",
@@ -534,6 +553,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="Guide/grid management action prepared",
         )
 
+
     @mcp.tool()
     async def preview_gegl_operation(
         target: dict[str, Any] | str,
@@ -573,6 +593,11 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="GEGL operation preview rendered",
         )
 
+    # ROADMAP-REVIEW[execute_pdb_call]
+    # target: src/gimp_mcp_pro/tools/pdb_tools.py
+    # implementation instructions: Move into pdb_tools only after adding a real allowlist and schema validator; dry-run lookup alone is not final.
+    # native GIMP backend: Validate procedure name, argument names/types, deprecated state, timeout, and operation-log recording before any run().
+    # async tests: Add async tests for allowlisted execution, denied procedure, schema mismatch, dry_run no mutation, and timeout/error mapping.
     @mcp.tool()
     async def execute_pdb_call(
         procedure: str,
@@ -630,6 +655,7 @@ def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             message="PDB call validated" if dry_run else "PDB call executed",
             extra_lines=extra,
         )
+
 
     @mcp.tool()
     async def apply_gegl_operation(

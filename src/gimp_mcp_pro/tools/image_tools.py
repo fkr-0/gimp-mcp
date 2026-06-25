@@ -11,6 +11,7 @@ from typing import Any
 from gimp_mcp_pro.models.common import FillType, OperationResult, py_literal
 from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool, _validate_formats
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, IMAGE_BASE_TYPE_MAP
 
@@ -654,3 +655,9 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="duplicate_image", error=str(e)).model_dump()
+
+
+
+
+
+

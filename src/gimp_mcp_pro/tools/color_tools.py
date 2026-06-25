@@ -12,6 +12,7 @@ from typing import Any
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.color")
@@ -1491,3 +1492,5 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="sample_color", error=str(e)).model_dump()
+
+

@@ -12,6 +12,7 @@ import logging
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.filter")
@@ -52,31 +53,46 @@ def _filter_preamble(layer_name: str | None, layer_index: int | None) -> list[st
 
 
 def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
-    """Generate code to apply a GEGL filter via Gimp.DrawableFilter.
+    """Generate code to apply and release a GEGL filter via Gimp.DrawableFilter.
 
-    This is the safe, stable way to apply filters in GIMP 3.0 plugin context.
-    The pattern is: create filter → set config props → append → merge.
+    This is the safe, stable way to apply filters in GIMP plugin context.
+    Generated code explicitly releases Python references to the filter/config
+    objects after merge, reducing long-session memory pressure.
 
     Args:
         gegl_op: GEGL operation name (e.g. 'gegl:gaussian-blur')
         props: dict mapping property name to Python expression string
     """
-    prop_lines = []
-    for k, v in props.items():
-        prop_lines.append(f"cfg.set_property('{k}', {v})")
+    prop_lines = [f"cfg.set_property({py_literal(k)}, {v})" for k, v in props.items()]
 
-    return (
-        [
-            f"df = Gimp.DrawableFilter.new(drawable, '{gegl_op}', '')",
-            "cfg = df.get_config()",
-        ]
-        + prop_lines
-        + [
-            "drawable.append_filter(df)",
-            "drawable.merge_filter(df)",
-            "Gimp.displays_flush()",
-        ]
-    )
+    return [
+        "import gc",
+        "# __gimp_mcp_filter_lifecycle__",
+        "df = None",
+        "cfg = None",
+        "try:",
+        f"    df = Gimp.DrawableFilter.new(drawable, {py_literal(gegl_op)}, '')",
+        "    cfg = df.get_config()",
+        *[f"    {line}" for line in prop_lines],
+        "    drawable.append_filter(df)",
+        "    drawable.merge_filter(df)",
+        "finally:",
+        "    try:",
+        "        if df is not None and hasattr(drawable, 'remove_filter'):",
+        "            drawable.remove_filter(df)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del cfg",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del df",
+        "    except Exception:",
+        "        pass",
+        "    gc.collect()",
+        "Gimp.displays_flush()",
+    ]
 
 
 def _preview_filter_code(
@@ -88,19 +104,47 @@ def _preview_filter_code(
     """Generate code that applies a filter to a temporary preview layer."""
     code = _filter_preamble(layer_name, layer_index)
     code += [
-        "preview_layer = drawable.copy()",
-        f"preview_layer.set_name({py_literal('Preview: ' + gegl_op)})",
-        "layers = image.get_layers()",
-        "position = list(layers).index(drawable) + 1 if drawable in layers else 0",
-        "image.insert_layer(preview_layer, None, position)",
+        "import gc",
+        "# __gimp_mcp_preview_filter_lifecycle__",
+        "preview_layer = None",
+        "df = None",
+        "cfg = None",
+        "try:",
+        "    preview_layer = drawable.copy()",
+        f"    preview_layer.set_name({py_literal('Preview: ' + gegl_op)})",
+        "    layers = image.get_layers()",
+        "    position = list(layers).index(drawable) + 1 if drawable in layers else 0",
+        "    image.insert_layer(preview_layer, None, position)",
     ]
-    prop_lines = [f"cfg.set_property('{key}', {value})" for key, value in props.items()]
+    prop_lines = [f"cfg.set_property({py_literal(key)}, {value})" for key, value in props.items()]
     code += [
-        f"df = Gimp.DrawableFilter.new(preview_layer, '{gegl_op}', '')",
-        "cfg = df.get_config()",
-        *prop_lines,
-        "preview_layer.append_filter(df)",
-        "preview_layer.merge_filter(df)",
+        f"    df = Gimp.DrawableFilter.new(preview_layer, {py_literal(gegl_op)}, '')",
+        "    cfg = df.get_config()",
+        *[f"    {line}" for line in prop_lines],
+        "    preview_layer.append_filter(df)",
+        "    preview_layer.merge_filter(df)",
+        "except Exception:",
+        "    try:",
+        "        if preview_layer is not None:",
+        "            image.remove_layer(preview_layer)",
+        "    except Exception:",
+        "        pass",
+        "    raise",
+        "finally:",
+        "    try:",
+        "        if preview_layer is not None and df is not None and hasattr(preview_layer, 'remove_filter'):",
+        "            preview_layer.remove_filter(df)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del cfg",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del df",
+        "    except Exception:",
+        "        pass",
+        "    gc.collect()",
         "Gimp.displays_flush()",
     ]
     return code
@@ -712,3 +756,7 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="apply_drop_shadow", error=str(e)).model_dump()
+
+
+
+

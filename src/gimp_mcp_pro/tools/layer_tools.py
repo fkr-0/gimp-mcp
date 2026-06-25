@@ -7,6 +7,7 @@ import logging
 from gimp_mcp_pro.models.common import BlendMode, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+from gimp_mcp_pro.tools.roadmap_tools import SUPPORTED_CHANNEL_ACTIONS, _execute_json_tool
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP, SELECTION_OP_MAP
 
@@ -1084,3 +1085,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="add_alpha_channel", error=str(e)).model_dump()
+
+
+
+
