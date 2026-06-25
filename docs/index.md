@@ -15,6 +15,6 @@ GIMP MCP Pro exposes typed Model Context Protocol tools for operating GIMP from 
 ## Current generated tool count
 
 ```yaml
-tools: 137
+tools: 146
 source: src/gimp_mcp_pro/tools
 ```

@@ -5,19 +5,19 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **137**
+Total tools: **146**
 
 | Category | Tools | Page |
 |---|---:|---|
 | Agent Tools | 3 | [agent_tools](agent_tools.md) |
-| Color Adjustments | 17 | [color_tools](color_tools.md) |
+| Color Adjustments | 20 | [color_tools](color_tools.md) |
 | Drawing and Text | 12 | [drawing_tools](drawing_tools.md) |
 | Filters and Effects | 10 | [filter_tools](filter_tools.md) |
 | Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
 | gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
 | History | 6 | [history_tools](history_tools.md) |
 | Image Management | 10 | [image_tools](image_tools.md) |
-| Inspection | 11 | [inspect_tools](inspect_tools.md) |
+| Inspection | 17 | [inspect_tools](inspect_tools.md) |
 | Layer Operations | 19 | [layer_tools](layer_tools.md) |
 | Vector Paths | 5 | [path_tools](path_tools.md) |
 | PDB and Escape Hatch | 2 | [pdb_tools](pdb_tools.md) |
@@ -46,6 +46,9 @@ Total tools: **137**
 - [`posterize`](color_tools.md#posterize) — Reduce the number of color levels (posterization effect).
 - [`color_to_alpha`](color_tools.md#color-to-alpha) — Make a specific color transparent (color to alpha).
 - [`auto_white_balance`](color_tools.md#auto-white-balance) — Automatically adjust white balance (stretch colors).
+- [`brush_inventory`](color_tools.md#brush-inventory) — List paint resources with current-context markers.
+- [`set_paint_resource`](color_tools.md#set-paint-resource) — Set one active paint resource by validated name.
+- [`set_paint_context`](color_tools.md#set-paint-context) — Set multiple paint context fields with validation and read-back.
 - [`list_gimp_resources`](color_tools.md#list-gimp-resources) — List available GIMP brushes, patterns, fonts, and gradients.
 - [`get_colors`](color_tools.md#get-colors) — Get the current foreground and background colors.
 - [`swap_colors`](color_tools.md#swap-colors) — Swap foreground and background colors.
@@ -124,6 +127,12 @@ Total tools: **137**
 
 ### Inspection
 
+- [`explain_current_context`](inspect_tools.md#explain-current-context) — Explain the current canvas state as an LLM-oriented context packet.
+- [`measure_geometry`](inspect_tools.md#measure-geometry) — Measure bounds, distance, overlap, alignment, and spacing for targets.
+- [`generate_layer_report`](inspect_tools.md#generate-layer-report) — Generate a read-only structured report of layers and export-relevant warnings.
+- [`prepare_export_checklist`](inspect_tools.md#prepare-export-checklist) — Prepare a read-only export readiness checklist for common image formats.
+- [`content_bounds`](inspect_tools.md#content-bounds) — Inspect non-transparent content bounds for a layer without mutation.
+- [`text_layer_introspection`](inspect_tools.md#text-layer-introspection) — Read text-layer metadata without rasterizing or mutating the layer.
 - [`create_contact_sheet`](inspect_tools.md#create-contact-sheet) — Render contact-sheet metadata for visible or selected layers.
 - [`compare_snapshots`](inspect_tools.md#compare-snapshots) — Compare two supplied snapshot, thumbnail, or region payloads.
 - [`assert_image_state`](inspect_tools.md#assert-image-state) — Evaluate typed postconditions against supplied or active document state.

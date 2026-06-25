@@ -708,11 +708,15 @@ features:
   status: partial
   current_tools:
   - list_gimp_resources
-  current_state_note: Resource listing currently covers brushes, patterns, fonts,
-    gradients; dynamics, palettes and presets remain future work.
+  - brush_inventory
+  current_state_note: Brush inventory now lists brushes, patterns, gradients, fonts,
+    and palettes with current-context markers; dynamics and tool presets remain future
+    work because this local GIMP API does not expose list functions for them.
   verification:
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
+  - tests/test_asset_context_tools.py::test_brush_inventory_lists_assets_with_current_context_markers
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[brush_inventory]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[brush_inventory]
+  implemented_tool: brush_inventory
 - id: FEAT-028
   name: set_paint_context
   category: asset
@@ -734,7 +738,15 @@ features:
   acceptance:
   - Validates asset names before applying.
   - Returns previous and new context.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: set_paint_context
+  current_state_note: Paint context update is implemented with resource validation
+    for brush/pattern/gradient, color setting, size/opacity validation, and previous/new
+    context read-back.
+  verification:
+  - tests/test_asset_context_tools.py::test_set_paint_context_sets_multiple_validated_context_fields
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[set_paint_context]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[set_paint_context]
 - id: FEAT-029
   name: palette_create_or_update
   category: asset
@@ -939,7 +951,15 @@ features:
   acceptance:
   - Facts remain machine-readable.
   - Recommendation mode is explicitly separate from raw inspection.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: explain_current_context
+  current_state_note: Read-only LLM-oriented context packet is implemented with machine-readable
+    facts and explicitly separate recommendations.
+  verification:
+  - tests/test_context_geometry_tools.py::test_explain_current_context_generates_machine_readable_summary
+  - tests/test_context_geometry_tools.py::test_explain_current_context_rejects_invalid_detail_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[explain_current_context]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[explain_current_context]
 - id: FEAT-038
   name: create_visual_annotation_layer
   category: edit
@@ -992,7 +1012,14 @@ features:
   acceptance:
   - Flags hidden layers, empty layers, out-of-canvas content, missing fonts, and unsupported
     export states where detectable.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: generate_layer_report
+  current_state_note: Read-only layer report is implemented with hidden/empty/out-of-canvas/missing-font/export-state
+    warnings where detectable.
+  verification:
+  - tests/test_layer_report_export_checklist_tools.py::test_generate_layer_report_flags_common_layer_and_export_warnings
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[generate_layer_report]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[generate_layer_report]
 - id: FEAT-041
   name: prepare_export_checklist
   category: asset
@@ -1012,7 +1039,15 @@ features:
   acceptance:
   - Reports format-specific limitations.
   - Does not export until a separate export call is made.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: prepare_export_checklist
+  current_state_note: Read-only export checklist is implemented for png/jpeg/webp/tiff/psd/xcf
+    with alpha/layer preservation warnings.
+  verification:
+  - tests/test_layer_report_export_checklist_tools.py::test_prepare_export_checklist_reports_format_limits_without_exporting
+  - tests/test_layer_report_export_checklist_tools.py::test_prepare_export_checklist_rejects_unsupported_format_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[prepare_export_checklist]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[prepare_export_checklist]
 - id: FEAT-042
   name: measure_geometry
   category: verify
@@ -1029,7 +1064,15 @@ features:
   acceptance:
   - Uses stable coordinate units.
   - Reports canvas-relative and target-relative values.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: measure_geometry
+  current_state_note: Read-only geometry measurement is implemented for bounds, distance,
+    overlap, alignment, and spacing with canvas-relative and target-relative metrics.
+  verification:
+  - tests/test_context_geometry_tools.py::test_measure_geometry_generates_layer_distance_overlap_and_alignment_metrics
+  - tests/test_context_geometry_tools.py::test_measure_geometry_rejects_unknown_measurement_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[measure_geometry]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[measure_geometry]
 - id: FEAT-043
   name: content_bounds
   category: observe
@@ -1048,7 +1091,15 @@ features:
   acceptance:
   - Works on layers and composite image.
   - Handles fully transparent layers gracefully.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: content_bounds
+  current_state_note: Read-only layer content bounds inspection is implemented; composite/group
+    scanning remains a future expansion.
+  verification:
+  - tests/test_content_text_inspect_tools.py::test_content_bounds_generates_read_only_layer_bounds_scan
+  - tests/test_content_text_inspect_tools.py::test_content_bounds_rejects_invalid_threshold_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[content_bounds]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[content_bounds]
 - id: FEAT-044
   name: layer_version_stamp
   category: transaction
@@ -1251,7 +1302,14 @@ features:
   acceptance:
   - Returns a structured unsupported state for non-text layers.
   - Does not rasterize or mutate the layer.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: text_layer_introspection
+  current_state_note: Read-only text layer metadata inspection is implemented with
+    structured non-text fallback.
+  verification:
+  - tests/test_content_text_inspect_tools.py::test_text_layer_introspection_uses_textlayer_api_without_mutation
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[text_layer_introspection]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[text_layer_introspection]
 - id: FEAT-052
   name: resource_catalog
   category: asset
@@ -1295,7 +1353,15 @@ features:
   acceptance:
   - Verifies the resource exists before changing context.
   - Context read-back confirms the new active resource.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: set_paint_resource
+  current_state_note: Validated single-resource activation is implemented for brush,
+    pattern, gradient, font, and palette with previous/active read-back.
+  verification:
+  - tests/test_asset_context_tools.py::test_set_paint_resource_validates_resource_and_reads_back_context
+  - tests/test_asset_context_tools.py::test_set_paint_resource_rejects_unsupported_resource_type_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[set_paint_resource]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[set_paint_resource]
 - id: FEAT-054
   name: apply_gegl_operation
   category: edit
@@ -1472,7 +1538,7 @@ open_design_questions:
 - How should live smoke tests distinguish optional GIMP plug-ins from required core
   functionality?
 current_registry:
-  total_tools: 137
+  total_tools: 146
   new_this_pass:
   - sample_pixels
   - compare_snapshots
@@ -1484,7 +1550,16 @@ current_registry:
   - create_checkpoint
   - get_operation_log
   - preview_filter
-  remaining_feature_ids:
+  - content_bounds
+  - text_layer_introspection
+  - generate_layer_report
+  - prepare_export_checklist
+  - explain_current_context
+  - measure_geometry
+  - brush_inventory
+  - set_paint_context
+  - set_paint_resource
+  remaining_feature_ids: &id001
   - FEAT-009
   - FEAT-018
   - FEAT-020
@@ -1493,38 +1568,28 @@ current_registry:
   - FEAT-024
   - FEAT-025
   - FEAT-027
-  - FEAT-028
   - FEAT-029
   - FEAT-030
   - FEAT-031
   - FEAT-034
   - FEAT-035
   - FEAT-036
-  - FEAT-037
   - FEAT-038
   - FEAT-039
-  - FEAT-040
-  - FEAT-041
-  - FEAT-042
-  - FEAT-043
   - FEAT-044
   - FEAT-047
   - FEAT-048
   - FEAT-049
   - FEAT-050
-  - FEAT-051
   - FEAT-052
-  - FEAT-053
   - FEAT-054
   - FEAT-055
   - FEAT-056
   - FEAT-057
 implementation_summary:
-  total_tools: 137
+  total_tools: 146
   new_this_pass:
-  - create_contact_sheet
-  - analyze_color_palette
-  - create_checkpoint
-  - get_operation_log
-  - preview_filter
-  remaining_feature_ids: []
+  - brush_inventory
+  - set_paint_context
+  - set_paint_resource
+  remaining_feature_ids: *id001

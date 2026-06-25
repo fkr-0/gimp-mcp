@@ -89,6 +89,7 @@ class MCPProPlugin(Gimp.PlugIn):
         self.server_thread = None
         self.main_loop = None
         self.auto_start_done = False
+        self.dispatch_direct = False
         self.flow_specs = {}
         # Persistent Python execution context
         self.exec_context = {}
@@ -468,8 +469,9 @@ class MCPProPlugin(Gimp.PlugIn):
         return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())
 
     def run(self, procedure, *args):
-        self._start_server_thread(reason="procedure invocation", blocking=False)
-        if self.running:
+        blocking = _env_flag("GIMP_MCP_BLOCKING_RUN") or _env_flag("GIMP_MCP_PRO_BLOCKING_RUN")
+        self._start_server_thread(reason="procedure invocation", blocking=blocking)
+        if self.running and not blocking:
             self._register_flow_procedures()
             procedure.persistent_ready()
             self.persistent_enable()
@@ -489,6 +491,7 @@ class MCPProPlugin(Gimp.PlugIn):
             print("MCP Pro Server is already running")
             return
 
+        self.dispatch_direct = blocking
         self.running = True
         try:
             signal.signal(signal.SIGTERM, self._shutdown)
@@ -586,6 +589,9 @@ class MCPProPlugin(Gimp.PlugIn):
 
     def _dispatch_on_gimp_thread(self, request):
         """Run a decoded request on the persistent GLib/GIMP thread."""
+        if self.dispatch_direct:
+            return self._dispatch(request)
+
         response_queue = queue.Queue(maxsize=1)
 
         def dispatch_request():

@@ -69,6 +69,15 @@ def test_plugin_server_autostart_is_static_registered() -> None:
     assert "def do_quit" in source
 
 
+def test_plugin_server_procedure_honors_blocking_run_environment() -> None:
+    """Spawned live smoke uses blocking-run mode to avoid duplicate server startup."""
+    source = live.PLUGIN_SOURCE.read_text(encoding="utf-8")
+
+    assert "GIMP_MCP_BLOCKING_RUN" in source
+    assert "GIMP_MCP_PRO_BLOCKING_RUN" in source
+    assert "blocking=blocking" in source
+
+
 def test_bitmap_export_uses_gimp_3_2_image_flatten_api() -> None:
     source = live.PLUGIN_SOURCE.read_text(encoding="utf-8")
 
@@ -435,3 +444,12 @@ def test_unexpected_tool_failures_still_fail() -> None:
     assert normalized["status"] == "fail"
     assert normalized["evidence"]["failed_tools"] == ["apply_gaussian_blur"]
     assert normalized["evidence"]["rejected_failures"][0]["tool"] == "apply_gaussian_blur"
+
+
+def test_plugin_blocking_run_dispatches_requests_directly() -> None:
+    """Blocking spawned server mode cannot depend on a GLib idle callback loop."""
+    source = live.PLUGIN_SOURCE.read_text(encoding="utf-8")
+
+    assert "self.dispatch_direct = blocking" in source
+    assert "if self.dispatch_direct:" in source
+    assert "return self._dispatch(request)" in source

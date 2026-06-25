@@ -144,7 +144,7 @@ issues:
   - tool-registry
   - agent-workflows
   - tdd
-  status: implemented
+  status: partially-implemented
   goal: Keep features.yml synchronized with the real MCP registry and implement remaining
     high-priority agent-facing features with focused RED/GREEN tests and matrix contract
     updates.
@@ -159,13 +159,60 @@ issues:
     tool: get_operation_log
   - feature_id: FEAT-017
     tool: preview_filter
-  remaining_open_features: []
+  - feature_id: FEAT-040
+    tool: generate_layer_report
+  - feature_id: FEAT-041
+    tool: prepare_export_checklist
+  - feature_id: FEAT-043
+    tool: content_bounds
+  - feature_id: FEAT-051
+    tool: text_layer_introspection
+  - feature_id: FEAT-037
+    tool: explain_current_context
+  - feature_id: FEAT-042
+    tool: measure_geometry
+  - feature_id: FEAT-027
+    tool: brush_inventory
+  - feature_id: FEAT-028
+    tool: set_paint_context
+  - feature_id: FEAT-053
+    tool: set_paint_resource
+  - feature_id: FEAT-027
+    tool: brush_inventory
+    status: partial
+  remaining_open_features:
+  - FEAT-009
+  - FEAT-018
+  - FEAT-020
+  - FEAT-022
+  - FEAT-023
+  - FEAT-024
+  - FEAT-025
+  - FEAT-027
+  - FEAT-029
+  - FEAT-030
+  - FEAT-031
+  - FEAT-034
+  - FEAT-035
+  - FEAT-036
+  - FEAT-038
+  - FEAT-039
+  - FEAT-044
+  - FEAT-047
+  - FEAT-048
+  - FEAT-049
+  - FEAT-050
+  - FEAT-052
+  - FEAT-054
+  - FEAT-055
+  - FEAT-056
+  - FEAT-057
   checklist:
   - Reconcile implemented/partial/planned feature statuses against registered MCP
     tools.
   - Implement FEAT-005 sample_pixels with explicit point and grid sampling.
   - Implement FEAT-014 compare_snapshots and FEAT-015 assert_image_state.
-  - Update public tool count and compatibility/docs contracts to 137 tools.
+  - Update public tool count and compatibility/docs contracts to 146 tools.
   - Continue with remaining P1 features after completing FEAT-032 dry_run_macro and
     FEAT-033 run_macro_transaction.
   - Keep every new public tool in generated-code and invocation matrices.
@@ -174,4 +221,4 @@ issues:
     state.
   - New feature work follows RED/GREEN verification.
   - Focused, matrix, static, and full offline test suites pass before completion.
-  registry_total: 137
+  registry_total: 146

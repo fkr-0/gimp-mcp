@@ -17,15 +17,21 @@ logger = logging.getLogger("gimp_mcp_pro.tools.history")
 
 OPERATION_LOG: deque[dict[str, Any]] = deque(maxlen=200)
 
+
 def _redact_paths(value: Any) -> Any:
     """Redact local filesystem paths from operation-log payloads."""
     if isinstance(value, dict):
-        return {key: _redact_paths(nested) for key, nested in value.items() if key not in {"local_file_path", "xcf_path", "path"}}
+        return {
+            key: _redact_paths(nested)
+            for key, nested in value.items()
+            if key not in {"local_file_path", "xcf_path", "path"}
+        }
     if isinstance(value, list):
         return [_redact_paths(item) for item in value]
     if isinstance(value, str) and ("/" in value or "\\" in value):
         return "[redacted-path]"
     return value
+
 
 def _record_operation(operation: str, **data: Any) -> None:
     """Append a compact operation-log entry."""
@@ -40,7 +46,6 @@ def _record_operation(operation: str, **data: Any) -> None:
 
 def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register history/undo tools with the MCP server."""
-
 
     @mcp.tool()
     async def create_checkpoint(
@@ -73,7 +78,9 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             "duplicate = image.duplicate()",
             f"include_xcf_copy = {include_xcf_copy!r}",
             "xcf_path = os.path.join(checkpoint_dir, checkpoint_id + '.xcf') if include_xcf_copy else None",
-            "metadata = {'checkpoint_id': checkpoint_id, 'label': " + repr(safe_label) + ", 'include_xcf_copy': include_xcf_copy, 'xcf_path': xcf_path, 'image_id': int(image.get_id()) if hasattr(image, 'get_id') else None}",
+            "metadata = {'checkpoint_id': checkpoint_id, 'label': "
+            + repr(safe_label)
+            + ", 'include_xcf_copy': include_xcf_copy, 'xcf_path': xcf_path, 'image_id': int(image.get_id()) if hasattr(image, 'get_id') else None}",
             "print(json.dumps(metadata))",
         ]
         try:
@@ -89,7 +96,9 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 checkpoint_id=checkpoint_id,
                 label=safe_label,
                 include_snapshot=False,
-                local_file_path="/tmp/gimp-mcp-checkpoints/redacted.xcf" if include_xcf_copy else None,
+                local_file_path="/tmp/gimp-mcp-checkpoints/redacted.xcf"
+                if include_xcf_copy
+                else None,
             )
             return OperationResult.ok(
                 operation="create_checkpoint",
@@ -121,7 +130,10 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         limit = max(1, min(200, int(limit)))
         operations = list(OPERATION_LOG)[-limit:]
         if not include_snapshots:
-            operations = [{k: v for k, v in entry.items() if k not in {"snapshot", "before", "after"}} for entry in operations]
+            operations = [
+                {k: v for k, v in entry.items() if k not in {"snapshot", "before", "after"}}
+                for entry in operations
+            ]
         if redact_paths:
             operations = _redact_paths(operations)
         return OperationResult.ok(

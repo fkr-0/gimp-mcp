@@ -164,7 +164,6 @@ def _sample_pixels_code(
     return code
 
 
-
 def _palette_analysis_code(
     max_colors: int,
     ignore_transparent: bool,
@@ -219,6 +218,228 @@ def _palette_analysis_code(
         "    last = palette[-1]['rgba']\n"
         "    contrast_notes.append({'pair': [palette[0]['hex'], palette[-1]['hex']], 'luminance_delta': round(abs(rel_luminance((first['r'], first['g'], first['b'])) - rel_luminance((last['r'], last['g'], last['b']))), 6)})",
         "result = {'palette': palette, 'coverage': [entry['coverage'] for entry in palette], 'contrast_notes': contrast_notes, 'sampled_pixels': sampled, 'transparent_skipped': transparent_skipped, 'region': region, 'deterministic': True}",
+        "print(json.dumps(result))",
+    ]
+    return code
+
+
+PAINT_RESOURCE_ALIASES = {
+    "brush": "brushes",
+    "brushes": "brushes",
+    "pattern": "patterns",
+    "patterns": "patterns",
+    "gradient": "gradients",
+    "gradients": "gradients",
+    "font": "fonts",
+    "fonts": "fonts",
+    "palette": "palettes",
+    "palettes": "palettes",
+}
+
+PAINT_RESOURCE_LIST_CALLS = {
+    "brushes": "Gimp.brushes_get_list('')",
+    "patterns": "Gimp.patterns_get_list('')",
+    "gradients": "Gimp.gradients_get_list('')",
+    "fonts": "Gimp.fonts_get_list('')",
+    "palettes": "Gimp.palettes_get_list('')",
+}
+
+PAINT_RESOURCE_GETTERS = {
+    "brushes": "Gimp.context_get_brush()",
+    "patterns": "Gimp.context_get_pattern()",
+    "gradients": "Gimp.context_get_gradient()",
+    "fonts": "Gimp.context_get_font()",
+    "palettes": "Gimp.context_get_palette()",
+}
+
+PAINT_RESOURCE_SETTERS = {
+    "brushes": "Gimp.context_set_brush",
+    "patterns": "Gimp.context_set_pattern",
+    "gradients": "Gimp.context_set_gradient",
+    "fonts": "Gimp.context_set_font",
+    "palettes": "Gimp.context_set_palette",
+}
+
+
+def _json_from_bridge(result: dict[str, Any]) -> dict[str, Any]:
+    """Decode the first JSON object printed by generated code."""
+    import json as _json
+
+    for out in result.get("results", []):
+        if out and str(out).strip():
+            try:
+                decoded = _json.loads(str(out).strip())
+            except _json.JSONDecodeError:
+                continue
+            if isinstance(decoded, dict):
+                return decoded
+    return {}
+
+
+def _resource_common_code() -> list[str]:
+    """Shared generated Python helpers for GIMP resource inspection."""
+    return [
+        "import json",
+        "from gi.repository import Gimp, Gegl",
+        (
+            "def _resource_names(value):\n"
+            "    if isinstance(value, tuple):\n"
+            "        for part in reversed(value):\n"
+            "            if isinstance(part, (list, tuple)):\n"
+            "                value = part\n"
+            "                break\n"
+            "    names = []\n"
+            "    for item in (value or []):\n"
+            "        get_name = getattr(item, 'get_name', None)\n"
+            "        names.append(str(get_name() if get_name else item))\n"
+            "    return names"
+        ),
+        (
+            "def _resource_name(value):\n"
+            "    if value is None:\n"
+            "        return None\n"
+            "    get_name = getattr(value, 'get_name', None)\n"
+            "    return str(get_name() if get_name else value)"
+        ),
+    ]
+
+
+def _brush_inventory_code(
+    asset_types: list[str],
+    filter_text: str | None,
+    limit: int,
+    include_current: bool,
+) -> list[str]:
+    """Return generated Python code for resource inventory with current markers."""
+    code = _resource_common_code()
+    code += [
+        "# __gimp_mcp_brush_inventory__",
+        f"asset_types = {asset_types!r}",
+        f"filter_text = {filter_text!r}",
+        f"limit = {limit!r}",
+        f"include_current = {include_current!r}",
+        "current = {}",
+    ]
+    if include_current:
+        for kind in asset_types:
+            getter = PAINT_RESOURCE_GETTERS[kind]
+            code.append(f"current[{py_literal(kind)}] = _resource_name({getter})")
+    code.append("assets = []")
+    for kind in asset_types:
+        call = PAINT_RESOURCE_LIST_CALLS[kind]
+        code += [
+            f"names = _resource_names({call})",
+            "if filter_text:",
+            "    names = [name for name in names if filter_text.lower() in name.lower()]",
+            f"for name in names[:limit]: assets.append({{'type': {py_literal(kind)}, 'name': name, 'is_current': current.get({py_literal(kind)}) == name}})",
+        ]
+    code += [
+        "result = {'assets': assets, 'current': current, 'limit': limit, 'filter': filter_text}",
+        "print(json.dumps(result))",
+    ]
+    return code
+
+
+def _set_paint_resource_code(resource_type: str, resource_name: str) -> list[str]:
+    """Return generated Python code that validates and sets one paint resource."""
+    resource_names_call = PAINT_RESOURCE_LIST_CALLS[resource_type]
+    getter = PAINT_RESOURCE_GETTERS[resource_type]
+    setter = PAINT_RESOURCE_SETTERS[resource_type]
+    singular = {
+        "brushes": "brush",
+        "patterns": "pattern",
+        "gradients": "gradient",
+        "fonts": "font",
+        "palettes": "palette",
+    }[resource_type]
+    return _resource_common_code() + [
+        "# __gimp_mcp_set_paint_resource__",
+        f"resource_type = {py_literal(singular)}",
+        f"resource_name = {py_literal(resource_name)}",
+        f"names = _resource_names({resource_names_call})",
+        "if resource_name not in names:\n"
+        "    raise RuntimeError(f'Resource not found: {resource_name}')",
+        f"previous_resource = {{'type': resource_type, 'name': _resource_name({getter})}}",
+        f"{setter}(resource_name)",
+        f"active_resource = {{'type': resource_type, 'name': _resource_name({getter})}}",
+        "result = {'previous_resource': previous_resource, 'active_resource': active_resource}",
+        "print(json.dumps(result))",
+    ]
+
+
+def _set_paint_context_code(
+    brush: str | None,
+    size: float | None,
+    opacity: float | None,
+    dynamics: str | None,
+    pattern: str | None,
+    gradient: str | None,
+    foreground: str | None,
+    background: str | None,
+) -> list[str]:
+    """Return generated Python code that validates and applies paint context fields."""
+    code = _resource_common_code() + [
+        "# __gimp_mcp_set_paint_context__",
+        "previous_context = {",
+        "    'brush': _resource_name(Gimp.context_get_brush()),",
+        "    'pattern': _resource_name(Gimp.context_get_pattern()),",
+        "    'gradient': _resource_name(Gimp.context_get_gradient()),",
+        "    'font': _resource_name(Gimp.context_get_font()),",
+        "    'palette': _resource_name(Gimp.context_get_palette()),",
+        "    'opacity': Gimp.context_get_opacity(),",
+        "    'brush_size': Gimp.context_get_brush_size(),",
+        "    'dynamics': _resource_name(Gimp.context_get_dynamics()),",
+        "}",
+        "warnings = []",
+    ]
+
+    if brush is not None:
+        code += [
+            "names = _resource_names(Gimp.brushes_get_list(''))",
+            f"if {py_literal(brush)} not in names:\n"
+            f"    raise RuntimeError('Brush not found: {brush}')",
+            f"Gimp.context_set_brush({py_literal(brush)})",
+        ]
+    if pattern is not None:
+        code += [
+            "names = _resource_names(Gimp.patterns_get_list(''))",
+            f"if {py_literal(pattern)} not in names:\n"
+            f"    raise RuntimeError('Pattern not found: {pattern}')",
+            f"Gimp.context_set_pattern({py_literal(pattern)})",
+        ]
+    if gradient is not None:
+        code += [
+            "names = _resource_names(Gimp.gradients_get_list(''))",
+            f"if {py_literal(gradient)} not in names:\n"
+            f"    raise RuntimeError('Gradient not found: {gradient}')",
+            f"Gimp.context_set_gradient({py_literal(gradient)})",
+        ]
+    if dynamics is not None:
+        code += [
+            f"Gimp.context_set_dynamics({py_literal(dynamics)})",
+            "warnings.append({'code': 'dynamics_not_list_validated', 'severity': 'info'})",
+        ]
+    if size is not None:
+        code.append(f"Gimp.context_set_brush_size({float(size)!r})")
+    if opacity is not None:
+        code.append(f"Gimp.context_set_opacity({float(opacity)!r})")
+    if foreground is not None:
+        code.append(f"Gimp.context_set_foreground(Gegl.Color.new({py_literal(foreground)}))")
+    if background is not None:
+        code.append(f"Gimp.context_set_background(Gegl.Color.new({py_literal(background)}))")
+
+    code += [
+        "new_context = {",
+        "    'brush': _resource_name(Gimp.context_get_brush()),",
+        "    'pattern': _resource_name(Gimp.context_get_pattern()),",
+        "    'gradient': _resource_name(Gimp.context_get_gradient()),",
+        "    'font': _resource_name(Gimp.context_get_font()),",
+        "    'palette': _resource_name(Gimp.context_get_palette()),",
+        "    'opacity': Gimp.context_get_opacity(),",
+        "    'brush_size': Gimp.context_get_brush_size(),",
+        "    'dynamics': _resource_name(Gimp.context_get_dynamics()),",
+        "}",
+        "result = {'previous_context': previous_context, 'new_context': new_context, 'warnings': warnings}",
         "print(json.dumps(result))",
     ]
     return code
@@ -703,6 +924,148 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="auto_white_balance", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def brush_inventory(
+        asset_types: list[str] | None = None,
+        filter: str | None = None,
+        limit: int = 100,
+        include_current: bool = True,
+    ) -> ToolResult:
+        """List paint resources with current-context markers.
+
+        Args:
+            asset_types: Resource types to list. Supported: brushes, patterns, gradients, fonts, palettes.
+            filter: Optional case-insensitive substring filter.
+            limit: Maximum entries per requested resource type.
+            include_current: Mark resources currently active in GIMP context.
+
+        Returns:
+            Operation result with flat ``assets`` list and current resource map.
+        """
+        requested = asset_types or ["brushes", "patterns", "gradients", "fonts", "palettes"]
+        normalised: list[str] = []
+        unsupported: list[str] = []
+        for item in requested:
+            key = PAINT_RESOURCE_ALIASES.get(str(item).lower().strip().replace("-", "_"))
+            if key is None:
+                unsupported.append(str(item))
+            elif key not in normalised:
+                normalised.append(key)
+        if unsupported:
+            return OperationResult.fail(
+                operation="brush_inventory",
+                error=f"unsupported asset type(s): {', '.join(unsupported)}",
+            ).model_dump()
+        limit = max(1, min(1000, int(limit)))
+        try:
+            result = await bridge.async_execute_python(
+                _brush_inventory_code(normalised, filter, limit, include_current)
+            )
+            data = _json_from_bridge(result)
+            data.setdefault("assets", [])
+            data.setdefault("current", {})
+            return OperationResult.ok(
+                operation="brush_inventory",
+                message=f"Listed paint inventory for {len(normalised)} asset type(s)",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="brush_inventory", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def set_paint_resource(
+        resource_type: str,
+        name: str,
+    ) -> ToolResult:
+        """Set one active paint resource by validated name.
+
+        Args:
+            resource_type: One of brush, pattern, gradient, font, or palette.
+            name: Resource name to validate and activate.
+
+        Returns:
+            Operation result with previous_resource and active_resource read-back.
+        """
+        key = PAINT_RESOURCE_ALIASES.get(resource_type.lower().strip().replace("-", "_"))
+        if key is None:
+            return OperationResult.fail(
+                operation="set_paint_resource",
+                error=f"unsupported paint resource type: {resource_type}",
+            ).model_dump()
+        try:
+            result = await bridge.async_execute_python(_set_paint_resource_code(key, name))
+            data = _json_from_bridge(result)
+            data.setdefault("previous_resource", {})
+            data.setdefault("active_resource", {"type": resource_type, "name": name})
+            return OperationResult.ok(
+                operation="set_paint_resource",
+                message=f"Activated {resource_type} resource {name!r}",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="set_paint_resource", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def set_paint_context(
+        brush: str | None = None,
+        size: float | None = None,
+        opacity: float | None = None,
+        dynamics: str | None = None,
+        pattern: str | None = None,
+        gradient: str | None = None,
+        foreground: str | None = None,
+        background: str | None = None,
+    ) -> ToolResult:
+        """Set multiple paint context fields with validation and read-back.
+
+        Args:
+            brush: Optional brush name.
+            size: Optional brush size.
+            opacity: Optional context opacity percent, 0..100.
+            dynamics: Optional dynamics name. Applied with read-back warning because GIMP does not expose list validation.
+            pattern: Optional pattern name.
+            gradient: Optional gradient name.
+            foreground: Optional foreground color.
+            background: Optional background color.
+
+        Returns:
+            Operation result with previous_context, new_context, and warnings.
+        """
+        if size is not None and float(size) <= 0:
+            return OperationResult.fail(
+                operation="set_paint_context",
+                error="size must be positive",
+            ).model_dump()
+        if opacity is not None and (float(opacity) < 0 or float(opacity) > 100):
+            return OperationResult.fail(
+                operation="set_paint_context",
+                error="opacity must be between 0 and 100",
+            ).model_dump()
+        try:
+            result = await bridge.async_execute_python(
+                _set_paint_context_code(
+                    brush,
+                    float(size) if size is not None else None,
+                    float(opacity) if opacity is not None else None,
+                    dynamics,
+                    pattern,
+                    gradient,
+                    foreground,
+                    background,
+                )
+            )
+            data = _json_from_bridge(result)
+            data.setdefault("previous_context", {})
+            data.setdefault("new_context", {})
+            data.setdefault("warnings", [])
+            return OperationResult.ok(
+                operation="set_paint_context",
+                message="Paint context updated",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="set_paint_context", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def list_gimp_resources(
         resource_type: str = "all",
         limit: int = 100,
@@ -850,7 +1213,6 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         except GimpCommandError as e:
             return OperationResult.fail(operation="swap_colors", error=str(e)).model_dump()
 
-
     @mcp.tool()
     async def analyze_color_palette(
         max_colors: int = 8,
@@ -884,7 +1246,9 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 width = int(region["width"])
                 height = int(region["height"])
             except (KeyError, TypeError, ValueError) as e:
-                return OperationResult.fail(operation="analyze_color_palette", error=str(e)).model_dump()
+                return OperationResult.fail(
+                    operation="analyze_color_palette", error=str(e)
+                ).model_dump()
             if width < 1 or height < 1:
                 return OperationResult.fail(
                     operation="analyze_color_palette",
@@ -892,7 +1256,9 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 ).model_dump()
         try:
             result = await bridge.async_execute_python(
-                _palette_analysis_code(max_colors, ignore_transparent, region, layer_name, layer_index),
+                _palette_analysis_code(
+                    max_colors, ignore_transparent, region, layer_name, layer_index
+                ),
                 timeout=LONG_TIMEOUT,
             )
             import json as _json
@@ -916,7 +1282,9 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 data=data,
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(operation="analyze_color_palette", error=str(e)).model_dump()
+            return OperationResult.fail(
+                operation="analyze_color_palette", error=str(e)
+            ).model_dump()
 
     @mcp.tool()
     async def sample_pixels(

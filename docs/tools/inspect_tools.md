@@ -4,6 +4,12 @@ Source module: `src/gimp_mcp_pro/tools/inspect_tools.py`
 
 | Tool | Summary | Parameters |
 |---|---|---:|
+| [`explain_current_context`](#explain-current-context) | Explain the current canvas state as an LLM-oriented context packet. | 2 |
+| [`measure_geometry`](#measure-geometry) | Measure bounds, distance, overlap, alignment, and spacing for targets. | 2 |
+| [`generate_layer_report`](#generate-layer-report) | Generate a read-only structured report of layers and export-relevant warnings. | 3 |
+| [`prepare_export_checklist`](#prepare-export-checklist) | Prepare a read-only export readiness checklist for common image formats. | 3 |
+| [`content_bounds`](#content-bounds) | Inspect non-transparent content bounds for a layer without mutation. | 5 |
+| [`text_layer_introspection`](#text-layer-introspection) | Read text-layer metadata without rasterizing or mutating the layer. | 3 |
 | [`create_contact_sheet`](#create-contact-sheet) | Render contact-sheet metadata for visible or selected layers. | 4 |
 | [`compare_snapshots`](#compare-snapshots) | Compare two supplied snapshot, thumbnail, or region payloads. | 6 |
 | [`assert_image_state`](#assert-image-state) | Evaluate typed postconditions against supplied or active document state. | 2 |
@@ -16,9 +22,262 @@ Source module: `src/gimp_mcp_pro/tools/inspect_tools.py`
 | [`get_context_state`](#get-context-state) | Get current GIMP context state (colors, brush, opacity, settings). | 0 |
 | [`get_gimp_info`](#get-gimp-info) | Get GIMP environment info (version, paths, capabilities). | 0 |
 
+## `explain_current_context` {#explain-current-context}
+
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:940`
+
+```python
+async def explain_current_context(detail_level: str = 'medium', include_recommendations: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `detail_level` | low, medium, or high detail for machine-readable facts. |
+| `include_recommendations` | Include a separate recommendations list. |
+
+## Returns
+
+Operation result with summary, facts, warnings, and optional recommendations. Contract: Facts remain machine-readable. Recommendations are explicitly separated from raw inspection facts and this tool is read-only.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Explain the current canvas state as an LLM-oriented context packet.
+
+Args:
+    detail_level: low, medium, or high detail for machine-readable facts.
+    include_recommendations: Include a separate recommendations list.
+
+Returns:
+    Operation result with summary, facts, warnings, and optional recommendations.
+
+Contract:
+    Facts remain machine-readable. Recommendations are explicitly separated
+    from raw inspection facts and this tool is read-only.
+
+## `measure_geometry` {#measure-geometry}
+
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:982`
+
+```python
+async def measure_geometry(targets: list[dict[str, object]] | None = None, measurements: list[str] | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `targets` | List of layer references such as {"layer_name": "A"} or {"layer_index": 0}. |
+| `measurements` | Metrics to compute: bounds, distance, overlap, alignment, spacing. |
+
+## Returns
+
+Operation result with canvas_relative and target_relative geometry metrics. Contract: This tool is read-only and reports stable pixel-coordinate units.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Measure bounds, distance, overlap, alignment, and spacing for targets.
+
+Args:
+    targets: List of layer references such as {"layer_name": "A"} or {"layer_index": 0}.
+    measurements: Metrics to compute: bounds, distance, overlap, alignment, spacing.
+
+Returns:
+    Operation result with canvas_relative and target_relative geometry metrics.
+
+Contract:
+    This tool is read-only and reports stable pixel-coordinate units.
+
+## `generate_layer_report` {#generate-layer-report}
+
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1028`
+
+```python
+async def generate_layer_report(include_previews: bool = False, include_warnings: bool = True, include_markdown: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `include_previews` | Reserve preview metadata in the report without embedding bitmaps. |
+| `include_warnings` | Flag hidden, empty, out-of-canvas, missing-font, and export issues. |
+| `include_markdown` | Include a compact Markdown summary for human handoff. |
+
+## Returns
+
+Operation result with a structured report and optional Markdown summary. Contract: This tool is read-only. It observes layer state and does not modify the image.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Generate a read-only structured report of layers and export-relevant warnings.
+
+Args:
+    include_previews: Reserve preview metadata in the report without embedding bitmaps.
+    include_warnings: Flag hidden, empty, out-of-canvas, missing-font, and export issues.
+    include_markdown: Include a compact Markdown summary for human handoff.
+
+Returns:
+    Operation result with a structured report and optional Markdown summary.
+
+Contract:
+    This tool is read-only. It observes layer state and does not modify the image.
+
+## `prepare_export_checklist` {#prepare-export-checklist}
+
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1064`
+
+```python
+async def prepare_export_checklist(formats: list[str] | None = None, require_alpha: bool = False, require_layers_preserved: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `formats` | Formats to evaluate. Supported: png, jpeg/jpg, webp, tiff, psd, xcf. |
+| `require_alpha` | Flag formats that would lose required alpha information. |
+| `require_layers_preserved` | Flag formats that would flatten required layer data. |
+
+## Returns
+
+Operation result with ready flag, issues, and recommended export settings. Contract: This tool does not export files. Use export_image or a dedicated export tool separately.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Prepare a read-only export readiness checklist for common image formats.
+
+Args:
+    formats: Formats to evaluate. Supported: png, jpeg/jpg, webp, tiff, psd, xcf.
+    require_alpha: Flag formats that would lose required alpha information.
+    require_layers_preserved: Flag formats that would flatten required layer data.
+
+Returns:
+    Operation result with ready flag, issues, and recommended export settings.
+
+Contract:
+    This tool does not export files. Use export_image or a dedicated export tool separately.
+
+## `content_bounds` {#content-bounds}
+
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1112`
+
+```python
+async def content_bounds(target: str = 'active_layer', threshold: float = 0.0, include_sample_points: bool = False, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `target` | Target mode label. Currently active_layer is the default path. |
+| `threshold` | Alpha threshold from 0.0 to 1.0 for deciding content presence. |
+| `include_sample_points` | Include a bounded list of sampled content pixels. |
+| `layer_name` | Optional layer name target. |
+| `layer_index` | Optional layer index target. |
+
+## Returns
+
+Operation result with content_bounds, fully_transparent, and sample evidence. Contract: This tool is read-only. It never crops, resizes, selects, or edits the target layer.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Inspect non-transparent content bounds for a layer without mutation.
+
+Args:
+    target: Target mode label. Currently active_layer is the default path.
+    threshold: Alpha threshold from 0.0 to 1.0 for deciding content presence.
+    include_sample_points: Include a bounded list of sampled content pixels.
+    layer_name: Optional layer name target.
+    layer_index: Optional layer index target.
+
+Returns:
+    Operation result with content_bounds, fully_transparent, and sample evidence.
+
+Contract:
+    This tool is read-only. It never crops, resizes, selects, or edits the target layer.
+
+## `text_layer_introspection` {#text-layer-introspection}
+
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1167`
+
+```python
+async def text_layer_introspection(layer_name: str | None = None, layer_index: int | None = None, include_font_details: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `layer_name` | Optional layer name target. |
+| `layer_index` | Optional layer index target. |
+| `include_font_details` | Include structured font details where GIMP exposes them. |
+
+## Returns
+
+Operation result with text, font, size, color, justification, and warnings. Contract: This tool is read-only and returns a structured unsupported state for non-text layers.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Read text-layer metadata without rasterizing or mutating the layer.
+
+Args:
+    layer_name: Optional layer name target.
+    layer_index: Optional layer index target.
+    include_font_details: Include structured font details where GIMP exposes them.
+
+Returns:
+    Operation result with text, font, size, color, justification, and warnings.
+
+Contract:
+    This tool is read-only and returns a structured unsupported state for non-text layers.
+
 ## `create_contact_sheet` {#create-contact-sheet}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:534`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1204`
 
 ```python
 async def create_contact_sheet(target: str = 'visible_layers', max_tile_size: int = 128, label_tiles: bool = True, include_hidden_layers: bool = False) -> ToolResult
@@ -63,7 +322,7 @@ Contract:
 
 ## `compare_snapshots` {#compare-snapshots}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:581`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1251`
 
 ```python
 async def compare_snapshots(before: dict[str, Any], after: dict[str, Any], metrics: list[str] | None = None, region: dict[str, Any] | None = None, ignore_transparent: bool = False, tolerance: float = 0.0) -> ToolResult
@@ -114,7 +373,7 @@ Returns:
 
 ## `assert_image_state` {#assert-image-state}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:633`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1303`
 
 ```python
 async def assert_image_state(assertions: list[dict[str, Any]] | None = None, state: dict[str, Any] | None = None) -> ToolResult
@@ -157,7 +416,7 @@ Returns:
 
 ## `session_capabilities` {#session-capabilities}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:700`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1370`
 
 ```python
 async def session_capabilities(include_pdb_probe: bool = True, include_export_probe: bool = True) -> ToolResult
@@ -199,7 +458,7 @@ Returns:
 
 ## `observe_document_state` {#observe-document-state}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:733`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1403`
 
 ```python
 async def observe_document_state(include_thumbnail: bool = False, include_layer_previews: bool = False, max_preview_size: int = 256) -> ToolResult
@@ -243,7 +502,7 @@ Returns:
 
 ## `get_layer_tree_detailed` {#get-layer-tree-detailed}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:791`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1461`
 
 ```python
 async def get_layer_tree_detailed(image_id: int | None = None, include_pixel_bounds: bool = True, include_text_metadata: bool = True) -> ToolResult
@@ -287,7 +546,7 @@ Returns:
 
 ## `observe_region` {#observe-region}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:827`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1497`
 
 ```python
 async def observe_region(x: int, y: int, width: int, height: int, max_size: int = 512, include_histogram: bool = False) -> ToolResult
@@ -337,7 +596,7 @@ Returns:
 
 ## `get_image_bitmap` {#get-image-bitmap}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:904`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1574`
 
 ```python
 async def get_image_bitmap(max_width: int | None = 1024, max_height: int | None = 1024, region_x: int | None = None, region_y: int | None = None, region_width: int | None = None, region_height: int | None = None) -> ToolResult
@@ -390,7 +649,7 @@ Returns:
 
 ## `get_image_metadata` {#get-image-metadata}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:988`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1658`
 
 ```python
 async def get_image_metadata() -> ToolResult
@@ -424,7 +683,7 @@ Returns:
 
 ## `get_context_state` {#get-context-state}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1019`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1689`
 
 ```python
 async def get_context_state() -> ToolResult
@@ -458,7 +717,7 @@ Returns:
 
 ## `get_gimp_info` {#get-gimp-info}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1050`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1720`
 
 ```python
 async def get_gimp_info() -> ToolResult

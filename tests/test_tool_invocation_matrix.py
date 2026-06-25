@@ -487,6 +487,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "apply_threshold": ((), {"low": 64, "high": 192}),
     "apply_unsharp_mask": ((), {"amount": 0.4, "radius": 2.0}),
     "auto_white_balance": ((), {}),
+    "brush_inventory": (
+        (),
+        {"asset_types": ["brushes", "patterns", "palettes"], "filter": "Hardness", "limit": 12},
+    ),
     "autocrop_image": ((), {}),
     "begin_edit_transaction": ((), {"label": "matrix", "capture_before_state": True}),
     "begin_undo_group": ((), {"name": "matrix"}),
@@ -499,7 +503,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     ),
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
     "create_layer_group": ((), {"name": "Group A", "position": 0}),
-    "create_contact_sheet": ((), {"target": "visible_layers", "max_tile_size": 96, "label_tiles": True}),
+    "create_contact_sheet": (
+        (),
+        {"target": "visible_layers", "max_tile_size": 96, "label_tiles": True},
+    ),
     "content_bounds": ((), {"target": "active_layer", "threshold": 0.05}),
     "create_checkpoint": ((), {"label": "matrix checkpoint", "include_xcf_copy": False}),
     "crop_image": ((1, 2, 100, 80), {}),
@@ -525,6 +532,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "end_edit_transaction": ((), {}),
     "end_undo_group": ((), {}),
     "execute_python": ((["print('ok')"],), {"timeout_seconds": 1.0}),
+    "explain_current_context": ((), {"detail_level": "high", "include_recommendations": True}),
     "export_image": (("/tmp/gimp-mcp-test.png",), {"format": "png", "quality": 90}),
     "fill_selection": ((), {"fill_type": "foreground", "color": "red"}),
     "flatten_image": ((), {}),
@@ -540,6 +548,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "get_image_info": ((), {}),
     "get_image_metadata": ((), {}),
     "get_layer_mask_info": ((), {"layer_index": 0}),
+    "generate_layer_report": ((), {"include_previews": False, "include_warnings": True}),
     "get_operation_log": ((), {"limit": 5}),
     "get_selection_info": ((), {}),
     "gradient_fill": (
@@ -556,6 +565,13 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "list_paths": ((), {}),
     "merge_visible_layers": ((), {}),
     "move_layer_to_group": ((), {"layer_index": 0, "group_name": "Group A", "position": 0}),
+    "measure_geometry": (
+        (),
+        {
+            "targets": [{"layer_name": "A"}, {"layer_name": "B"}],
+            "measurements": ["bounds", "distance", "overlap", "alignment", "spacing"],
+        },
+    ),
     "offset_layer": ((5, -3), {"layer_index": 0}),
     "pin_flow": (("prepare-product-image",), {}),
     "path_to_selection": ((), {"path_name": "Path 1"}),
@@ -564,7 +580,22 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
         {"interpolation": "cubic", "resize": "adjust", "layer_name": "Photo"},
     ),
     "propose_flow": ((flow_payload(),), {}),
-    "preview_filter": ((), {"filter": "gaussian_blur", "parameters": {"radius_x": 3.0, "radius_y": 4.0}, "layer_index": 0}),
+    "preview_filter": (
+        (),
+        {
+            "filter": "gaussian_blur",
+            "parameters": {"radius_x": 3.0, "radius_y": 4.0},
+            "layer_index": 0,
+        },
+    ),
+    "prepare_export_checklist": (
+        (),
+        {
+            "formats": ["png", "jpeg", "xcf"],
+            "require_alpha": True,
+            "require_layers_preserved": True,
+        },
+    ),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
     "remove_layer_mask": ((), {"apply": False, "layer_index": 0}),
@@ -622,6 +653,19 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
         },
     ),
     "set_background_color": (("#ffffff",), {}),
+    "set_paint_context": (
+        (),
+        {
+            "brush": "2. Hardness 050",
+            "size": 12.5,
+            "opacity": 80.0,
+            "pattern": "Pine",
+            "gradient": "FG to BG (RGB)",
+            "foreground": "#112233",
+            "background": "#ffffff",
+        },
+    ),
+    "set_paint_resource": (("brush", "2. Hardness 050"), {}),
     "set_foreground_color": (("#000000",), {}),
     "set_layer_mask_state": (
         (),
@@ -664,7 +708,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 139
+    assert len(TOOL_SUCCESS_CASES) == 146
 
 
 @pytest.mark.asyncio

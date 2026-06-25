@@ -219,7 +219,6 @@ def _region_sample_code(
     ]
 
 
-
 def _contact_sheet_code(
     target: str,
     max_tile_size: int,
@@ -526,6 +525,279 @@ def _assertion_result(
     }
 
 
+SUPPORTED_EXPORT_FORMATS = {"png", "jpeg", "jpg", "webp", "tiff", "psd", "xcf"}
+VALID_CONTEXT_DETAIL_LEVELS = {"low", "medium", "high"}
+SUPPORTED_GEOMETRY_MEASUREMENTS = {"bounds", "distance", "overlap", "alignment", "spacing"}
+
+
+def _context_explanation_code(detail_level: str, include_recommendations: bool) -> list[str]:
+    """Return generated Python code that summarizes current canvas context."""
+    return [
+        "import json",
+        "# __gimp_mcp_explain_current_context__",
+        f"detail_level = {detail_level!r}",
+        f"include_recommendations = {include_recommendations!r}",
+        "def safe_call(fn, default=None):\n"
+        "    try:\n"
+        "        return fn()\n"
+        "    except Exception:\n"
+        "        return default",
+        "def layer_fact(layer, index):\n"
+        "    return {\n"
+        "        'id': safe_call(lambda: int(layer.get_id()), None),\n"
+        "        'index': index,\n"
+        "        'name': safe_call(lambda: layer.get_name(), ''),\n"
+        "        'visible': bool(safe_call(lambda: layer.get_visible(), True)),\n"
+        "        'width': safe_call(lambda: layer.get_width(), None),\n"
+        "        'height': safe_call(lambda: layer.get_height(), None),\n"
+        "        'opacity': safe_call(lambda: layer.get_opacity(), None),\n"
+        "    }",
+        "images = Gimp.get_images()",
+        "warnings = []",
+        "recommendations = []",
+        "if not images:\n"
+        "    facts = {'has_image': False, 'layers': [], 'selection': {'non_empty': False}}\n"
+        "    warnings.append({'code': 'no_open_image', 'message': 'No image is open'})\n"
+        "    summary = 'No image is currently open.'\n"
+        "else:\n"
+        "    image = images[0]\n"
+        "    layers = list(safe_call(lambda: image.get_layers(), []) or [])\n"
+        "    selected = list(safe_call(lambda: image.get_selected_layers(), []) or [])\n"
+        "    selection_bounds = safe_call(lambda: Gimp.Selection.bounds(image), None)\n"
+        "    selection = {'non_empty': bool(getattr(selection_bounds, 'non_empty', False)) if selection_bounds is not None else False}\n"
+        "    layer_facts = [layer_fact(layer, index) for index, layer in enumerate(layers)]\n"
+        "    hidden = [layer for layer in layer_facts if not layer.get('visible', True)]\n"
+        "    if hidden:\n"
+        "        warnings.append({'code': 'hidden_layers', 'count': len(hidden)})\n"
+        "    if include_recommendations and selection.get('non_empty'):\n"
+        "        recommendations.append('There is an active selection; edits may be selection-limited.')\n"
+        "    if include_recommendations and hidden:\n"
+        "        recommendations.append('Review hidden layers before export or flattening.')\n"
+        "    facts = {\n"
+        "        'has_image': True,\n"
+        "        'image': {'width': safe_call(lambda: image.get_width(), None), 'height': safe_call(lambda: image.get_height(), None), 'base_type': str(safe_call(lambda: image.get_base_type(), 'unknown'))},\n"
+        "        'layer_count': len(layers),\n"
+        "        'selected_layer_count': len(selected),\n"
+        "        'layers': layer_facts if detail_level == 'high' else layer_facts[:5],\n"
+        "        'selection': selection,\n"
+        "    }\n"
+        "    summary = f\"Image {facts['image']['width']}x{facts['image']['height']} with {len(layers)} layer(s); selection active={selection.get('non_empty')}\"",
+        "result = {'summary': summary, 'facts': facts, 'warnings': warnings, 'recommendations': recommendations if include_recommendations else [], 'detail_level': detail_level}",
+        "print(json.dumps(result))",
+    ]
+
+
+def _geometry_target_lookup_lines(targets: list[dict[str, object]]) -> list[str]:
+    """Return literal target lookup lines for geometry measurement code."""
+    lines = ["targets = []"]
+    for index, target in enumerate(targets):
+        layer_name = target.get("layer_name") if isinstance(target, dict) else None
+        layer_index = target.get("layer_index") if isinstance(target, dict) else None
+        if layer_name is not None:
+            lines.append(f"target_{index} = image.get_layer_by_name({str(layer_name)!r})")
+        elif layer_index is not None:
+            layer_index_int = int(str(layer_index))
+            lines.append(
+                f"target_{index} = layers[{layer_index_int}] if 0 <= {layer_index_int} < len(layers) else None"
+            )
+        else:
+            lines.append(f"target_{index} = layers[{index}] if {index} < len(layers) else None")
+        lines.append(f"targets.append(target_{index})")
+    return lines
+
+
+def _measure_geometry_code(targets: list[dict[str, object]], measurements: list[str]) -> list[str]:
+    """Return generated Python code that reports stable geometry metrics."""
+    lookup_lines = _geometry_target_lookup_lines(targets)
+    return [
+        "import json, math",
+        "# __gimp_mcp_measure_geometry__",
+        f"measurements = {measurements!r}",
+        "def safe_call(fn, default=None):\n"
+        "    try:\n"
+        "        return fn()\n"
+        "    except Exception:\n"
+        "        return default",
+        "def offsets(layer):\n"
+        "    off = safe_call(lambda: layer.get_offsets(), None)\n"
+        "    if off is None:\n"
+        "        return {'x': 0, 'y': 0}\n"
+        "    if hasattr(off, 'offset_x'):\n"
+        "        return {'x': off.offset_x, 'y': off.offset_y}\n"
+        "    try:\n"
+        "        return {'x': off[0], 'y': off[1]}\n"
+        "    except Exception:\n"
+        "        return {'x': 0, 'y': 0}",
+        "def rect(layer):\n"
+        "    off = offsets(layer)\n"
+        "    width = int(safe_call(lambda: layer.get_width(), 0) or 0)\n"
+        "    height = int(safe_call(lambda: layer.get_height(), 0) or 0)\n"
+        "    return {'x': off['x'], 'y': off['y'], 'width': width, 'height': height, 'right': off['x'] + width, 'bottom': off['y'] + height}\n",
+        "def center(box):\n"
+        "    return {'x': box['x'] + box['width'] / 2, 'y': box['y'] + box['height'] / 2}",
+        "def overlap(a, b):\n"
+        "    x1 = max(a['x'], b['x']); y1 = max(a['y'], b['y'])\n"
+        "    x2 = min(a['right'], b['right']); y2 = min(a['bottom'], b['bottom'])\n"
+        "    width = max(0, x2 - x1); height = max(0, y2 - y1)\n"
+        "    return {'x': x1, 'y': y1, 'width': width, 'height': height, 'area': width * height}\n",
+        "images = Gimp.get_images()",
+        "if not images:\n"
+        "    result = {'metrics': {}, 'warnings': ['no open images']}\n"
+        "else:\n"
+        "    image = images[0]\n"
+        "    layers = list(safe_call(lambda: image.get_layers(), []) or [])",
+        *lookup_lines,
+        "    boxes = [rect(layer) for layer in targets if layer is not None]\n"
+        "    metrics = {'canvas_relative': boxes, 'target_relative': []}\n"
+        "    if boxes:\n"
+        "        origin = boxes[0]\n"
+        "        metrics['target_relative'] = [{'x': box['x'] - origin['x'], 'y': box['y'] - origin['y'], 'width': box['width'], 'height': box['height']} for box in boxes]\n"
+        "    if 'bounds' in measurements:\n"
+        "        metrics['bounds'] = boxes\n"
+        "    if len(boxes) >= 2:\n"
+        "        a, b = boxes[0], boxes[1]\n"
+        "        ac, bc = center(a), center(b)\n"
+        "        if 'distance' in measurements:\n"
+        "            metrics['distance'] = {'dx': bc['x'] - ac['x'], 'dy': bc['y'] - ac['y'], 'euclidean': math.hypot(bc['x'] - ac['x'], bc['y'] - ac['y'])}\n"
+        "        if 'overlap' in measurements:\n"
+        "            metrics['overlap'] = overlap(a, b)\n"
+        "        if 'alignment' in measurements:\n"
+        "            metrics['alignment'] = {'left': a['x'] == b['x'], 'top': a['y'] == b['y'], 'center_x': ac['x'] == bc['x'], 'center_y': ac['y'] == bc['y']}\n"
+        "        if 'spacing' in measurements:\n"
+        "            metrics['spacing'] = {'horizontal_gap': max(0, max(a['x'], b['x']) - min(a['right'], b['right'])), 'vertical_gap': max(0, max(a['y'], b['y']) - min(a['bottom'], b['bottom']))}\n"
+        "    result = {'metrics': metrics, 'target_count': len(targets), 'measurements': measurements, 'warnings': []}",
+        "print(json.dumps(result))",
+    ]
+
+
+def _layer_report_code(
+    include_previews: bool,
+    include_warnings: bool,
+    include_markdown: bool,
+) -> list[str]:
+    """Return generated Python code that builds a read-only layer report."""
+    return [
+        "import json",
+        "# __gimp_mcp_layer_report__",
+        f"include_previews = {include_previews!r}",
+        f"include_warnings = {include_warnings!r}",
+        f"include_markdown = {include_markdown!r}",
+        "def safe_call(fn, default=None):\n"
+        "    try:\n"
+        "        return fn()\n"
+        "    except Exception:\n"
+        "        return default",
+        "def offsets(layer):\n"
+        "    off = safe_call(lambda: layer.get_offsets(), None)\n"
+        "    if off is None:\n"
+        "        return {'x': 0, 'y': 0}\n"
+        "    if hasattr(off, 'offset_x'):\n"
+        "        return {'x': off.offset_x, 'y': off.offset_y}\n"
+        "    try:\n"
+        "        return {'x': off[0], 'y': off[1]}\n"
+        "    except Exception:\n"
+        "        return {'x': 0, 'y': 0}",
+        "def layer_record(layer, index, image_width, image_height):\n"
+        "    width = int(safe_call(lambda: layer.get_width(), 0) or 0)\n"
+        "    height = int(safe_call(lambda: layer.get_height(), 0) or 0)\n"
+        "    layer_offsets = offsets(layer)\n"
+        "    visible = bool(safe_call(lambda: layer.get_visible(), True))\n"
+        "    text_layer = Gimp.TextLayer.get_by_id(layer.get_id())\n"
+        "    font = safe_call(lambda: text_layer.get_font(), None) if text_layer is not None else None\n"
+        "    warnings = []\n"
+        "    if include_warnings and not visible:\n"
+        "        warnings.append({'code': 'hidden_layer', 'severity': 'info'})\n"
+        "    if include_warnings and (width <= 0 or height <= 0):\n"
+        "        warnings.append({'code': 'empty_layer', 'severity': 'warning'})\n"
+        "    if include_warnings and (layer_offsets['x'] < 0 or layer_offsets['y'] < 0 or layer_offsets['x'] + width > image_width or layer_offsets['y'] + height > image_height):\n"
+        "        warnings.append({'code': 'out_of_canvas', 'severity': 'warning'})\n"
+        "    if include_warnings and text_layer is not None and font is None:\n"
+        "        warnings.append({'code': 'missing_font', 'severity': 'warning'})\n"
+        "    mode = str(safe_call(lambda: layer.get_mode(), 'unknown'))\n"
+        "    if include_warnings and 'PASS_THROUGH' in mode:\n"
+        "        warnings.append({'code': 'unsupported_export_state', 'severity': 'warning', 'detail': 'pass-through blend mode may not export identically'})\n"
+        "    return {\n"
+        "        'id': safe_call(lambda: int(layer.get_id()), None),\n"
+        "        'index': index,\n"
+        "        'name': safe_call(lambda: layer.get_name(), ''),\n"
+        "        'visible': visible,\n"
+        "        'width': width,\n"
+        "        'height': height,\n"
+        "        'offsets': layer_offsets,\n"
+        "        'opacity': safe_call(lambda: layer.get_opacity(), None),\n"
+        "        'mode': mode,\n"
+        "        'is_text_layer': text_layer is not None,\n"
+        "        'warnings': warnings,\n"
+        "    }",
+        "images = Gimp.get_images()",
+        "if not images:\n"
+        "    result = {'has_image': False, 'report': {'layers': [], 'warnings': ['no open images']}, 'markdown': None}\n"
+        "else:\n"
+        "    image = images[0]\n"
+        "    image_width = int(safe_call(lambda: image.get_width(), 0) or 0)\n"
+        "    image_height = int(safe_call(lambda: image.get_height(), 0) or 0)\n"
+        "    layers = list(safe_call(lambda: image.get_layers(), []) or [])\n"
+        "    layer_rows = [layer_record(layer, index, image_width, image_height) for index, layer in enumerate(layers)]\n"
+        "    warnings = [warning for row in layer_rows for warning in row.get('warnings', [])]\n"
+        "    report = {'image': {'width': image_width, 'height': image_height}, 'layer_count': len(layer_rows), 'layers': layer_rows, 'warnings': warnings, 'include_previews': include_previews}\n"
+        "    markdown = None\n"
+        "    if include_markdown:\n"
+        "        markdown = '# Layer report\\n\\n' + '\\n'.join([f\"- {row.get('name')} ({row.get('width')}x{row.get('height')}) warnings={len(row.get('warnings', []))}\" for row in layer_rows])\n"
+        "    result = {'has_image': True, 'report': report, 'markdown': markdown}",
+        "print(json.dumps(result))",
+    ]
+
+
+def _export_checklist_code(
+    formats: list[str],
+    require_alpha: bool,
+    require_layers_preserved: bool,
+) -> list[str]:
+    """Return generated Python code that validates export readiness without exporting."""
+    normalized_formats = ["jpeg" if fmt == "jpg" else fmt for fmt in formats]
+    return [
+        "import json",
+        "# __gimp_mcp_export_checklist__",
+        f"formats = {normalized_formats!r}",
+        f"require_alpha = {require_alpha!r}",
+        f"require_layers_preserved = {require_layers_preserved!r}",
+        "format_limitations = {\n"
+        "    'png': {'procedure': 'file-png-export', 'preserves_alpha': True, 'preserves_layers': False},\n"
+        "    'jpeg': {'procedure': 'file-jpeg-export', 'preserves_alpha': False, 'preserves_layers': False},\n"
+        "    'webp': {'procedure': 'file-webp-export', 'preserves_alpha': True, 'preserves_layers': False},\n"
+        "    'tiff': {'procedure': 'file-tiff-export', 'preserves_alpha': True, 'preserves_layers': False},\n"
+        "    'psd': {'procedure': 'file-psd-export', 'preserves_alpha': True, 'preserves_layers': True},\n"
+        "    'xcf': {'procedure': 'gimp-xcf-save', 'preserves_alpha': True, 'preserves_layers': True},\n"
+        "}",
+        "def safe_call(fn, default=None):\n"
+        "    try:\n"
+        "        return fn()\n"
+        "    except Exception:\n"
+        "        return default",
+        "images = Gimp.get_images()",
+        "issues = []",
+        "recommended_settings = {}",
+        "if not images:\n"
+        "    issues.append({'code': 'no_open_image', 'severity': 'error'})\n"
+        "    image = None\n"
+        "    layers = []\n"
+        "else:\n"
+        "    image = images[0]\n"
+        "    layers = list(safe_call(lambda: image.get_layers(), []) or [])",
+        "for format_name in formats:\n"
+        "    limits = format_limitations[format_name]\n"
+        "    recommended_settings[format_name] = {'procedure': limits['procedure']}\n"
+        "    if require_alpha and not limits['preserves_alpha']:\n"
+        "        issues.append({'format': format_name, 'code': 'alpha_loss', 'severity': 'warning'})\n"
+        "    if require_layers_preserved and len(layers) > 1 and not limits['preserves_layers']:\n"
+        "        issues.append({'format': format_name, 'code': 'layers_will_flatten', 'severity': 'warning'})\n"
+        "    if image is not None and format_name == 'jpeg' and any(safe_call(lambda layer=layer: layer.has_alpha(), False) for layer in layers):\n"
+        "        issues.append({'format': format_name, 'code': 'alpha_loss', 'severity': 'warning', 'detail': 'JPEG has no alpha channel'})",
+        "ready = not any(issue.get('severity') == 'error' for issue in issues)",
+        "result = {'ready': ready, 'issues': issues, 'recommended_settings': recommended_settings, 'formats': formats, 'layer_count': len(layers)}",
+        "print(json.dumps(result))",
+    ]
+
 
 def _content_bounds_code(
     target: str,
@@ -664,6 +936,176 @@ def _text_layer_introspection_code(
 def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all inspection tools with the MCP server."""
 
+    @mcp.tool()
+    async def explain_current_context(
+        detail_level: str = "medium",
+        include_recommendations: bool = False,
+    ) -> ToolResult:
+        """Explain the current canvas state as an LLM-oriented context packet.
+
+        Args:
+            detail_level: low, medium, or high detail for machine-readable facts.
+            include_recommendations: Include a separate recommendations list.
+
+        Returns:
+            Operation result with summary, facts, warnings, and optional recommendations.
+
+        Contract:
+            Facts remain machine-readable. Recommendations are explicitly separated
+            from raw inspection facts and this tool is read-only.
+        """
+        if detail_level not in VALID_CONTEXT_DETAIL_LEVELS:
+            return OperationResult.fail(
+                operation="explain_current_context",
+                error="detail_level must be one of: low, medium, high",
+            ).model_dump()
+        try:
+            result = await bridge.async_execute_python(
+                _context_explanation_code(detail_level, include_recommendations)
+            )
+            data = _json_payload(result)
+            data.setdefault("summary", "")
+            data.setdefault("facts", {})
+            data.setdefault("warnings", [])
+            data.setdefault("recommendations", [])
+            return OperationResult.ok(
+                operation="explain_current_context",
+                message="Current context explained",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="explain_current_context", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def measure_geometry(
+        targets: list[dict[str, object]] | None = None,
+        measurements: list[str] | None = None,
+    ) -> ToolResult:
+        """Measure bounds, distance, overlap, alignment, and spacing for targets.
+
+        Args:
+            targets: List of layer references such as {"layer_name": "A"} or {"layer_index": 0}.
+            measurements: Metrics to compute: bounds, distance, overlap, alignment, spacing.
+
+        Returns:
+            Operation result with canvas_relative and target_relative geometry metrics.
+
+        Contract:
+            This tool is read-only and reports stable pixel-coordinate units.
+        """
+        selected_targets = targets or []
+        selected_measurements = measurements or ["bounds"]
+        unknown = [m for m in selected_measurements if m not in SUPPORTED_GEOMETRY_MEASUREMENTS]
+        if unknown:
+            return OperationResult.fail(
+                operation="measure_geometry",
+                error=f"unsupported measurement(s): {', '.join(unknown)}",
+            ).model_dump()
+        if not selected_targets:
+            return OperationResult.fail(
+                operation="measure_geometry",
+                error="at least one target is required",
+            ).model_dump()
+        try:
+            result = await bridge.async_execute_python(
+                _measure_geometry_code(selected_targets, selected_measurements)
+            )
+            data = _json_payload(result)
+            data.setdefault("metrics", {})
+            data.setdefault("warnings", [])
+            return OperationResult.ok(
+                operation="measure_geometry",
+                message="Geometry measured",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="measure_geometry", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def generate_layer_report(
+        include_previews: bool = False,
+        include_warnings: bool = True,
+        include_markdown: bool = False,
+    ) -> ToolResult:
+        """Generate a read-only structured report of layers and export-relevant warnings.
+
+        Args:
+            include_previews: Reserve preview metadata in the report without embedding bitmaps.
+            include_warnings: Flag hidden, empty, out-of-canvas, missing-font, and export issues.
+            include_markdown: Include a compact Markdown summary for human handoff.
+
+        Returns:
+            Operation result with a structured report and optional Markdown summary.
+
+        Contract:
+            This tool is read-only. It observes layer state and does not modify the image.
+        """
+        try:
+            result = await bridge.async_execute_python(
+                _layer_report_code(include_previews, include_warnings, include_markdown)
+            )
+            data = _json_payload(result)
+            data.setdefault("report", {"layers": [], "warnings": []})
+            data.setdefault("markdown", None)
+            return OperationResult.ok(
+                operation="generate_layer_report",
+                message="Layer report generated",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="generate_layer_report", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def prepare_export_checklist(
+        formats: list[str] | None = None,
+        require_alpha: bool = False,
+        require_layers_preserved: bool = False,
+    ) -> ToolResult:
+        """Prepare a read-only export readiness checklist for common image formats.
+
+        Args:
+            formats: Formats to evaluate. Supported: png, jpeg/jpg, webp, tiff, psd, xcf.
+            require_alpha: Flag formats that would lose required alpha information.
+            require_layers_preserved: Flag formats that would flatten required layer data.
+
+        Returns:
+            Operation result with ready flag, issues, and recommended export settings.
+
+        Contract:
+            This tool does not export files. Use export_image or a dedicated export tool separately.
+        """
+        selected_formats = [fmt.lower() for fmt in (formats or ["png"])]
+        unsupported = [fmt for fmt in selected_formats if fmt not in SUPPORTED_EXPORT_FORMATS]
+        if unsupported:
+            return OperationResult.fail(
+                operation="prepare_export_checklist",
+                error=f"unsupported export format(s): {', '.join(unsupported)}",
+            ).model_dump()
+        try:
+            result = await bridge.async_execute_python(
+                _export_checklist_code(
+                    selected_formats,
+                    require_alpha,
+                    require_layers_preserved,
+                )
+            )
+            data = _json_payload(result)
+            data.setdefault("ready", False)
+            data.setdefault("issues", [])
+            data.setdefault("recommended_settings", {})
+            return OperationResult.ok(
+                operation="prepare_export_checklist",
+                message="Export checklist prepared",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="prepare_export_checklist", error=str(e)
+            ).model_dump()
 
     @mcp.tool()
     async def content_bounds(
@@ -756,7 +1198,6 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             return OperationResult.fail(
                 operation="text_layer_introspection", error=str(e)
             ).model_dump()
-
 
     @mcp.tool()
     async def create_contact_sheet(

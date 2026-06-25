@@ -79,7 +79,6 @@ def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
     )
 
 
-
 def _preview_filter_code(
     gegl_op: str,
     props: dict[str, str],
@@ -106,28 +105,42 @@ def _preview_filter_code(
     ]
     return code
 
-def _preview_filter_spec(filter_name: str, parameters: dict[str, object]) -> tuple[str, dict[str, str], dict[str, object]]:
+
+def _preview_filter_spec(
+    filter_name: str, parameters: dict[str, object]
+) -> tuple[str, dict[str, str], dict[str, object]]:
     """Resolve a supported preview filter into GEGL op/properties."""
-    key = filter_name.strip().lower().replace('-', '_')
+    key = filter_name.strip().lower().replace("-", "_")
     if key in {"gaussian_blur", "gaussian"}:
         radius_x = float(parameters.get("radius_x", parameters.get("radius", 5.0)))
         radius_y = float(parameters.get("radius_y", radius_x))
-        return "gegl:gaussian-blur", {"std-dev-x": str(radius_x), "std-dev-y": str(radius_y)}, {"filter": "gaussian_blur", "radius_x": radius_x, "radius_y": radius_y}
+        return (
+            "gegl:gaussian-blur",
+            {"std-dev-x": str(radius_x), "std-dev-y": str(radius_y)},
+            {"filter": "gaussian_blur", "radius_x": radius_x, "radius_y": radius_y},
+        )
     if key in {"unsharp_mask", "sharpen"}:
         amount = float(parameters.get("amount", 0.5))
         radius = float(parameters.get("radius", 3.0))
         threshold = float(parameters.get("threshold", 0.0))
-        return "gegl:unsharp-mask", {"scale": str(amount), "std-dev": str(radius), "threshold": str(threshold)}, {"filter": "unsharp_mask", "amount": amount, "radius": radius, "threshold": threshold}
+        return (
+            "gegl:unsharp-mask",
+            {"scale": str(amount), "std-dev": str(radius), "threshold": str(threshold)},
+            {"filter": "unsharp_mask", "amount": amount, "radius": radius, "threshold": threshold},
+        )
     if key in {"motion_blur", "motion_blur_linear"}:
         length = float(parameters.get("length", 10.0))
         angle = float(parameters.get("angle", 0.0))
-        return "gegl:motion-blur-linear", {"length": str(length), "angle": str(angle)}, {"filter": "motion_blur_linear", "length": length, "angle": angle}
+        return (
+            "gegl:motion-blur-linear",
+            {"length": str(length), "angle": str(angle)},
+            {"filter": "motion_blur_linear", "length": length, "angle": angle},
+        )
     raise ValueError(f"Unsupported filter: {filter_name}")
 
 
 def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all filter/effect tools with the MCP server."""
-
 
     @mcp.tool()
     async def preview_filter(
@@ -175,7 +188,9 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
                     "preview_mode": preview_mode,
                     "gegl_operation": gegl_op,
                     "parameters": applied,
-                    "warnings": ["preview layer must be committed or discarded by a follow-up workflow"],
+                    "warnings": [
+                        "preview layer must be committed or discarded by a follow-up workflow"
+                    ],
                 },
             ).model_dump()
         except GimpCommandError as e:

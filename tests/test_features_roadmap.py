@@ -125,3 +125,26 @@ def test_selected_first_wave_features_are_marked_implemented() -> None:
     statuses = {feature["id"]: feature.get("status") for feature in data["features"]}
 
     assert {statuses[feature_id] for feature_id in selected} == {"implemented"}
+
+
+def test_current_feature_backlog_excludes_verified_tool_features() -> None:
+    """The active task backlog must not list features already covered by registered tools."""
+    roadmap = load_roadmap()
+    feature_by_id = {feature["id"]: feature for feature in roadmap["features"]}
+    implemented_this_pass = {
+        "FEAT-040": "generate_layer_report",
+        "FEAT-041": "prepare_export_checklist",
+        "FEAT-043": "content_bounds",
+        "FEAT-051": "text_layer_introspection",
+    }
+
+    for feature_id, tool_name in implemented_this_pass.items():
+        feature = feature_by_id[feature_id]
+        assert feature.get("status") == "implemented_this_pass"
+        assert feature.get("implemented_tool") == tool_name
+        assert feature.get("verification")
+
+    issues = yaml.safe_load((ROOT / "tasks.issues.yml").read_text())
+    feature_issue = next(issue for issue in issues["issues"] if issue["id"] == "GIMP-MCP-005")
+    remaining = set(feature_issue.get("remaining_open_features", []))
+    assert remaining.isdisjoint(implemented_this_pass)

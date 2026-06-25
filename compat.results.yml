@@ -1,30 +1,30 @@
 schema: gimp-mcp.compat.results.v1
 project: gimp-mcp
 contract: compat.yml
-run_id: live-smoke-1782179348
-run_started_at: '2026-06-23T01:48:17+00:00'
-run_finished_at: '2026-06-23T01:49:08+00:00'
+run_id: live-smoke-1782382879
+run_started_at: '2026-06-25T10:20:11+00:00'
+run_finished_at: '2026-06-25T10:21:19+00:00'
 tester: archlinux
 environment:
   os: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
   desktop_session: x11
   gimp_executable: gimp-3.2
-  gimp_version: unknown
+  gimp_version: 3.2.4
   gimp_verbose_version: unknown
-  python_version_inside_gimp: unknown
-  pygobject_version_inside_gimp: unknown
+  python_version_inside_gimp: 3.14.5
+  pygobject_version_inside_gimp: 3.56.3
   libgimp_api_version: '3.0'
   libgimp_library_version: 3.2.4
-  gegl_version: unknown
-  plugin_install_path: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-  plugin_sha256: 676da5480cb01836246123cf0eeb980e52b0d56fb40c8ae9ddd87f15532fe330
-  mcp_server_revision: 4978d0125f0fca725f7ae939de6b3b43d88902e5
+  gegl_version: 0.4.70
+  plugin_install_path: /tmp/gimp-mcp-live-xdgblkkz/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+  plugin_sha256: c57098bc635c56e28543121555ed3bca84dae24eac4541fbc70bfaba34313aef
+  mcp_server_revision: e061c1d6d30822583c12f1a94885fb105adc17e3
   mcp_server_command: uv run gimp-mcp-pro serve
   spawned_gimp: true
   xvfb: true
-  xdg_config_home: /tmp/gimp-mcp-live-wzx4xqdk/config
-  gimp3_directory: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0
-  mcp_port: 41173
+  xdg_config_home: /tmp/gimp-mcp-live-xdgblkkz/config
+  gimp3_directory: /tmp/gimp-mcp-live-xdgblkkz/config/GIMP/3.0
+  mcp_port: 36165
   gimp_process_output: 'Warning: Unknown input_id: -1 for input: surfacemap_x
 
     Warning: Unknown input_id: -1 for input: surfacemap_x
@@ -62,185 +62,2258 @@ environment:
 
     Shutting down MCP Pro server...
 
-    gui_dbus_name_lost: the name "org.gimp.GIMP.UI" could not be acquired on the bus.
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
 
-    Server error: [Errno 98] Address already in use
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:28.943: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.144: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+
+    (gimp:2450707): GLib-GObject-CRITICAL **: 12:20:29.145: g_object_unref: assertion
+    ''G_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-GUI-CRITICAL: gui_display_create: assertion ''image_managers !=
+    NULL'' failed
+
+    GIMP MCP Pro server started on localhost:36165 (procedure invocation)
+
+    Client connected: (''127.0.0.1'', 60974)
+
+    Client disconnected
+
+    Client connected: (''127.0.0.1'', 60976)
+
+    Client connected: (''127.0.0.1'', 60978)
+
+    Client disconnected
+
+    Client connected: (''127.0.0.1'', 60986)
+
+    Client disconnected
 
     Shutting down MCP Pro server...
 
-    Server error: [Errno 98] Address already in use
+    Client disconnected
+
+    MCP Pro server stopped
 
     Shutting down MCP Pro server...
 
-    set device ''Virtual core XTEST pointer'' to mode: disabled
+    gimp-3.2: terminated: Terminated
 
-    set device ''Xvfb mouse'' to mode: disabled
+    GIMP MCP Pro server started on localhost:36165 (procedure invocation)
 
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
+    Shutting down MCP Pro server...
 
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
+    MCP Pro server stopped
 
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
-    || GIMP_IS_OBJECT (object)'' failed
-
-    gimp-3.2: fatal error: Segmentation fault
-
-    /usr/lib/gimp/3.0/plug-ins/script-fu/script-fu: fatal error: GIMP crashed
-
-
-    (gimp_mcp_plugin.py:1743141): LibGimpBase-WARNING **: 03:48:37.063: gimp_mcp_plugin.py:
-    gimp_wire_read(): unexpected EOF
-
-
-    (python-eval.py:1744235): LibGimpBase-WARNING **: 03:48:37.063: python-eval.py:
-    gimp_wire_read(): unexpected EOF
+    Shutting down MCP Pro server...
 
     '
 checks:
 - id: C-000-spawn-gimp
   status: pass
   evidence:
-    pid: 1741048
+    pid: 2450523
     gimp: gimp-3.2
     xvfb: true
-    plugin_path: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-    xdg_config_home: /tmp/gimp-mcp-live-wzx4xqdk/config
-    gimp3_directory: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0
-    mcp_port: 41173
+    plugin_path: /tmp/gimp-mcp-live-xdgblkkz/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+    xdg_config_home: /tmp/gimp-mcp-live-xdgblkkz/config
+    gimp3_directory: /tmp/gimp-mcp-live-xdgblkkz/config/GIMP/3.0
+    mcp_port: 36165
 - id: C-005-autostart-server
-  status: fail
+  status: pass
   evidence:
-    detail: 'Could not connect to GIMP at localhost:41173 after 6 attempts. Ensure
-      the GIMP MCP plugin is running. Last error: [Errno 111] Connection refused'
+    detail: connected
     startup_timeout: 45.0
     socket_host: localhost
-    socket_port: 41173
+    socket_port: 36165
     derived_from: C-020-transport
 - id: C-020-transport
+  status: pass
+  evidence:
+    first_round_trip:
+      status: success
+      results:
+        session:
+          num_open_images: 0
+        gimp:
+          version: 3.2.4
+          resources_loaded: available_requires_callback
+          api_family: 3.x
+        system:
+          platform: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+          python_version: 3.14.5
+        capabilities:
+          mcp_pro_server: true
+          length_prefix_framing: true
+          persistent_connections: true
+          reports_version: true
+          reports_resources_loaded: true
+    length_prefix_default: true
+    sequential_round_trip:
+      status: success
+      results:
+        session:
+          num_open_images: 0
+        gimp:
+          version: 3.2.4
+          resources_loaded: available_requires_callback
+          api_family: 3.x
+        system:
+          platform: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+          python_version: 3.14.5
+        capabilities:
+          mcp_pro_server: true
+          length_prefix_framing: true
+          persistent_connections: true
+          reports_version: true
+          reports_resources_loaded: true
+    reconnect_round_trip:
+      status: success
+      results:
+        session:
+          num_open_images: 0
+        gimp:
+          version: 3.2.4
+          resources_loaded: available_requires_callback
+          api_family: 3.x
+        system:
+          platform: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+          python_version: 3.14.5
+        capabilities:
+          mcp_pro_server: true
+          length_prefix_framing: true
+          persistent_connections: true
+          reports_version: true
+          reports_resources_loaded: true
+    oversized_response_guard: Message size 433 exceeds maximum 1
+    failures: []
+- id: C-025-async-transport
   status: fail
   evidence:
-    error: 'Could not connect to GIMP at localhost:41173 after 6 attempts. Ensure
-      the GIMP MCP plugin is running. Last error: [Errno 111] Connection refused'
+    async_bridge_class: AsyncGimpBridge
+    first_round_trip:
+      status: success
+      results:
+        session:
+          num_open_images: 0
+        gimp:
+          version: 3.2.4
+          resources_loaded: available_requires_callback
+          api_family: 3.x
+        system:
+          platform: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
+          python_version: 3.14.5
+        capabilities:
+          mcp_pro_server: true
+          length_prefix_framing: true
+          persistent_connections: true
+          reports_version: true
+          reports_resources_loaded: true
+    registered_tool_total: 146
+    tool_calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 96x64 rgb image
+        error: null
+        data:
+          width: 96
+          height: 64
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382827.0266674
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'async-compat'
+        error: null
+        data:
+          name: async-compat
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382827.0702264
+    - tool: get_image_info
+      success: true
+      result:
+        success: true
+        operation: get_image_info
+        message: Image metadata retrieved
+        error: null
+        data:
+          basic:
+            width: 96
+            height: 64
+            base_type: RGB
+            resolution_x: null
+            resolution_y: null
+            is_dirty: true
+          structure:
+            num_layers: 2
+            layers:
+            - name: async-compat
+              visible: true
+              opacity: 100.0
+              width: 96
+              height: 64
+              has_alpha: true
+              blend_mode: '28'
+            - name: Background
+              visible: true
+              opacity: 100.0
+              width: 96
+              height: 64
+              has_alpha: false
+              blend_mode: '28'
+          file: {}
+        timestamp: 1782382827.2021878
+    - tool: get_image_bitmap
+      success: true
+      result:
+        success: true
+        operation: get_image_bitmap
+        message: 'Image captured: 64x42 pixels'
+        error: null
+        data:
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAEAAAAAqCAIAAACMZMq1AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGGQoUG3AG5J4AAAA8SURBVFjD7c8BEQAABAQw9O/8cjhbg3WSumzqOAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGBX4EF8GMDUU6sHawAAAAASUVORK5CYII=
+          format: png
+          width: 64
+          height: 42
+          original_width: 96
+          original_height: 64
+          encoding: base64
+        timestamp: 1782382827.4762933
+    failed_tools: []
+- id: C-001-env-introspection
+  status: pass
+  evidence:
+    ok: true
+    data:
+      python_version: 3.14.5
+      pygobject_version: 3.56.3
+      gimp_version: 3.2.4
+      gimp_resources_loaded: available
+      libgimp_api_version: '3.0'
+      gegl_version: 0.4.70
+      imports:
+        Gimp: true
+        Gegl: true
+        GLib: true
+        Gio: true
+        GObject: true
+- id: C-010-plugin-registration
+  status: pass
+  evidence:
+    ok: true
+    data:
+      procedure_exists: true
+      lookup_non_null: true
+      procedure_repr: <__gi__.GimpPDBProcedure object at 0x7f48078900c0 (GimpPDBProcedure
+        at 0x7f47f4007ac0)>
+      menu_path_static: <Image>/Tools/
+      menu_label_static: Start MCP Pro Server
+      activation_model: spawned GIMP invokes persistent procedure through python-fu-eval;
+        UI menu activation uses the same PDB procedure
+- id: C-030-image-basics
+  status: fail
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 320x240 rgb image
+        error: null
+        data:
+          width: 320
+          height: 240
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382827.4879158
+    - tool: list_images
+      success: true
+      result:
+        success: true
+        operation: list_images
+        message: Found 2 open image(s)
+        error: null
+        data:
+          images:
+          - width: 320
+            height: 240
+            base_type: '0'
+            num_layers: 1
+            is_dirty: true
+          - width: 96
+            height: 64
+            base_type: '0'
+            num_layers: 2
+            is_dirty: true
+          count: 2
+        timestamp: 1782382827.488755
+    - tool: get_image_info
+      success: true
+      result:
+        success: true
+        operation: get_image_info
+        message: Image metadata retrieved
+        error: null
+        data:
+          basic:
+            width: 320
+            height: 240
+            base_type: RGB
+            resolution_x: null
+            resolution_y: null
+            is_dirty: true
+          structure:
+            num_layers: 1
+            layers:
+            - name: Background
+              visible: true
+              opacity: 100.0
+              width: 320
+              height: 240
+              has_alpha: false
+              blend_mode: '28'
+          file: {}
+        timestamp: 1782382827.4892585
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'flatten-input'
+        error: null
+        data:
+          name: flatten-input
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382827.4917126
+    - tool: duplicate_image
+      success: true
+      result:
+        success: true
+        operation: duplicate_image
+        message: Image duplicated
+        error: null
+        data: null
+        timestamp: 1782382827.5078506
+    - tool: flatten_image
+      success: true
+      result:
+        success: true
+        operation: flatten_image
+        message: All layers flattened into one
+        error: null
+        data: null
+        timestamp: 1782382827.51999
+    - tool: get_image_info
+      success: true
+      result:
+        success: true
+        operation: get_image_info
+        message: Image metadata retrieved
+        error: null
+        data:
+          basic:
+            width: 320
+            height: 240
+            base_type: RGB
+            resolution_x: null
+            resolution_y: null
+            is_dirty: true
+          structure:
+            num_layers: 1
+            layers:
+            - name: Background
+              visible: true
+              opacity: 100.0
+              width: 320
+              height: 240
+              has_alpha: false
+              blend_mode: '28'
+          file: {}
+        timestamp: 1782382827.521039
+    failed_tools:
+    - registry-count
+    registry:
+      expected_total: 143
+      actual_total: 146
+      tools:
+      - activate_flow
+      - add_alpha_channel
+      - add_guide
+      - add_layer_mask
+      - add_text
+      - adjust_brightness_contrast
+      - adjust_color_balance
+      - adjust_curves
+      - adjust_hue_saturation
+      - adjust_levels
+      - analyze_color_palette
+      - apply_drop_shadow
+      - apply_edge_detect
+      - apply_emboss
+      - apply_gaussian_blur
+      - apply_median
+      - apply_motion_blur
+      - apply_noise
+      - apply_pixelize
+      - apply_threshold
+      - apply_unsharp_mask
+      - assert_image_state
+      - auto_white_balance
+      - autocrop_image
+      - begin_edit_transaction
+      - begin_undo_group
+      - border_selection
+      - brush_inventory
+      - bucket_fill
+      - channel_to_selection
+      - color_to_alpha
+      - compare_snapshots
+      - content_bounds
+      - create_checkpoint
+      - create_contact_sheet
+      - create_image
+      - create_layer
+      - create_layer_group
+      - create_path
+      - crop_image
+      - crop_to_selection
+      - deactivate_flow
+      - delete_guide
+      - delete_layer
+      - desaturate
+      - draw_brush_stroke
+      - draw_ellipse
+      - draw_line
+      - draw_polygon
+      - draw_rectangle
+      - dry_run_macro
+      - duplicate_image
+      - duplicate_layer
+      - edit_clear
+      - edit_text_layer
+      - end_edit_transaction
+      - end_undo_group
+      - execute_python
+      - explain_current_context
+      - export_image
+      - feather_selection
+      - fill_selection
+      - flatten_image
+      - flip_image
+      - flip_layer
+      - generate_layer_report
+      - get_colors
+      - get_context_state
+      - get_flow
+      - get_gimp_info
+      - get_image_bitmap
+      - get_image_info
+      - get_image_metadata
+      - get_layer_mask_info
+      - get_layer_tree_detailed
+      - get_operation_log
+      - get_selection_info
+      - gimp_dev_plugin_catalog
+      - gimp_dev_status
+      - gradient_fill
+      - invert_colors
+      - list_channels
+      - list_flows
+      - list_gimp_resources
+      - list_guides
+      - list_images
+      - list_layers
+      - list_paths
+      - measure_geometry
+      - merge_visible_layers
+      - move_layer_to_group
+      - observe_document_state
+      - observe_region
+      - offset_layer
+      - path_to_selection
+      - perspective_layer
+      - pin_flow
+      - posterize
+      - prepare_export_checklist
+      - preview_filter
+      - propose_flow
+      - redo
+      - remove_layer_mask
+      - remove_path
+      - resize_canvas
+      - resolve_target
+      - rollback_transaction
+      - rotate_image
+      - rotate_layer
+      - run_flow
+      - run_macro_transaction
+      - sample_color
+      - sample_pixels
+      - save_selection_to_channel
+      - scale_image
+      - scale_layer
+      - search_pdb
+      - select_all
+      - select_by_color
+      - select_ellipse
+      - select_grow
+      - select_invert
+      - select_none
+      - select_polygon
+      - select_rectangle
+      - select_shrink
+      - session_capabilities
+      - set_active_layer
+      - set_background_color
+      - set_foreground_color
+      - set_image_grid
+      - set_layer_mask_state
+      - set_layer_mode
+      - set_layer_opacity
+      - set_layer_visibility
+      - set_paint_context
+      - set_paint_resource
+      - shear_layer
+      - stroke_path
+      - stroke_selection
+      - swap_colors
+      - text_layer_introspection
+      - undo
+      - unpin_flow
+      - validate_flow
+      - validate_targets
+- id: C-040-layer-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 240x180 rgb image
+        error: null
+        data:
+          width: 240
+          height: 180
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382827.5331802
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'layer-contract'
+        error: null
+        data:
+          name: layer-contract
+          opacity: 80.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382827.5387323
+    - tool: list_layers
+      success: true
+      result:
+        success: true
+        operation: list_layers
+        message: Found 2 layer(s)
+        error: null
+        data:
+          layers:
+          - index: 0
+            name: layer-contract
+            visible: true
+            opacity: 80.0
+            width: 240
+            height: 180
+            has_alpha: true
+            blend_mode: '28'
+          - index: 1
+            name: Background
+            visible: true
+            opacity: 100.0
+            width: 240
+            height: 180
+            has_alpha: false
+            blend_mode: '28'
+          count: 2
+        timestamp: 1782382827.540993
+    - tool: set_active_layer
+      success: true
+      result:
+        success: true
+        operation: set_active_layer
+        message: Active layer set to 'layer-contract'
+        error: null
+        data:
+          layer_name: layer-contract
+        timestamp: 1782382827.5420053
+    - tool: set_layer_opacity
+      success: true
+      result:
+        success: true
+        operation: set_layer_opacity
+        message: Layer opacity set to 55.0%
+        error: null
+        data:
+          opacity: 55.0
+        timestamp: 1782382827.543849
+    - tool: set_layer_visibility
+      success: true
+      result:
+        success: true
+        operation: set_layer_visibility
+        message: Layer is now hidden
+        error: null
+        data:
+          visible: false
+        timestamp: 1782382827.545138
+    - tool: set_layer_visibility
+      success: true
+      result:
+        success: true
+        operation: set_layer_visibility
+        message: Layer is now visible
+        error: null
+        data:
+          visible: true
+        timestamp: 1782382827.5459242
+    - tool: duplicate_layer
+      success: true
+      result:
+        success: true
+        operation: duplicate_layer
+        message: Layer duplicated
+        error: null
+        data: null
+        timestamp: 1782382827.5491118
+    - tool: add_alpha_channel
+      success: true
+      result:
+        success: true
+        operation: add_alpha_channel
+        message: Alpha channel added
+        error: null
+        data: null
+        timestamp: 1782382827.5498664
+    - tool: add_layer_mask
+      success: true
+      result:
+        success: true
+        operation: add_layer_mask
+        message: Added white layer mask
+        error: null
+        data:
+          layer_name: layer-contract
+          mask_type: white
+        timestamp: 1782382827.5903423
+    - tool: get_layer_mask_info
+      success: true
+      result:
+        success: true
+        operation: get_layer_mask_info
+        message: Layer has a mask
+        error: null
+        data:
+          layer_name: layer-contract
+          has_mask: true
+          mask_name: layer-contract mask
+          edit_mask: true
+          show_mask: false
+          apply_mask: true
+        timestamp: 1782382827.591151
+    - tool: set_layer_mask_state
+      success: true
+      result:
+        success: true
+        operation: set_layer_mask_state
+        message: Layer mask state updated
+        error: null
+        data:
+          edit_mask: true
+          show_mask: false
+          apply_mask: true
+        timestamp: 1782382827.5915532
+    - tool: remove_layer_mask
+      success: true
+      result:
+        success: true
+        operation: remove_layer_mask
+        message: Layer mask discarded
+        error: null
+        data:
+          applied: false
+        timestamp: 1782382827.592744
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'delete-me'
+        error: null
+        data:
+          name: delete-me
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382827.5947196
+    - tool: delete_layer
+      success: true
+      result:
+        success: true
+        operation: delete_layer
+        message: Layer deleted
+        error: null
+        data: null
+        timestamp: 1782382827.595686
+    - tool: merge_visible_layers
+      success: true
+      result:
+        success: true
+        operation: merge_visible_layers
+        message: Visible layers merged
+        error: null
+        data: null
+        timestamp: 1782382827.6003866
+    - tool: list_layers
+      success: true
+      result:
+        success: true
+        operation: list_layers
+        message: Found 1 layer(s)
+        error: null
+        data:
+          layers:
+          - index: 0
+            name: Background
+            visible: true
+            opacity: 100.0
+            width: 240
+            height: 180
+            has_alpha: true
+            blend_mode: '28'
+          count: 1
+        timestamp: 1782382827.6015844
+    failed_tools: []
+- id: C-050-selection-drawing-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 260x180 rgb image
+        error: null
+        data:
+          width: 260
+          height: 180
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382827.6161287
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'draw-contract'
+        error: null
+        data:
+          name: draw-contract
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382827.6223795
+    - tool: set_active_layer
+      success: true
+      result:
+        success: true
+        operation: set_active_layer
+        message: Active layer set to 'draw-contract'
+        error: null
+        data:
+          layer_name: draw-contract
+        timestamp: 1782382827.6264703
+    - tool: set_foreground_color
+      success: true
+      result:
+        success: true
+        operation: set_foreground_color
+        message: Foreground color set to red
+        error: null
+        data:
+          color: red
+        timestamp: 1782382827.627691
+    - tool: set_background_color
+      success: true
+      result:
+        success: true
+        operation: set_background_color
+        message: Background color set to blue
+        error: null
+        data:
+          color: blue
+        timestamp: 1782382827.6284938
+    - tool: select_rectangle
+      success: true
+      result:
+        success: true
+        operation: select_rectangle
+        message: Selected rectangle (10,10) 40x30
+        error: null
+        data: null
+        timestamp: 1782382827.6430585
+    - tool: fill_selection
+      success: true
+      result:
+        success: true
+        operation: fill_selection
+        message: Filled with foreground
+        error: null
+        data: null
+        timestamp: 1782382827.6471481
+    - tool: select_ellipse
+      success: true
+      result:
+        success: true
+        operation: select_ellipse
+        message: Selected ellipse at (60,10) 40x30
+        error: null
+        data: null
+        timestamp: 1782382827.648428
+    - tool: fill_selection
+      success: true
+      result:
+        success: true
+        operation: fill_selection
+        message: Filled with background
+        error: null
+        data: null
+        timestamp: 1782382827.6498759
+    - tool: select_polygon
+      success: true
+      result:
+        success: true
+        operation: select_polygon
+        message: Selected polygon with 3 vertices
+        error: null
+        data: null
+        timestamp: 1782382827.652157
+    - tool: fill_selection
+      success: true
+      result:
+        success: true
+        operation: fill_selection
+        message: Filled with foreground
+        error: null
+        data: null
+        timestamp: 1782382827.65362
+    - tool: select_all
+      success: true
+      result:
+        success: true
+        operation: select_all
+        message: Selected all
+        error: null
+        data: null
+        timestamp: 1782382827.6547356
+    - tool: select_invert
+      success: true
+      result:
+        success: true
+        operation: select_invert
+        message: Selection inverted
+        error: null
+        data: null
+        timestamp: 1782382827.6549973
+    - tool: select_none
+      success: true
+      result:
+        success: true
+        operation: select_none
+        message: Selection cleared
+        error: null
+        data: null
+        timestamp: 1782382827.6552083
+    - tool: select_rectangle
+      success: true
+      result:
+        success: true
+        operation: select_rectangle
+        message: Selected rectangle (20,70) 60x40
+        error: null
+        data: null
+        timestamp: 1782382827.6554527
+    - tool: get_selection_info
+      success: true
+      result:
+        success: true
+        operation: get_selection_info
+        message: Selection active — bounds (20,70) 60x40
+        error: null
+        data:
+          has_selection: true
+          is_all: false
+          bounds:
+            x: 20
+            y: 70
+            width: 60
+            height: 40
+          image_size:
+            width: 260
+            height: 180
+        timestamp: 1782382827.6559618
+    - tool: select_grow
+      success: true
+      result:
+        success: true
+        operation: select_grow
+        message: Selection grown by 2px
+        error: null
+        data: null
+        timestamp: 1782382827.656484
+    - tool: select_shrink
+      success: true
+      result:
+        success: true
+        operation: select_shrink
+        message: Selection shrunk by 1px
+        error: null
+        data: null
+        timestamp: 1782382827.6572838
+    - tool: feather_selection
+      success: true
+      result:
+        success: true
+        operation: feather_selection
+        message: Selection feathered by 2.0px
+        error: null
+        data:
+          radius: 2.0
+        timestamp: 1782382827.6578834
+    - tool: border_selection
+      success: true
+      result:
+        success: true
+        operation: border_selection
+        message: Selection border created with radius 2px
+        error: null
+        data:
+          radius: 2
+        timestamp: 1782382827.6583374
+    - tool: stroke_selection
+      success: true
+      result:
+        success: true
+        operation: stroke_selection
+        message: Selection stroked
+        error: null
+        data:
+          color: blue
+          brush_size: 2.0
+        timestamp: 1782382827.6627204
+    - tool: bucket_fill
+      success: true
+      result:
+        success: true
+        operation: bucket_fill
+        message: Bucket-filled at (30,30)
+        error: null
+        data:
+          x: 30
+          y: 30
+          color: red
+          threshold: 40.0
+          sample_merged: true
+        timestamp: 1782382827.6964183
+    - tool: select_by_color
+      success: true
+      result:
+        success: true
+        operation: select_by_color
+        message: Selected by color at (30,30) threshold=40.0
+        error: null
+        data:
+          has_selection: true
+          bounds:
+            x: 10
+            y: 10
+            width: 40
+            height: 30
+        timestamp: 1782382827.6989846
+    - tool: fill_selection
+      success: true
+      result:
+        success: true
+        operation: fill_selection
+        message: Filled with foreground
+        error: null
+        data: null
+        timestamp: 1782382827.7019422
+    - tool: draw_line
+      success: true
+      result:
+        success: true
+        operation: draw_line
+        message: Drew line from (5,5) to (120,80)
+        error: null
+        data: null
+        timestamp: 1782382827.708656
+    - tool: draw_brush_stroke
+      success: true
+      result:
+        success: true
+        operation: draw_brush_stroke
+        message: Drew pencil stroke with 3 points
+        error: null
+        data: null
+        timestamp: 1782382827.7123327
+    - tool: draw_rectangle
+      success: true
+      result:
+        success: true
+        operation: draw_rectangle
+        message: Drew filled rectangle at (130,70) size 40x30
+        error: null
+        data: null
+        timestamp: 1782382827.7149844
+    - tool: draw_ellipse
+      success: true
+      result:
+        success: true
+        operation: draw_ellipse
+        message: Drew filled ellipse at (180,70) size 40x30
+        error: null
+        data: null
+        timestamp: 1782382827.7169945
+    - tool: draw_polygon
+      success: true
+      result:
+        success: true
+        operation: draw_polygon
+        message: Drew filled polygon with 3 vertices
+        error: null
+        data: null
+        timestamp: 1782382827.719504
+    - tool: add_text
+      success: true
+      result:
+        success: true
+        operation: add_text
+        message: 'Text layer added: "compat"'
+        error: null
+        data:
+          text: compat
+          x: 20
+          y: 140
+          font: Sans
+          size: 18
+        timestamp: 1782382827.7790334
+    - tool: select_all
+      success: true
+      result:
+        success: true
+        operation: select_all
+        message: Selected all
+        error: null
+        data: null
+        timestamp: 1782382827.780453
+    - tool: edit_clear
+      success: true
+      result:
+        success: true
+        operation: edit_clear
+        message: Selection cleared
+        error: null
+        data: null
+        timestamp: 1782382827.7906609
+    - tool: select_none
+      success: true
+      result:
+        success: true
+        operation: select_none
+        message: Selection cleared
+        error: null
+        data: null
+        timestamp: 1782382827.7909303
+    failed_tools: []
+- id: C-055-path-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 200x160 rgb image
+        error: null
+        data:
+          width: 200
+          height: 160
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382827.8035495
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'path-contract'
+        error: null
+        data:
+          name: path-contract
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382827.8083205
+    - tool: set_active_layer
+      success: true
+      result:
+        success: true
+        operation: set_active_layer
+        message: Active layer set to 'path-contract'
+        error: null
+        data:
+          layer_name: path-contract
+        timestamp: 1782382827.8114872
+    - tool: set_foreground_color
+      success: true
+      result:
+        success: true
+        operation: set_foreground_color
+        message: Foreground color set to red
+        error: null
+        data:
+          color: red
+        timestamp: 1782382827.811845
+    - tool: create_path
+      success: true
+      result:
+        success: true
+        operation: create_path
+        message: Created path 'triangle-path' with 3 vertices
+        error: null
+        data:
+          name: triangle-path
+          vertices: 3
+          closed: true
+        timestamp: 1782382827.8132026
+    - tool: list_paths
+      success: true
+      result:
+        success: true
+        operation: list_paths
+        message: Found 1 path(s)
+        error: null
+        data:
+          paths:
+          - index: 0
+            name: triangle-path
+            stroke_count: 1
+          count: 1
+        timestamp: 1782382827.8135824
+    - tool: path_to_selection
+      success: true
+      result:
+        success: true
+        operation: path_to_selection
+        message: Converted path to selection using replace
+        error: null
+        data:
+          operation: replace
+        timestamp: 1782382827.8251047
+    - tool: fill_selection
+      success: true
+      result:
+        success: true
+        operation: fill_selection
+        message: Filled with foreground
+        error: null
+        data: null
+        timestamp: 1782382827.8278828
+    - tool: stroke_path
+      success: true
+      result:
+        success: true
+        operation: stroke_path
+        message: Path stroked
+        error: null
+        data:
+          path_name: triangle-path
+          path_index: null
+        timestamp: 1782382827.8316712
+    - tool: remove_path
+      success: true
+      result:
+        success: true
+        operation: remove_path
+        message: Removed path 'triangle-path'
+        error: null
+        data:
+          name: triangle-path
+        timestamp: 1782382827.832125
+    - tool: list_paths
+      success: true
+      result:
+        success: true
+        operation: list_paths
+        message: Found 0 path(s)
+        error: null
+        data:
+          paths: []
+          count: 0
+        timestamp: 1782382827.832465
+    failed_tools: []
+- id: C-060-export-bitmap-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 120x90 rgb image
+        error: null
+        data:
+          width: 120
+          height: 90
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382827.8484836
+    - tool: draw_rectangle
+      success: true
+      result:
+        success: true
+        operation: draw_rectangle
+        message: Drew filled rectangle at (10,10) size 40x30
+        error: null
+        data: null
+        timestamp: 1782382827.8626053
+    - tool: get_image_bitmap
+      success: true
+      result:
+        success: true
+        operation: get_image_bitmap
+        message: 'Image captured: 80x60 pixels'
+        error: null
+        data:
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGGQoUHO5icT0AAACRSURBVGje7dmxDYQwEEXBD7oAd0AI7dIkqUsgwjRA6JO4Y17oZDWWI+/QWsubGvOygIGBf7vPzdlxpNaeQ+Y50/RgcK1Z155D9j3L4kkDAwMDAwMDAwMDAwMDAwMDf6m7L55Ssm0ZO93FeaaU54AHqxZgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg4H/sAusWEb/SUzduAAAAAElFTkSuQmCC
+          format: png
+          width: 80
+          height: 60
+          original_width: 120
+          original_height: 90
+          encoding: base64
+        timestamp: 1782382828.0358858
+    - tool: get_image_bitmap
+      success: true
+      result:
+        success: true
+        operation: get_image_bitmap
+        message: 'Image captured: 30x30 pixels'
+        error: null
+        data:
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAIAAAC0Ujn1AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGGQoUHO5icT0AAAAwSURBVEjH7dAhDgAACMNARvj/l4fHT5C0cuLEZLsydcWCPs0dJL6GhoaGhoaG/k4vR/YDPbv2HgMAAAAASUVORK5CYII=
+          format: png
+          width: 30
+          height: 30
+          original_width: 120
+          original_height: 90
+          encoding: base64
+        timestamp: 1782382828.2079167
+    - tool: export_image
+      success: true
+      result:
+        success: true
+        operation: export_image
+        message: Exported to /tmp/gimp-mcp-compat.png
+        error: null
+        data:
+          file_path: /tmp/gimp-mcp-compat.png
+          format: png
+        timestamp: 1782382828.3619819
+    - tool: export_image
+      success: true
+      result:
+        success: true
+        operation: export_image
+        message: Exported to /tmp/gimp-mcp-compat.jpg
+        error: null
+        data:
+          file_path: /tmp/gimp-mcp-compat.jpg
+          format: jpeg
+        timestamp: 1782382828.547689
+    failed_tools: []
+- id: C-070-transform-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 180x140 rgb image
+        error: null
+        data:
+          width: 180
+          height: 140
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382828.556381
+    - tool: create_layer
+      success: true
+      result:
+        success: true
+        operation: create_layer
+        message: Created layer 'transform-layer'
+        error: null
+        data:
+          name: transform-layer
+          opacity: 100.0
+          blend_mode: normal
+          position: 0
+        timestamp: 1782382828.563133
+    - tool: set_active_layer
+      success: true
+      result:
+        success: true
+        operation: set_active_layer
+        message: Active layer set to 'transform-layer'
+        error: null
+        data:
+          layer_name: transform-layer
+        timestamp: 1782382828.5677035
+    - tool: scale_layer
+      success: true
+      result:
+        success: true
+        operation: scale_layer
+        message: Layer scaled to 120x80
+        error: null
+        data:
+          width: 120
+          height: 80
+        timestamp: 1782382828.6303375
+    - tool: offset_layer
+      success: true
+      result:
+        success: true
+        operation: offset_layer
+        message: Layer moved by (5, 7)
+        error: null
+        data:
+          offset_x: 5
+          offset_y: 7
+        timestamp: 1782382828.6318629
+    - tool: rotate_layer
+      success: true
+      result:
+        success: true
+        operation: rotate_layer
+        message: Layer rotated 10.0°
+        error: null
+        data:
+          angle_degrees: 10.0
+        timestamp: 1782382828.6389527
+    - tool: flip_layer
+      success: true
+      result:
+        success: true
+        operation: flip_layer
+        message: Layer flipped horizontal
+        error: null
+        data:
+          direction: horizontal
+        timestamp: 1782382828.6408272
+    - tool: scale_image
+      success: true
+      result:
+        success: true
+        operation: scale_image
+        message: Image scaled to 160x120
+        error: null
+        data:
+          width: 160
+          height: 120
+        timestamp: 1782382828.6510692
+    - tool: rotate_image
+      success: true
+      result:
+        success: true
+        operation: rotate_image
+        message: Image rotated 90°
+        error: null
+        data:
+          angle: 90
+        timestamp: 1782382828.6664708
+    - tool: flip_image
+      success: true
+      result:
+        success: true
+        operation: flip_image
+        message: Image flipped vertical
+        error: null
+        data:
+          direction: vertical
+        timestamp: 1782382828.670682
+    - tool: resize_canvas
+      success: true
+      result:
+        success: true
+        operation: resize_canvas
+        message: Canvas resized to 200x170
+        error: null
+        data:
+          width: 200
+          height: 170
+          offset_x: 10
+          offset_y: 10
+        timestamp: 1782382828.672762
+    - tool: select_rectangle
+      success: true
+      result:
+        success: true
+        operation: select_rectangle
+        message: Selected rectangle (20,20) 80x60
+        error: null
+        data: null
+        timestamp: 1782382828.673488
+    - tool: crop_to_selection
+      success: true
+      result:
+        success: true
+        operation: crop_to_selection
+        message: Image cropped to selection
+        error: null
+        data: null
+        timestamp: 1782382828.675023
+    - tool: crop_image
+      success: true
+      result:
+        success: true
+        operation: crop_image
+        message: Image cropped to 50x40 at (0,0)
+        error: null
+        data:
+          x: 0
+          y: 0
+          width: 50
+          height: 40
+        timestamp: 1782382828.6763525
+    - tool: autocrop_image
+      success: true
+      result:
+        success: true
+        operation: autocrop_image
+        message: Image auto-cropped
+        error: null
+        data: null
+        timestamp: 1782382828.678394
+    - tool: get_image_info
+      success: true
+      result:
+        success: true
+        operation: get_image_info
+        message: Image metadata retrieved
+        error: null
+        data:
+          basic:
+            width: 50
+            height: 40
+            base_type: RGB
+            resolution_x: null
+            resolution_y: null
+            is_dirty: true
+          structure:
+            num_layers: 2
+            layers:
+            - name: transform-layer
+              visible: true
+              opacity: 100.0
+              width: 50
+              height: 40
+              has_alpha: true
+              blend_mode: '28'
+            - name: Background
+              visible: true
+              opacity: 100.0
+              width: 50
+              height: 40
+              has_alpha: false
+              blend_mode: '28'
+          file: {}
+        timestamp: 1782382828.6795855
+    failed_tools: []
+- id: C-080-color-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 120x90 rgb image
+        error: null
+        data:
+          width: 120
+          height: 90
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382828.693308
+    - tool: draw_rectangle
+      success: true
+      result:
+        success: true
+        operation: draw_rectangle
+        message: Drew filled rectangle at (0,0) size 120x90
+        error: null
+        data: null
+        timestamp: 1782382828.7027864
+    - tool: set_foreground_color
+      success: true
+      result:
+        success: true
+        operation: set_foreground_color
+        message: Foreground color set to green
+        error: null
+        data:
+          color: green
+        timestamp: 1782382828.7032096
+    - tool: set_background_color
+      success: true
+      result:
+        success: true
+        operation: set_background_color
+        message: Background color set to blue
+        error: null
+        data:
+          color: blue
+        timestamp: 1782382828.7034552
+    - tool: get_colors
+      success: true
+      result:
+        success: true
+        operation: get_colors
+        message: Current colors retrieved
+        error: null
+        data:
+          foreground:
+            r: 0.0
+            g: 0.2159
+            b: 0.0
+            a: 1.0
+          background:
+            r: 0.0
+            g: 0.0
+            b: 1.0
+            a: 1.0
+        timestamp: 1782382828.7112076
+    - tool: swap_colors
+      success: true
+      result:
+        success: true
+        operation: swap_colors
+        message: Foreground and background colors swapped
+        error: null
+        data: null
+        timestamp: 1782382828.7114742
+    - tool: sample_color
+      success: true
+      result:
+        success: true
+        operation: sample_color
+        message: Color sampled at (5, 5)
+        error: null
+        data:
+          r: 1.0
+          g: 0.0
+          b: 0.0
+          a: 1.0
+        timestamp: 1782382828.767636
+    - tool: adjust_brightness_contrast
+      success: true
+      result:
+        success: true
+        operation: adjust_brightness_contrast
+        message: Brightness=5, Contrast=5
+        error: null
+        data:
+          brightness: 5
+          contrast: 5
+        timestamp: 1782382828.7704403
+    - tool: adjust_hue_saturation
+      success: true
+      result:
+        success: true
+        operation: adjust_hue_saturation
+        message: Hue=5.0°, Saturation=5.0, Lightness=0.0
+        error: null
+        data:
+          hue: 5.0
+          saturation: 5.0
+          lightness: 0.0
+        timestamp: 1782382828.8150904
+    - tool: adjust_levels
+      success: true
+      result:
+        success: true
+        operation: adjust_levels
+        message: 'Levels adjusted (value): input [0-255], gamma 1.0'
+        error: null
+        data:
+          channel: value
+          input_low: 0
+          input_high: 255
+          gamma: 1.0
+          output_low: 0
+          output_high: 255
+        timestamp: 1782382828.8184795
+    - tool: adjust_curves
+      success: true
+      result:
+        success: true
+        operation: adjust_curves
+        message: Curves adjusted (value, 3 control points)
+        error: null
+        data:
+          channel: value
+          num_points: 3
+        timestamp: 1782382828.8461792
+    - tool: desaturate
+      success: true
+      result:
+        success: true
+        operation: desaturate
+        message: Desaturated using luminosity method
+        error: null
+        data:
+          method: luminosity
+        timestamp: 1782382828.9113488
+    - tool: invert_colors
+      success: true
+      result:
+        success: true
+        operation: invert_colors
+        message: Colors inverted
+        error: null
+        data: null
+        timestamp: 1782382828.9161046
+    - tool: apply_threshold
+      success: true
+      result:
+        success: true
+        operation: apply_threshold
+        message: Threshold applied (64-255)
+        error: null
+        data:
+          low: 64
+          high: 255
+        timestamp: 1782382828.9199836
+    - tool: posterize
+      success: true
+      result:
+        success: true
+        operation: posterize
+        message: Posterized to 4 levels
+        error: null
+        data:
+          levels: 4
+        timestamp: 1782382828.924219
+    - tool: color_to_alpha
+      success: true
+      result:
+        success: true
+        operation: color_to_alpha
+        message: Color 'white' made transparent
+        error: null
+        data:
+          color: white
+        timestamp: 1782382828.937496
+    - tool: auto_white_balance
+      success: true
+      result:
+        success: true
+        operation: auto_white_balance
+        message: Auto white balance applied
+        error: null
+        data: null
+        timestamp: 1782382828.9424047
+    failed_tools: []
+- id: C-090-filter-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 140x100 rgb image
+        error: null
+        data:
+          width: 140
+          height: 100
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382828.9534118
+    - tool: draw_rectangle
+      success: true
+      result:
+        success: true
+        operation: draw_rectangle
+        message: Drew filled rectangle at (10,10) size 80x60
+        error: null
+        data: null
+        timestamp: 1782382828.9607646
+    - tool: apply_gaussian_blur
+      success: true
+      result:
+        success: true
+        operation: apply_gaussian_blur
+        message: Gaussian blur applied (radius 1.0x1.0)
+        error: null
+        data:
+          radius_x: 1.0
+          radius_y: 1.0
+        timestamp: 1782382829.0266285
+    - tool: apply_unsharp_mask
+      success: true
+      result:
+        success: true
+        operation: apply_unsharp_mask
+        message: Unsharp mask applied (amount=0.2, radius=1.0)
+        error: null
+        data:
+          amount: 0.2
+          radius: 1.0
+          threshold: 0.0
+        timestamp: 1782382829.0360155
+    - tool: apply_pixelize
+      success: true
+      result:
+        success: true
+        operation: apply_pixelize
+        message: Pixelized with 4x4 blocks
+        error: null
+        data:
+          block_width: 4
+          block_height: 4
+        timestamp: 1782382829.0538356
+    - tool: apply_edge_detect
+      success: true
+      result:
+        success: true
+        operation: apply_edge_detect
+        message: Edge detection applied (sobel)
+        error: null
+        data:
+          method: sobel
+          amount: 1.0
+        timestamp: 1782382829.084381
+    - tool: apply_emboss
+      success: true
+      result:
+        success: true
+        operation: apply_emboss
+        message: Emboss applied (azimuth=315.0°, depth=1)
+        error: null
+        data: null
+        timestamp: 1782382829.1119661
+    - tool: apply_noise
+      success: true
+      result:
+        success: true
+        operation: apply_noise
+        message: Noise added (amount=0.05)
+        error: null
+        data:
+          amount: 0.05
+        timestamp: 1782382829.1220078
+    - tool: apply_median
+      success: true
+      result:
+        success: true
+        operation: apply_median
+        message: Median filter applied (radius=1)
+        error: null
+        data:
+          radius: 1
+        timestamp: 1782382829.1282856
+    - tool: apply_drop_shadow
+      success: true
+      result:
+        success: true
+        operation: apply_drop_shadow
+        message: Drop shadow applied (offset 2.0,2.0, blur 2.0)
+        error: null
+        data:
+          offset_x: 2.0
+          offset_y: 2.0
+          blur_radius: 2.0
+          color: black
+          opacity: 0.5
+        timestamp: 1782382829.1395378
+    failed_tools: []
+- id: C-100-pdb-contract
+  status: pass
+  evidence:
+    pdb_probe:
+      ok: true
+      data:
+        required:
+          file-png-export: true
+          file-jpeg-export: true
+          gimp-image-autocrop: true
+        script-fu-drop-shadow: false
+    tool_probe:
+      calls:
+      - tool: search_pdb
+        success: true
+        result:
+          success: true
+          operation: search_pdb
+          message: Found 3 procedure(s) matching 'png'
+          error: null
+          data:
+            query: png
+            procedures:
+            - file-png-export
+            - file-png-load
+            - file-apng-load
+          timestamp: 1782382829.143378
+      - tool: execute_python
+        success: true
+        result:
+          success: true
+          operation: execute_python
+          message: Code executed successfully
+          error: null
+          data:
+            outputs:
+            - ''
+            - '42
+
+              '
+            lines_executed: 2
+          timestamp: 1782382829.1437366
+      - tool: execute_python
+        success: true
+        result:
+          success: true
+          operation: execute_python
+          message: Code executed successfully
+          error: null
+          data:
+            outputs:
+            - '41
+
+              '
+            lines_executed: 1
+          timestamp: 1782382829.1440208
+      failed_tools: []
+- id: C-110-history-contract
+  status: pass
+  evidence:
+    calls:
+    - tool: create_image
+      success: true
+      result:
+        success: true
+        operation: create_image
+        message: Created 120x90 rgb image
+        error: null
+        data:
+          width: 120
+          height: 90
+          color_mode: rgb
+          fill: white
+        timestamp: 1782382829.1545749
+    - tool: begin_undo_group
+      success: true
+      result:
+        success: true
+        operation: begin_undo_group
+        message: Undo group 'compat-history' started
+        error: null
+        data:
+          name: compat-history
+        timestamp: 1782382829.155906
+    - tool: draw_line
+      success: true
+      result:
+        success: true
+        operation: draw_line
+        message: Drew line from (5,5) to (90,70)
+        error: null
+        data: null
+        timestamp: 1782382829.1585085
+    - tool: end_undo_group
+      success: true
+      result:
+        success: true
+        operation: end_undo_group
+        message: Undo group ended
+        error: null
+        data: null
+        timestamp: 1782382829.158738
+    - tool: undo
+      success: false
+      result:
+        success: false
+        operation: undo
+        message: null
+        error: Undo is not available via the GIMP 3.0 plugin API. Use Ctrl+Z in GIMP
+          directly.
+        data:
+          error_code: optional_capability_unavailable
+          optional_capability: true
+          capability: programmatic image undo
+          procedure: gimp-image-undo
+          recommendation: Use Ctrl+Z in GIMP directly or group changes with begin_undo_group/end_undo_group.
+        timestamp: 1782382829.1597776
+    - tool: redo
+      success: false
+      result:
+        success: false
+        operation: redo
+        message: null
+        error: Redo is not available via the GIMP 3.0 plugin API. Use Ctrl+Y in GIMP
+          directly.
+        data:
+          error_code: optional_capability_unavailable
+          optional_capability: true
+          capability: programmatic image redo
+          procedure: gimp-image-redo
+          recommendation: Use Ctrl+Y in GIMP directly after verifying the active image
+            state.
+        timestamp: 1782382829.1604695
+    failed_tools: []
+    accepted_optional_failures:
+    - tool: undo
+      reason: Undo is not available via the GIMP 3.0 plugin API. Use Ctrl+Z in GIMP
+        directly.
+      capability: programmatic image undo
+      procedure: gimp-image-undo
+      recommendation: Use Ctrl+Z in GIMP directly or group changes with begin_undo_group/end_undo_group.
+    - tool: redo
+      reason: Redo is not available via the GIMP 3.0 plugin API. Use Ctrl+Y in GIMP
+        directly.
+      capability: programmatic image redo
+      procedure: gimp-image-redo
+      recommendation: Use Ctrl+Y in GIMP directly after verifying the active image
+        state.
+    optional_capability_policy: known unavailable optional capabilities do not fail
+      the transport smoke
+- id: C-120-error-contract
+  status: pass
+  evidence:
+    invalid_bridge_command: 'Unknown command type: definitely_invalid_compat_command'
+    invalid_tool_calls:
+    - tool: set_active_layer
+      success: false
+      result:
+        success: false
+        operation: set_active_layer
+        message: null
+        error: Layer 'does-not-exist' not found
+        data: null
+        timestamp: 1782382829.1630948
+    - tool: rotate_image
+      success: false
+      result:
+        success: false
+        operation: rotate_image
+        message: null
+        error: angle must be 90, 180, or 270 (got 13)
+        data: null
+        timestamp: 1782382829.1631198
+- id: C-130-docs-contract
+  status: pass
+  evidence:
+    tool_count_ok: true
+    stale_3_0_8_claim_absent: true
+    mentions_compatibility_and_3_2_4: true
+- id: C-900-stop-bridge
+  status: pass
+  evidence: stop command accepted
+- id: S-001-yaml-validity
+  status: pass
+  evidence: compat.yml parsed by live runner
+- id: S-010-tool-registry-count
+  status: fail
+  evidence:
+    command: uv run python scripts/compat.py validate
+    output: 'compat validation failed:
+
+      - compat registry missing source tools: brush_inventory, set_paint_context,
+      set_paint_resource
+
+      - expected_registry_total=143 but source has 146 @mcp.tool entries
+
+      '
+- id: S-020-unit-suite
+  status: fail
+  evidence:
+    command: uv run pytest --no-cov
+    output: "...                                  [ 13%]\ntests/test_config.py .......\
+      \                                             [ 15%]\ntests/test_content_text_inspect_tools.py\
+      \ ...                             [ 15%]\ntests/test_context_geometry_tools.py\
+      \ ....                                [ 16%]\ntests/test_docs.py F....F....\
+      \                                            [ 18%]\ntests/test_docs_pdf.py\
+      \ .                                                 [ 18%]\ntests/test_features_roadmap.py\
+      \ .......                                   [ 19%]\ntests/test_flow_cli.py ....\
+      \                                              [ 20%]\ntests/test_flow_models.py\
+      \ ........                                       [ 21%]\ntests/test_flow_runner.py\
+      \ .......                                        [ 22%]\ntests/test_flow_store.py\
+      \ .....                                           [ 23%]\ntests/test_flow_tools.py\
+      \ ...                                             [ 24%]\ntests/test_gimp_dev_integration.py\
+      \ .........                             [ 25%]\ntests/test_guide_grid_tools.py\
+      \ ..                                        [ 25%]\ntests/test_layer_group_channel_tools.py\
+      \ .....                            [ 26%]\ntests/test_layer_report_export_checklist_tools.py\
+      \ ...                    [ 27%]\ntests/test_live_spawn_setup.py ...................\
+      \                       [ 30%]\ntests/test_macro_tools.py ....             \
+      \                              [ 31%]\ntests/test_models/test_common.py ......................\
+      \                  [ 34%]\ntests/test_motion_blur_tools.py ..              \
+      \                         [ 35%]\ntests/test_perspective_shear_tools.py .. \
+      \                                [ 35%]\ntests/test_phase2.py ......................................\
+      \              [ 42%]\ntests/test_project_script.py ....                   \
+      \                     [ 42%]\ntests/test_remaining_feature_tools.py ...... \
+      \                            [ 43%]\ntests/test_sample_pixels_tools.py ... \
+      \                                   [ 44%]\ntests/test_server.py ..        \
+      \                                          [ 44%]\ntests/test_snapshot_assertion_tools.py\
+      \ ....                              [ 45%]\ntests/test_stroke_bucket_selection_tools.py\
+      \ .......                      [ 46%]\ntests/test_tool_generated_code_paths.py\
+      \ ................................ [ 52%]\n........................................................................\
+      \ [ 64%]\n.......................................................          \
+      \        [ 73%]\ntests/test_tool_invocation_matrix.py ...................................\
+      \ [ 79%]\n........................................................................\
+      \ [ 92%]\n.............................................                    \
+      \        [100%]\n\n=================================== FAILURES ===================================\n\
+      _________________ test_compat_tool_extractor_counts_async_defs _________________\n\
+      \n    def test_compat_tool_extractor_counts_async_defs() -> None:\n        names\
+      \ = compat.flatten_registry(compat.extract_source_tool_registry())\n    \n>\
+      \       assert len(names) == 143\nE       AssertionError: assert 146 == 143\n\
+      E        +  where 146 = len(['begin_edit_transaction', 'end_edit_transaction',\
+      \ 'rollback_transaction', 'adjust_brightness_contrast', 'adjust_hue_saturation',\
+      \ 'adjust_color_balance', ...])\n\ntests/test_324_static_verification.py:102:\
+      \ AssertionError\n__________________ test_inspection_tools_are_async_coroutines\
+      \ __________________\n\n    def test_inspection_tools_are_async_coroutines()\
+      \ -> None:\n        tools = _registered_tools()\n    \n>       assert set(tools)\
+      \ == {\n            \"compare_snapshots\",\n            \"assert_image_state\"\
+      ,\n            \"session_capabilities\",\n            \"observe_document_state\"\
+      ,\n            \"get_layer_tree_detailed\",\n            \"observe_region\"\
+      ,\n            \"content_bounds\",\n            \"text_layer_introspection\"\
+      ,\n            \"generate_layer_report\",\n            \"prepare_export_checklist\"\
+      ,\n            \"create_contact_sheet\",\n            \"get_image_bitmap\",\n\
+      \            \"get_image_metadata\",\n            \"get_context_state\",\n \
+      \           \"get_gimp_info\",\n        }\nE       AssertionError: assert {'assert_imag..._report',\
+      \ ...} == {'assert_imag...t_state', ...}\nE         \nE         Extra items\
+      \ in the left set:\nE         'explain_current_context'\nE         'measure_geometry'\n\
+      E         Use -v to get more diff\n\ntests/test_async_inspect_tools.py:56: AssertionError\n\
+      ______________ test_all_registered_tools_are_coroutine_functions _______________\n\
+      \n    def test_all_registered_tools_are_coroutine_functions() -> None:\n   \
+      \     tools = registered_tools()\n    \n>       assert len(tools) == 143\nE\
+      \       AssertionError: assert 146 == 143\nE        +  where 146 = len({'begin_edit_transaction':\
+      \ <function register_agent_tools.<locals>.begin_edit_transaction at 0x7fc8d946f100>,\
+      \ 'end_edi...ction at 0x7fc8d78d7560>, 'create_image': <function register_image_tools.<locals>.create_image\
+      \ at 0x7fc8d78d7740>, ...})\n\ntests/test_async_tool_registry.py:264: AssertionError\n\
+      __________ test_async_native_bridge_can_drive_registered_tool_surface __________\n\
+      \n    @pytest.mark.asyncio\n    async def test_async_native_bridge_can_drive_registered_tool_surface()\
+      \ -> None:\n        class ScriptedAsyncBridge(AsyncNoopBridge):\n          \
+      \  def __init__(self) -> None:\n                self.calls: list[tuple[str,\
+      \ object]] = []\n    \n            async def async_get_gimp_info(self) -> PluginResponse:\n\
+      \                self.calls.append((\"get_gimp_info\", None))\n            \
+      \    return {\"status\": \"success\", \"results\": {\"gimp\": {\"version\":\
+      \ \"3.2.4\"}}}\n    \n            async def async_execute_python(\n        \
+      \        self,\n                code_lines: list[str],\n                timeout:\
+      \ float | None = None,\n            ) -> PluginResponse:\n                self.calls.append((\"\
+      execute_python\", code_lines))\n                return {\"status\": \"success\"\
+      , \"results\": [\"ok\"]}\n    \n            async def async_get_image_metadata(self)\
+      \ -> PluginResponse:\n                self.calls.append((\"get_image_metadata\"\
+      , None))\n                return {\"status\": \"success\", \"results\": {\"\
+      basic\": {\"width\": 96, \"height\": 64}}}\n    \n            async def async_get_image_bitmap(\n\
+      \                self,\n                max_width: int | None = None,\n    \
+      \            max_height: int | None = None,\n                region: BitmapRegion\
+      \ | None = None,\n            ) -> PluginResponse:\n                self.calls.append(\n\
+      \                    (\n                        \"get_image_bitmap\",\n    \
+      \                    {\"max_width\": max_width, \"max_height\": max_height,\
+      \ \"region\": region},\n                    )\n                )\n         \
+      \       return {\n                    \"status\": \"success\",\n           \
+      \         \"results\": {\"image_data\": \"iVBORw0KGgo=\", \"width\": 64, \"\
+      height\": 64},\n                }\n    \n        bridge = ScriptedAsyncBridge()\n\
+      \        tools = registered_tools(bridge)\n    \n        create_result = await\
+      \ tools[\"create_image\"](96, 64, \"rgb\", \"white\")\n        info_result =\
+      \ await tools[\"get_image_info\"]()\n        bitmap_result = await tools[\"\
+      get_image_bitmap\"](64, 64)\n        gimp_result = await tools[\"get_gimp_info\"\
+      ]()\n    \n        assert create_result[\"success\"] is True\n        assert\
+      \ info_result[\"success\"] is True\n        assert bitmap_result[\"success\"\
+      ] is True\n        assert gimp_result[\"success\"] is True\n>       assert len(tools)\
+      \ == 143\nE       AssertionError: assert 146 == 143\nE        +  where 146 =\
+      \ len({'begin_edit_transaction': <function register_agent_tools.<locals>.begin_edit_transaction\
+      \ at 0x7fc8d75bb4c0>, 'end_edi...ction at 0x7fc8d75bb600>, 'create_image': <function\
+      \ register_image_tools.<locals>.create_image at 0x7fc8d75bb6a0>, ...})\n\ntests/test_async_tool_registry.py:442:\
+      \ AssertionError\n______________ test_compat_contract_matches_source_tool_registry\
+      \ _______________\n\n    def test_compat_contract_matches_source_tool_registry()\
+      \ -> None:\n        contract = compat.load_contract()\n    \n        failures\
+      \ = compat.validate_contract(contract)\n    \n>       assert failures == []\n\
+      E       AssertionError: assert ['compat regi...tool entries'] == []\nE     \
+      \    \nE         Left contains 2 more items, first extra item: 'compat registry\
+      \ missing source tools: brush_inventory, set_paint_context, set_paint_resource'\n\
+      E         Use -v to get more diff\n\ntests/test_compat_contract.py:15: AssertionError\n\
+      ___________________ test_source_tool_registry_current_total ____________________\n\
+      \n    def test_source_tool_registry_current_total() -> None:\n        registry\
+      \ = compat.extract_source_tool_registry()\n        names = compat.flatten_registry(registry)\n\
+      \    \n>       assert len(names) == 143\nE       AssertionError: assert 146\
+      \ == 143\nE        +  where 146 = len(['begin_edit_transaction', 'end_edit_transaction',\
+      \ 'rollback_transaction', 'adjust_brightness_contrast', 'adjust_hue_saturation',\
+      \ 'adjust_color_balance', ...])\n\ntests/test_compat_contract.py:22: AssertionError\n\
+      _______________ test_extract_tool_docs_matches_runtime_contract ________________\n\
+      \n    def test_extract_tool_docs_matches_runtime_contract() -> None:\n     \
+      \   tool_docs = docs.extract_tool_docs()\n        names = {tool.name for tool\
+      \ in tool_docs}\n    \n>       assert len(tool_docs) == 143\nE       AssertionError:\
+      \ assert 146 == 143\nE        +  where 146 = len([ToolDoc(module='agent_tools',\
+      \ module_title='Agent Tools', source_path=PosixPath('/home/user/code/gimp-mcp/src/gimp_mc...meters=('range',\
+      \ 'cyan_red', 'magenta_green', 'yellow_blue', 'preserve_luminosity', 'layer_name',\
+      \ 'layer_index')), ...])\n\ntests/test_docs.py:19: AssertionError\n_______ test_generated_tool_reference_contains_signatures_and_docstrings\
+      \ _______\n\ntmp_path = PosixPath('/tmp/pytest-of-user/pytest-160/test_generated_tool_reference_0')\n\
+      \n    def test_generated_tool_reference_contains_signatures_and_docstrings(tmp_path:\
+      \ Path) -> None:\n        written = docs.write_generated_docs(tmp_path)\n  \
+      \      docs.render_docstring_audit(tmp_path)\n    \n        tool_index = tmp_path\
+      \ / \"tools\" / \"index.md\"\n        inspect_page = tmp_path / \"tools\" /\
+      \ \"inspect_tools.md\"\n        api_index = tmp_path / \"api\" / \"index.md\"\
+      \n        protocol_page = tmp_path / \"api\" / \"protocol.md\"\n        tool_types_page\
+      \ = tmp_path / \"api\" / \"tools-types.md\"\n    \n        assert tool_index\
+      \ in written\n        assert inspect_page in written\n        assert api_index\
+      \ in written\n        assert protocol_page in written\n        assert tool_types_page\
+      \ in written\n>       assert \"Total tools: **143**\" in tool_index.read_text()\n\
+      E       AssertionError: assert 'Total tools: **143**' in '# MCP Tool Reference\\\
+      n\\nThis section is generated from the nested `@mcp.tool()` handler docstrings\
+      \ in `src/gimp_mcp_p...nt.\\n- [`offset_layer`](transform_tools.md#offset-layer)\
+      \ — Move a layer by an offset (reposition within the canvas).\\n'\nE       \
+      \ +  where '# MCP Tool Reference\\n\\nThis section is generated from the nested\
+      \ `@mcp.tool()` handler docstrings in `src/gimp_mcp_p...nt.\\n- [`offset_layer`](transform_tools.md#offset-layer)\
+      \ — Move a layer by an offset (reposition within the canvas).\\n' = read_text()\n\
+      E        +    where read_text = PosixPath('/tmp/pytest-of-user/pytest-160/test_generated_tool_reference_0/tools/index.md').read_text\n\
+      \ntests/test_docs.py:117: AssertionError\n=========================== short\
+      \ test summary info ============================\nFAILED tests/test_324_static_verification.py::test_compat_tool_extractor_counts_async_defs\n\
+      FAILED tests/test_async_inspect_tools.py::test_inspection_tools_are_async_coroutines\n\
+      FAILED tests/test_async_tool_registry.py::test_all_registered_tools_are_coroutine_functions\n\
+      FAILED tests/test_async_tool_registry.py::test_async_native_bridge_can_drive_registered_tool_surface\n\
+      FAILED tests/test_compat_contract.py::test_compat_contract_matches_source_tool_registry\n\
+      FAILED tests/test_compat_contract.py::test_source_tool_registry_current_total\n\
+      FAILED tests/test_docs.py::test_extract_tool_docs_matches_runtime_contract -\
+      \ ...\nFAILED tests/test_docs.py::test_generated_tool_reference_contains_signatures_and_docstrings\n\
+      ======================== 8 failed, 575 passed in 49.29s ========================\n"
+- id: S-030-quality-gate
+  status: fail
+  evidence:
+    command: uv run python scripts/project.py check
+    output: '+ uv run python scripts/docs.py audit
+
+      tool docstring audit ok
+
+      + uv run ruff format --check .
+
+      Would reformat: gimp_plugin/gimp_mcp_plugin.py
+
+      Would reformat: src/gimp_mcp_pro/tools/color_tools.py
+
+      Would reformat: src/gimp_mcp_pro/tools/inspect_tools.py
+
+      Would reformat: tests/test_live_spawn_setup.py
+
+      Would reformat: tests/test_tool_generated_code_paths.py
+
+      Would reformat: tests/test_tool_invocation_matrix.py
+
+      6 files would be reformatted, 88 files already formatted
+
+      '
+- id: S-040-doc-claim-gate
+  status: pass
+  evidence:
+    tool_count_ok: true
+    stale_3_0_8_claim_absent: true
+    mentions_compatibility_and_3_2_4: true
 summary:
   status: failed
-  passed: 1
-  failed: 2
+  passed: 19
+  failed: 5
   skipped: 0
   waived: 0
   claim_allowed: false

@@ -91,7 +91,7 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 137
+    current_total: 146
     by_module:
       agent_tools: 3
       image_tools: 10
@@ -109,7 +109,7 @@ known_repo_observations:
       gimp_dev_tools: 2
       flow_tools: 11
     reconciliation_required: README count is reconciled with current code registering
-      137 unique MCP tool decorators. The compatibility gate MUST keep the public
+      146 unique MCP tool decorators. The compatibility gate MUST keep the public
       count synchronized with the runtime registry before publishing a 3.2.4 support
       claim.
   plugin_entrypoint:
@@ -523,7 +523,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 137
+  expected_registry_total: 146
   registry:
     image:
     - create_image
@@ -601,6 +601,12 @@ mcp_tool_contract:
     - get_image_metadata
     - get_context_state
     - get_gimp_info
+    - content_bounds
+    - text_layer_introspection
+    - explain_current_context
+    - measure_geometry
+    - generate_layer_report
+    - prepare_export_checklist
     - create_contact_sheet
     history:
     - undo
@@ -659,6 +665,9 @@ mcp_tool_contract:
     - posterize
     - color_to_alpha
     - auto_white_balance
+    - brush_inventory
+    - set_paint_resource
+    - set_paint_context
     - list_gimp_resources
     - get_colors
     - swap_colors

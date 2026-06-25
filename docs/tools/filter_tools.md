@@ -17,7 +17,7 @@ Source module: `src/gimp_mcp_pro/tools/filter_tools.py`
 
 ## `preview_filter` {#preview-filter}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:133`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:146`
 
 ```python
 async def preview_filter(filter: str, parameters: dict[str, object] | None = None, preview_mode: str = 'temporary_layer', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -64,7 +64,7 @@ Contract:
 
 ## `apply_gaussian_blur` {#apply-gaussian-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:185`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:200`
 
 ```python
 async def apply_gaussian_blur(radius_x: float = 5.0, radius_y: float | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -109,7 +109,7 @@ Returns:
 
 ## `apply_motion_blur` {#apply-motion-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:228`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:243`
 
 ```python
 async def apply_motion_blur(blur_type: str = 'linear', length: float = 10.0, angle: float = 0.0, center_x: float = 0.0, center_y: float = 0.0, factor: float = 0.1, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -158,7 +158,7 @@ Returns:
 
 ## `apply_unsharp_mask` {#apply-unsharp-mask}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:309`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:324`
 
 ```python
 async def apply_unsharp_mask(amount: float = 0.5, radius: float = 3.0, threshold: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -205,7 +205,7 @@ Returns:
 
 ## `apply_pixelize` {#apply-pixelize}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:352`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:367`
 
 ```python
 async def apply_pixelize(block_width: int = 10, block_height: int | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -249,7 +249,7 @@ Returns:
 
 ## `apply_edge_detect` {#apply-edge-detect}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:394`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:409`
 
 ```python
 async def apply_edge_detect(method: str = 'sobel', amount: float = 1.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -294,7 +294,7 @@ Returns:
 
 ## `apply_emboss` {#apply-emboss}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:436`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:451`
 
 ```python
 async def apply_emboss(azimuth: float = 315.0, elevation: float = 45.0, depth: int = 2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -339,7 +339,7 @@ Returns:
 
 ## `apply_noise` {#apply-noise}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:476`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:491`
 
 ```python
 async def apply_noise(amount: float = 0.2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -381,7 +381,7 @@ Returns:
 
 ## `apply_median` {#apply-median}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:513`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:528`
 
 ```python
 async def apply_median(radius: int = 3, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -422,7 +422,7 @@ Returns:
 
 ## `apply_drop_shadow` {#apply-drop-shadow}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:548`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:563`
 
 ```python
 async def apply_drop_shadow(offset_x: float = 4.0, offset_y: float = 4.0, blur_radius: float = 8.0, color: str = 'black', opacity: float = 60.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
