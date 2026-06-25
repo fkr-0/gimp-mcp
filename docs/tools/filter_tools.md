@@ -5,6 +5,7 @@ Source module: `src/gimp_mcp_pro/tools/filter_tools.py`
 | Tool | Summary | Parameters |
 |---|---|---:|
 | [`preview_filter`](#preview-filter) | Apply a supported filter to a temporary preview layer. | 5 |
+| [`commit_filter_preview`](#commit-filter-preview) | Commit or discard a temporary filter preview layer. | 3 |
 | [`apply_gaussian_blur`](#apply-gaussian-blur) | Apply Gaussian blur to a layer. | 4 |
 | [`apply_motion_blur`](#apply-motion-blur) | Apply linear, circular, or zoom motion blur to a layer. | 8 |
 | [`apply_unsharp_mask`](#apply-unsharp-mask) | Sharpen a layer using unsharp mask. | 5 |
@@ -17,7 +18,7 @@ Source module: `src/gimp_mcp_pro/tools/filter_tools.py`
 
 ## `preview_filter` {#preview-filter}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:146`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:194`
 
 ```python
 async def preview_filter(filter: str, parameters: dict[str, object] | None = None, preview_mode: str = 'temporary_layer', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -62,9 +63,52 @@ Contract:
     The original drawable is not filtered. A copied preview layer receives
     the GEGL filter so the caller can inspect before committing.
 
+## `commit_filter_preview` {#commit-filter-preview}
+
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:248`
+
+```python
+async def commit_filter_preview(preview_id: str, action: str, committed_name: str | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `preview_id` | Preview layer name or ID returned by a preview workflow. |
+| `action` | ``commit`` to promote the layer, or ``discard`` to remove it. |
+| `committed_name` | Optional final layer name when committing. |
+
+## Returns
+
+Operation result with commit/discard metadata. Contract: Discard always removes the temporary preview layer. Commit is wrapped in a GIMP undo group transaction and never calls export or save APIs.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Commit or discard a temporary filter preview layer.
+
+Args:
+    preview_id: Preview layer name or ID returned by a preview workflow.
+    action: ``commit`` to promote the layer, or ``discard`` to remove it.
+    committed_name: Optional final layer name when committing.
+
+Returns:
+    Operation result with commit/discard metadata.
+
+Contract:
+    Discard always removes the temporary preview layer. Commit is wrapped
+    in a GIMP undo group transaction and never calls export or save APIs.
+
 ## `apply_gaussian_blur` {#apply-gaussian-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:200`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:300`
 
 ```python
 async def apply_gaussian_blur(radius_x: float = 5.0, radius_y: float | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -109,7 +153,7 @@ Returns:
 
 ## `apply_motion_blur` {#apply-motion-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:243`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:343`
 
 ```python
 async def apply_motion_blur(blur_type: str = 'linear', length: float = 10.0, angle: float = 0.0, center_x: float = 0.0, center_y: float = 0.0, factor: float = 0.1, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -158,7 +202,7 @@ Returns:
 
 ## `apply_unsharp_mask` {#apply-unsharp-mask}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:324`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:424`
 
 ```python
 async def apply_unsharp_mask(amount: float = 0.5, radius: float = 3.0, threshold: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -205,7 +249,7 @@ Returns:
 
 ## `apply_pixelize` {#apply-pixelize}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:367`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:467`
 
 ```python
 async def apply_pixelize(block_width: int = 10, block_height: int | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -249,7 +293,7 @@ Returns:
 
 ## `apply_edge_detect` {#apply-edge-detect}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:409`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:509`
 
 ```python
 async def apply_edge_detect(method: str = 'sobel', amount: float = 1.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -294,7 +338,7 @@ Returns:
 
 ## `apply_emboss` {#apply-emboss}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:451`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:551`
 
 ```python
 async def apply_emboss(azimuth: float = 315.0, elevation: float = 45.0, depth: int = 2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -339,7 +383,7 @@ Returns:
 
 ## `apply_noise` {#apply-noise}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:491`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:591`
 
 ```python
 async def apply_noise(amount: float = 0.2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -381,7 +425,7 @@ Returns:
 
 ## `apply_median` {#apply-median}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:528`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:628`
 
 ```python
 async def apply_median(radius: int = 3, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -422,7 +466,7 @@ Returns:
 
 ## `apply_drop_shadow` {#apply-drop-shadow}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:563`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:663`
 
 ```python
 async def apply_drop_shadow(offset_x: float = 4.0, offset_y: float = 4.0, blur_radius: float = 8.0, color: str = 'black', opacity: float = 60.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult

@@ -337,6 +337,7 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "content_bounds": {"target": "active_layer", "threshold": 0.05, "include_sample_points": True},
     "create_checkpoint": {"label": "matrix checkpoint", "include_xcf_copy": False},
     "crop_image": {"x": 1, "y": 2, "width": 32, "height": 24},
+    "commit_filter_preview": {"preview_id": "Preview: gegl:gaussian-blur", "action": "commit", "committed_name": "Committed blur"},
     "delete_layer": {"layer_index": 0},
     "delete_guide": {"guide_id": 7},
     "deactivate_flow": {"flow_id": "prepare-product-image"},
@@ -462,6 +463,7 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
         "background": "#ffffff",
     },
     "set_paint_resource": {"resource_type": "brush", "name": "2. Hardness 050"},
+    "smart_crop_or_resize": {"mode": "crop", "target_size": {"width": 320, "height": 200}, "anchor": "center", "dry_run": True},
     "set_foreground_color": {"color": "#000000"},
     "set_layer_mask_state": {
         "edit_mask": True,

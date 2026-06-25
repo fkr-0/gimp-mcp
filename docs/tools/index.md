@@ -5,14 +5,14 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **146**
+Total tools: **148**
 
 | Category | Tools | Page |
 |---|---:|---|
 | Agent Tools | 3 | [agent_tools](agent_tools.md) |
 | Color Adjustments | 20 | [color_tools](color_tools.md) |
 | Drawing and Text | 12 | [drawing_tools](drawing_tools.md) |
-| Filters and Effects | 10 | [filter_tools](filter_tools.md) |
+| Filters and Effects | 11 | [filter_tools](filter_tools.md) |
 | Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
 | gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
 | History | 6 | [history_tools](history_tools.md) |
@@ -23,7 +23,7 @@ Total tools: **146**
 | PDB and Escape Hatch | 2 | [pdb_tools](pdb_tools.md) |
 | Selections | 14 | [selection_tools](selection_tools.md) |
 | Target Resolution | 2 | [target_tools](target_tools.md) |
-| Transforms | 13 | [transform_tools](transform_tools.md) |
+| Transforms | 14 | [transform_tools](transform_tools.md) |
 
 ## Tool inventory
 
@@ -74,6 +74,7 @@ Total tools: **146**
 ### Filters and Effects
 
 - [`preview_filter`](filter_tools.md#preview-filter) — Apply a supported filter to a temporary preview layer.
+- [`commit_filter_preview`](filter_tools.md#commit-filter-preview) — Commit or discard a temporary filter preview layer.
 - [`apply_gaussian_blur`](filter_tools.md#apply-gaussian-blur) — Apply Gaussian blur to a layer.
 - [`apply_motion_blur`](filter_tools.md#apply-motion-blur) — Apply linear, circular, or zoom motion blur to a layer.
 - [`apply_unsharp_mask`](filter_tools.md#apply-unsharp-mask) — Sharpen a layer using unsharp mask.
@@ -213,6 +214,7 @@ Total tools: **146**
 - [`flip_image`](transform_tools.md#flip-image) — Flip the entire image.
 - [`flip_layer`](transform_tools.md#flip-layer) — Flip a single layer.
 - [`crop_to_selection`](transform_tools.md#crop-to-selection) — Crop the image to the current selection bounds.
+- [`smart_crop_or_resize`](transform_tools.md#smart-crop-or-resize) — Safely crop, pad, or resize with explicit anchors and dry-run support.
 - [`crop_image`](transform_tools.md#crop-image) — Crop the image to a specific rectangle.
 - [`autocrop_image`](transform_tools.md#autocrop-image) — Automatically crop the image to remove border whitespace/transparency.
 - [`resize_canvas`](transform_tools.md#resize-canvas) — Resize the image canvas without scaling content.

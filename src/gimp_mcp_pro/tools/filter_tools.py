@@ -139,6 +139,54 @@ def _preview_filter_spec(
     raise ValueError(f"Unsupported filter: {filter_name}")
 
 
+
+def _commit_filter_preview_code(
+    preview_id: str,
+    action: str,
+    committed_name: str | None,
+) -> list[str]:
+    """Generate action-specific code that commits or discards a preview layer."""
+    code = [
+        "from gi.repository import Gimp",
+        "import json",
+        "# __gimp_mcp_commit_filter_preview__",
+        f"preview_id = {py_literal(preview_id)}",
+        f"action = {py_literal(action)}",
+        f"committed_name = {py_literal(committed_name or preview_id)}",
+        "images = Gimp.get_images()",
+        "if not images: raise RuntimeError('No images are open')",
+        "image = images[0]",
+        "layers = list(image.get_layers())",
+        "preview_layer = None",
+        "for layer in layers:\n"
+        "    layer_name = layer.get_name()\n"
+        "    layer_id = str(layer.get_id()) if hasattr(layer, 'get_id') else ''\n"
+        "    if layer_name == preview_id or layer_id == preview_id:\n"
+        "        preview_layer = layer\n"
+        "        break",
+        "if preview_layer is None: raise RuntimeError(f'Preview layer not found: {preview_id}')",
+    ]
+    if action == "discard":
+        code += [
+            "image.remove_layer(preview_layer)",
+            "result = {'status': 'discarded', 'preview_id': preview_id, 'temporary_layer_removed': True}",
+        ]
+    else:
+        code += [
+            "image.undo_group_start()",
+            "try:",
+            f"    preview_layer.set_name({py_literal(committed_name or preview_id)})",
+            "    result = {'status': 'committed', 'preview_id': preview_id, 'committed_name': committed_name, 'transaction_wrapped': True}",
+            "finally:",
+            "    image.undo_group_end()",
+        ]
+    code += [
+        "Gimp.displays_flush()",
+        "print(json.dumps(result))",
+    ]
+    return code
+
+
 def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all filter/effect tools with the MCP server."""
 
@@ -195,6 +243,58 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="preview_filter", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def commit_filter_preview(
+        preview_id: str,
+        action: str,
+        committed_name: str | None = None,
+    ) -> ToolResult:
+        """Commit or discard a temporary filter preview layer.
+
+        Args:
+            preview_id: Preview layer name or ID returned by a preview workflow.
+            action: ``commit`` to promote the layer, or ``discard`` to remove it.
+            committed_name: Optional final layer name when committing.
+
+        Returns:
+            Operation result with commit/discard metadata.
+
+        Contract:
+            Discard always removes the temporary preview layer. Commit is wrapped
+            in a GIMP undo group transaction and never calls export or save APIs.
+        """
+        normalized_action = action.strip().lower().replace("-", "_")
+        if normalized_action not in {"commit", "discard"}:
+            return OperationResult.fail(
+                operation="commit_filter_preview",
+                error="action must be commit or discard",
+            ).model_dump()
+        if not preview_id.strip():
+            return OperationResult.fail(
+                operation="commit_filter_preview",
+                error="preview_id is required",
+            ).model_dump()
+        code = _commit_filter_preview_code(
+            preview_id.strip(), normalized_action, committed_name
+        )
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="commit_filter_preview",
+                message=f"Filter preview {normalized_action} requested",
+                data={
+                    "preview_id": preview_id,
+                    "action": normalized_action,
+                    "committed_name": committed_name,
+                    "transaction_wrapped": normalized_action == "commit",
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="commit_filter_preview", error=str(e)
+            ).model_dump()
+
 
     @mcp.tool()
     async def apply_gaussian_blur(

@@ -583,7 +583,7 @@ Returns:
 
 ## `set_paint_context` {#set-paint-context}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1010`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1008`
 
 ```python
 async def set_paint_context(brush: str | None = None, size: float | None = None, opacity: float | None = None, dynamics: str | None = None, pattern: str | None = None, gradient: str | None = None, foreground: str | None = None, background: str | None = None) -> ToolResult
@@ -632,7 +632,7 @@ Returns:
 
 ## `list_gimp_resources` {#list-gimp-resources}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1072`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1069`
 
 ```python
 async def list_gimp_resources(resource_type: str = 'all', limit: int = 100) -> ToolResult
@@ -669,7 +669,7 @@ Returns:
 
 ## `get_colors` {#get-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1153`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1150`
 
 ```python
 async def get_colors() -> ToolResult
@@ -699,7 +699,7 @@ Returns:
 
 ## `swap_colors` {#swap-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1200`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1197`
 
 ```python
 async def swap_colors() -> ToolResult
@@ -725,7 +725,7 @@ Returns:
 
 ## `analyze_color_palette` {#analyze-color-palette}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1220`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1217`
 
 ```python
 async def analyze_color_palette(max_colors: int = 8, ignore_transparent: bool = True, region: dict[str, Any] | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -771,7 +771,7 @@ Contract:
 
 ## `sample_pixels` {#sample-pixels}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1293`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1290`
 
 ```python
 async def sample_pixels(points: list[dict[str, Any]] | None = None, grid: dict[str, Any] | None = None, sample_merged: bool = False, sample_average: bool = False, average_radius: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -818,7 +818,7 @@ Returns:
 
 ## `sample_color` {#sample-color}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1366`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1363`
 
 ```python
 async def sample_color(x: int, y: int, sample_merged: bool = False) -> ToolResult

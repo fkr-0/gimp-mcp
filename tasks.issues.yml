@@ -180,14 +180,16 @@ issues:
   - feature_id: FEAT-027
     tool: brush_inventory
     status: partial
+  - feature_id: FEAT-018
+    tool: commit_filter_preview
+  - feature_id: FEAT-025
+    tool: smart_crop_or_resize
   remaining_open_features:
   - FEAT-009
-  - FEAT-018
   - FEAT-020
   - FEAT-022
   - FEAT-023
   - FEAT-024
-  - FEAT-025
   - FEAT-027
   - FEAT-029
   - FEAT-030
@@ -212,7 +214,7 @@ issues:
     tools.
   - Implement FEAT-005 sample_pixels with explicit point and grid sampling.
   - Implement FEAT-014 compare_snapshots and FEAT-015 assert_image_state.
-  - Update public tool count and compatibility/docs contracts to 146 tools.
+  - Update public tool count and compatibility/docs contracts to 148 tools.
   - Continue with remaining P1 features after completing FEAT-032 dry_run_macro and
     FEAT-033 run_macro_transaction.
   - Keep every new public tool in generated-code and invocation matrices.
@@ -221,4 +223,4 @@ issues:
     state.
   - New feature work follows RED/GREEN verification.
   - Focused, matrix, static, and full offline test suites pass before completion.
-  registry_total: 146
+  registry_total: 148

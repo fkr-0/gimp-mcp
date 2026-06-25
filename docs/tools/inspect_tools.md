@@ -105,7 +105,7 @@ Contract:
 
 ## `generate_layer_report` {#generate-layer-report}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1028`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1027`
 
 ```python
 async def generate_layer_report(include_previews: bool = False, include_warnings: bool = True, include_markdown: bool = False) -> ToolResult
@@ -147,7 +147,7 @@ Contract:
 
 ## `prepare_export_checklist` {#prepare-export-checklist}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1064`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1063`
 
 ```python
 async def prepare_export_checklist(formats: list[str] | None = None, require_alpha: bool = False, require_layers_preserved: bool = False) -> ToolResult
@@ -189,7 +189,7 @@ Contract:
 
 ## `content_bounds` {#content-bounds}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1112`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1111`
 
 ```python
 async def content_bounds(target: str = 'active_layer', threshold: float = 0.0, include_sample_points: bool = False, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -235,7 +235,7 @@ Contract:
 
 ## `text_layer_introspection` {#text-layer-introspection}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1167`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1166`
 
 ```python
 async def text_layer_introspection(layer_name: str | None = None, layer_index: int | None = None, include_font_details: bool = True) -> ToolResult
@@ -277,7 +277,7 @@ Contract:
 
 ## `create_contact_sheet` {#create-contact-sheet}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1204`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1203`
 
 ```python
 async def create_contact_sheet(target: str = 'visible_layers', max_tile_size: int = 128, label_tiles: bool = True, include_hidden_layers: bool = False) -> ToolResult
@@ -322,7 +322,7 @@ Contract:
 
 ## `compare_snapshots` {#compare-snapshots}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1251`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1250`
 
 ```python
 async def compare_snapshots(before: dict[str, Any], after: dict[str, Any], metrics: list[str] | None = None, region: dict[str, Any] | None = None, ignore_transparent: bool = False, tolerance: float = 0.0) -> ToolResult
@@ -373,7 +373,7 @@ Returns:
 
 ## `assert_image_state` {#assert-image-state}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1303`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1302`
 
 ```python
 async def assert_image_state(assertions: list[dict[str, Any]] | None = None, state: dict[str, Any] | None = None) -> ToolResult
@@ -416,7 +416,7 @@ Returns:
 
 ## `session_capabilities` {#session-capabilities}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1370`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1369`
 
 ```python
 async def session_capabilities(include_pdb_probe: bool = True, include_export_probe: bool = True) -> ToolResult
@@ -458,7 +458,7 @@ Returns:
 
 ## `observe_document_state` {#observe-document-state}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1403`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1402`
 
 ```python
 async def observe_document_state(include_thumbnail: bool = False, include_layer_previews: bool = False, max_preview_size: int = 256) -> ToolResult
@@ -502,7 +502,7 @@ Returns:
 
 ## `get_layer_tree_detailed` {#get-layer-tree-detailed}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1461`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1460`
 
 ```python
 async def get_layer_tree_detailed(image_id: int | None = None, include_pixel_bounds: bool = True, include_text_metadata: bool = True) -> ToolResult
@@ -546,7 +546,7 @@ Returns:
 
 ## `observe_region` {#observe-region}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1497`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1496`
 
 ```python
 async def observe_region(x: int, y: int, width: int, height: int, max_size: int = 512, include_histogram: bool = False) -> ToolResult
@@ -596,7 +596,7 @@ Returns:
 
 ## `get_image_bitmap` {#get-image-bitmap}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1574`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1573`
 
 ```python
 async def get_image_bitmap(max_width: int | None = 1024, max_height: int | None = 1024, region_x: int | None = None, region_y: int | None = None, region_width: int | None = None, region_height: int | None = None) -> ToolResult
@@ -649,7 +649,7 @@ Returns:
 
 ## `get_image_metadata` {#get-image-metadata}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1658`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1657`
 
 ```python
 async def get_image_metadata() -> ToolResult
@@ -683,7 +683,7 @@ Returns:
 
 ## `get_context_state` {#get-context-state}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1689`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1688`
 
 ```python
 async def get_context_state() -> ToolResult
@@ -717,7 +717,7 @@ Returns:
 
 ## `get_gimp_info` {#get-gimp-info}
 
-Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1720`
+Source: `src/gimp_mcp_pro/tools/inspect_tools.py:1719`
 
 ```python
 async def get_gimp_info() -> ToolResult

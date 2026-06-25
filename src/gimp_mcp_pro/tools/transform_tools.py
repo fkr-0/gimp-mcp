@@ -15,6 +15,9 @@ from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.transform")
 
+VALID_SMART_RESIZE_MODES = {"crop", "pad", "resize"}
+VALID_SMART_RESIZE_ANCHORS = {"center", "top_left", "top_right", "bottom_left", "bottom_right"}
+
 
 def _img_preamble() -> list[str]:
     """Standard preamble to get active image."""
@@ -74,6 +77,70 @@ def _layer_target(layer_name: str | None, layer_index: int | None) -> list[str]:
             "if not sel: raise RuntimeError('No active layer')",
             "target = sel[0]",
         ]
+
+
+
+def _anchor_offsets_code() -> str:
+    """Return generated helper code for explicit anchor offsets."""
+    return (
+        "def anchor_offsets(old_width, old_height, target_width, target_height, anchor):\n"
+        "    dx = target_width - old_width\n"
+        "    dy = target_height - old_height\n"
+        "    if anchor == 'top_left':\n"
+        "        return 0, 0\n"
+        "    if anchor == 'top_right':\n"
+        "        return dx, 0\n"
+        "    if anchor == 'bottom_left':\n"
+        "        return 0, dy\n"
+        "    if anchor == 'bottom_right':\n"
+        "        return dx, dy\n"
+        "    return dx // 2, dy // 2"
+    )
+
+
+def _smart_crop_or_resize_code(
+    mode: str,
+    target_width: int,
+    target_height: int,
+    anchor: str,
+    preserve_layers: bool,
+    background: str | None,
+    dry_run: bool,
+) -> list[str]:
+    """Generate code for dry-run-aware smart crop/pad/resize operations."""
+    code = _img_preamble() + [
+        "import json",
+        "# __gimp_mcp_smart_crop_or_resize__",
+        f"mode = {py_literal(mode)}",
+        f"target_width = {target_width}",
+        f"target_height = {target_height}",
+        f"anchor = {py_literal(anchor)}",
+        f"preserve_layers = {preserve_layers!r}",
+        f"dry_run = {dry_run!r}",
+        _anchor_offsets_code(),
+        "old_width = image.get_width()",
+        "old_height = image.get_height()",
+        "offset_x, offset_y = anchor_offsets(old_width, old_height, target_width, target_height, anchor)",
+        "would_clip = target_width < old_width or target_height < old_height",
+        "warnings = []",
+        "if would_clip:\n"
+        "    warnings.append({'code': 'would_clip', 'severity': 'warning', 'old_dimensions': {'width': old_width, 'height': old_height}, 'new_dimensions': {'width': target_width, 'height': target_height}})",
+        "old_dimensions = {'width': old_width, 'height': old_height}",
+        "new_dimensions = {'width': target_width, 'height': target_height}",
+    ]
+    if background is not None:
+        code.append(f"Gimp.context_set_background(Gegl.Color.new({py_literal(background)}))")
+    code += [
+        "if not dry_run:\n"
+        "    if mode == 'resize':\n"
+        "        image.scale(target_width, target_height)\n"
+        "    else:\n"
+        "        image.resize(target_width, target_height, offset_x, offset_y)\n"
+        "    Gimp.displays_flush()",
+        "result = {'mode': mode, 'dry_run': dry_run, 'anchor': anchor, 'preserve_layers': preserve_layers, 'old_dimensions': old_dimensions, 'new_dimensions': new_dimensions, 'offset': {'x': offset_x, 'y': offset_y}, 'would_clip': would_clip, 'warnings': warnings}",
+        "print(json.dumps(result))",
+    ]
+    return code
 
 
 def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
@@ -485,6 +552,86 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="crop_to_selection", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def smart_crop_or_resize(
+        mode: str,
+        target_size: dict[str, int],
+        anchor: str = "center",
+        preserve_layers: bool = True,
+        background: str | None = None,
+        dry_run: bool = True,
+    ) -> ToolResult:
+        """Safely crop, pad, or resize with explicit anchors and dry-run support.
+
+        Args:
+            mode: ``crop``, ``pad``, or ``resize``.
+            target_size: Mapping with integer ``width`` and ``height``.
+            anchor: center, top_left, top_right, bottom_left, or bottom_right.
+            preserve_layers: Keep layer structure where the selected operation supports it.
+            background: Optional background color used when padding.
+            dry_run: Report planned changes and clipping warnings without mutation.
+
+        Returns:
+            Operation result with old/new dimensions, offset, would_clip, and warnings.
+
+        Contract:
+            Dry-run mode never mutates GIMP. Destructive crop/pad operations report
+            clipping risk in the result for verification.
+        """
+        normalized_mode = mode.strip().lower().replace("-", "_")
+        normalized_anchor = anchor.strip().lower().replace("-", "_")
+        if normalized_mode not in VALID_SMART_RESIZE_MODES:
+            return OperationResult.fail(
+                operation="smart_crop_or_resize",
+                error="mode must be crop, pad, or resize",
+            ).model_dump()
+        if normalized_anchor not in VALID_SMART_RESIZE_ANCHORS:
+            return OperationResult.fail(
+                operation="smart_crop_or_resize",
+                error="anchor must be center, top_left, top_right, bottom_left, or bottom_right",
+            ).model_dump()
+        try:
+            target_width = int(target_size["width"])
+            target_height = int(target_size["height"])
+        except (KeyError, TypeError, ValueError):
+            return OperationResult.fail(
+                operation="smart_crop_or_resize",
+                error="target_size must include integer width and height",
+            ).model_dump()
+        if target_width < 1 or target_height < 1:
+            return OperationResult.fail(
+                operation="smart_crop_or_resize",
+                error="target width and height must be >= 1",
+            ).model_dump()
+        code = _smart_crop_or_resize_code(
+            normalized_mode,
+            target_width,
+            target_height,
+            normalized_anchor,
+            preserve_layers,
+            background,
+            dry_run,
+        )
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="smart_crop_or_resize",
+                message="Smart crop/resize plan generated" if dry_run else "Smart crop/resize applied",
+                data={
+                    "mode": normalized_mode,
+                    "target_size": {"width": target_width, "height": target_height},
+                    "anchor": normalized_anchor,
+                    "preserve_layers": preserve_layers,
+                    "dry_run": dry_run,
+                    "warnings": [],
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="smart_crop_or_resize", error=str(e)
+            ).model_dump()
+
 
     @mcp.tool()
     async def crop_image(

@@ -510,6 +510,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "content_bounds": ((), {"target": "active_layer", "threshold": 0.05}),
     "create_checkpoint": ((), {"label": "matrix checkpoint", "include_xcf_copy": False}),
     "crop_image": ((1, 2, 100, 80), {}),
+    "commit_filter_preview": (("Preview: gegl:gaussian-blur", "commit"), {"committed_name": "Committed blur"}),
     "crop_to_selection": ((), {}),
     "deactivate_flow": (("prepare-product-image",), {}),
     "delete_layer": ((), {"layer_index": 0}),
@@ -588,6 +589,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
             "layer_index": 0,
         },
     ),
+    "commit_filter_preview": (
+        (),
+        {"preview_id": "Preview: gegl:gaussian-blur", "action": "commit", "committed_name": "Committed blur"},
+    ),
     "prepare_export_checklist": (
         (),
         {
@@ -602,6 +607,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "remove_path": ((), {"path_name": "Path 1"}),
     "rollback_transaction": ((), {}),
     "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
+    "smart_crop_or_resize": (
+        (),
+        {"mode": "crop", "target_size": {"width": 320, "height": 200}, "anchor": "center", "dry_run": True},
+    ),
     "create_path": (([0, 0, 20, 0, 20, 20],), {"name": "Path 1", "closed": True}),
     "run_flow": (("prepare-product-image", {"width": 800, "image": 1, "sharpen": False}), {}),
     "run_macro_transaction": (
@@ -666,6 +675,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
         },
     ),
     "set_paint_resource": (("brush", "2. Hardness 050"), {}),
+    "smart_crop_or_resize": ((), {"mode": "crop", "target_size": {"width": 320, "height": 200}, "anchor": "center", "dry_run": True}),
     "set_foreground_color": (("#000000",), {}),
     "set_layer_mask_state": (
         (),
@@ -708,7 +718,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 146
+    assert len(TOOL_SUCCESS_CASES) == 148
 
 
 @pytest.mark.asyncio

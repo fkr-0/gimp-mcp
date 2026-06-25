@@ -513,7 +513,17 @@ features:
   acceptance:
   - Discard always cleans temporary layers.
   - Commit is wrapped in a transaction.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: commit_filter_preview
+  current_state_note: Commit/discard for temporary preview layers is implemented;
+    commit is transaction-wrapped and action-specific generated code avoids accidental
+    preview removal.
+  verification:
+  - tests/test_edit_safety_tools.py::test_commit_filter_preview_commit_wraps_transaction_and_promotes_preview
+  - tests/test_edit_safety_tools.py::test_commit_filter_preview_discard_removes_temporary_layer
+  - tests/test_edit_safety_tools.py::test_commit_filter_preview_rejects_unknown_action_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[commit_filter_preview]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[commit_filter_preview]
 - id: FEAT-019
   name: edit_text_layer
   category: edit
@@ -662,7 +672,17 @@ features:
   acceptance:
   - Reports content that would be clipped before destructive crop.
   - Supports dry-run mode.
-  status: planned
+  status: implemented_this_pass
+  implemented_tool: smart_crop_or_resize
+  current_state_note: Dry-run-aware smart crop/pad/resize is implemented with anchor
+    handling, clipping warnings, layer-preservation intent, and background fill for
+    padding.
+  verification:
+  - tests/test_edit_safety_tools.py::test_smart_crop_or_resize_dry_run_reports_clip_without_mutation
+  - tests/test_edit_safety_tools.py::test_smart_crop_or_resize_pad_sets_background_and_preserves_layers
+  - tests/test_edit_safety_tools.py::test_smart_crop_or_resize_rejects_invalid_mode_before_bridge_call
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[smart_crop_or_resize]
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[smart_crop_or_resize]
 - id: FEAT-026
   name: create_guides_grid
   category: edit
@@ -1538,7 +1558,7 @@ open_design_questions:
 - How should live smoke tests distinguish optional GIMP plug-ins from required core
   functionality?
 current_registry:
-  total_tools: 146
+  total_tools: 148
   new_this_pass:
   - sample_pixels
   - compare_snapshots
@@ -1559,14 +1579,14 @@ current_registry:
   - brush_inventory
   - set_paint_context
   - set_paint_resource
+  - commit_filter_preview
+  - smart_crop_or_resize
   remaining_feature_ids: &id001
   - FEAT-009
-  - FEAT-018
   - FEAT-020
   - FEAT-022
   - FEAT-023
   - FEAT-024
-  - FEAT-025
   - FEAT-027
   - FEAT-029
   - FEAT-030
@@ -1587,9 +1607,8 @@ current_registry:
   - FEAT-056
   - FEAT-057
 implementation_summary:
-  total_tools: 146
+  total_tools: 148
   new_this_pass:
-  - brush_inventory
-  - set_paint_context
-  - set_paint_resource
+  - commit_filter_preview
+  - smart_crop_or_resize
   remaining_feature_ids: *id001
