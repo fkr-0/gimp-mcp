@@ -11,8 +11,8 @@ from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.color")
@@ -903,14 +903,37 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         """
         c = Color(value=color)
 
+        lifecycle = [
+            "import gc",
+            "# __gimp_mcp_color_to_alpha_lifecycle__",
+            "df = None",
+            "cfg = None",
+            "try:",
+            "    if not drawable.has_alpha(): drawable.add_alpha()",
+            f"    gegl_color = {c.to_gegl_code()}",
+            "    df = Gimp.DrawableFilter.new(drawable, 'gegl:color-to-alpha', '')",
+            "    cfg = df.get_config()",
+            "    cfg.set_property('color', gegl_color)",
+            "    drawable.append_filter(df)",
+            "    drawable.merge_filter(df)",
+            "finally:",
+            "    try:",
+            "        if df is not None and hasattr(drawable, 'remove_filter'):",
+            "            drawable.remove_filter(df)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del cfg",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del df",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = _color_preamble(layer_name, layer_index) + [
-            "if not drawable.has_alpha(): drawable.add_alpha()",
-            f"gegl_color = {c.to_gegl_code()}",
-            "df = Gimp.DrawableFilter.new(drawable, 'gegl:color-to-alpha', '')",
-            "cfg = df.get_config()",
-            "cfg.set_property('color', gegl_color)",
-            "drawable.append_filter(df)",
-            "drawable.merge_filter(df)",
+            "\n".join(lifecycle),
             "Gimp.displays_flush()",
         ]
 
@@ -1493,4 +1516,42 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         except GimpCommandError as e:
             return OperationResult.fail(operation="sample_color", error=str(e)).model_dump()
 
+    @mcp.tool()
+    async def palette_create_or_update(
+        action: str,
+        palette_name: str,
+        colors: list[dict[str, Any]] | None = None,
+        overwrite: bool = False,
+    ) -> ToolResult:
+        """Create, inspect, or update a palette from provided colors.
 
+        Args:
+            action: create/update/inspect.
+            palette_name: Palette name.
+            colors: Optional named color entries.
+            overwrite: Allow replacing an existing palette.
+
+        Returns:
+            Operation result with palette metadata.
+        """
+        normalized = action.strip().lower().replace("-", "_")
+        if normalized not in {"create", "update", "inspect"}:
+            return OperationResult.fail(
+                operation="palette_create_or_update",
+                error="action must be create, update, or inspect",
+            ).model_dump()
+        if not palette_name.strip():
+            return OperationResult.fail(
+                operation="palette_create_or_update", error="palette_name is required"
+            ).model_dump()
+        payload = {
+            "action": normalized,
+            "palette": {"name": palette_name, "colors": colors or [], "overwrite": overwrite},
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="palette_create_or_update",
+            marker="__gimp_mcp_palette_create_or_update__",
+            payload=payload,
+            message="Palette operation prepared",
+        )

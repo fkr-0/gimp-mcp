@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from gimp_mcp_pro.models.common import BlendMode, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.tools.roadmap_tools import SUPPORTED_CHANNEL_ACTIONS, _execute_json_tool
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP, SELECTION_OP_MAP
 
@@ -897,27 +898,46 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         name = layer_name or "MCP Annotations"
         code = [
             "from gi.repository import Gimp, Gegl",
+            "import gc",
             "import json",
             "# __gimp_mcp_create_visual_annotation_layer__",
+            "# __gimp_mcp_layer_annotation_lifecycle__",
             f"annotations = {py_literal(annotations)}",
             f"layer_name = {py_literal(name)}",
             f"temporary = {temporary!r}",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            "layer = Gimp.Layer.new(image, layer_name, image.get_width(), image.get_height(), Gimp.ImageType.RGBA_IMAGE, 100, Gimp.LayerMode.NORMAL)",
-            "image.insert_layer(layer, None, 0)",
-            "try: layer.add_alpha()\nexcept Exception: pass",
-            "try:\n"
-            "    parasite = Gimp.Parasite.new('gimp-mcp-annotation', 0, json.dumps({'temporary': temporary, 'annotations': annotations}).encode('utf-8'))\n"
-            "    layer.attach_parasite(parasite)\n"
-            "except Exception:\n"
-            "    pass",
-            "for annotation in annotations:\n"
-            "    color = annotation.get('color', '#ff0000')\n"
-            "    Gimp.context_set_foreground(Gegl.Color.new(color))",
-            "annotation_layer_id = int(layer.get_id()) if hasattr(layer, 'get_id') else None",
-            "result = {'annotation_layer_id': annotation_layer_id, 'layer_name': layer_name, 'temporary': temporary, 'annotation_count': len(annotations), 'tag': 'gimp-mcp-annotation'}",
+            "layer = None",
+            "parasite = None",
+            "try:",
+            "    layer = Gimp.Layer.new(image, layer_name, image.get_width(), image.get_height(), Gimp.ImageType.RGBA_IMAGE, 100, Gimp.LayerMode.NORMAL)",
+            "    if layer is None: raise RuntimeError('Could not create annotation layer')",
+            "    image.insert_layer(layer, None, 0)",
+            "    try:",
+            "        layer.add_alpha()",
+            "    except Exception:",
+            "        pass",
+            "    parasite = Gimp.Parasite.new('gimp-mcp-annotation', 0, json.dumps({'temporary': temporary, 'annotations': annotations}).encode('utf-8'))",
+            "    layer.attach_parasite(parasite)",
+            "    for annotation in annotations:",
+            "        color = annotation.get('color', '#ff0000')",
+            "        Gimp.context_set_foreground(Gegl.Color.new(color))",
+            "    annotation_layer_id = int(layer.get_id()) if hasattr(layer, 'get_id') else None",
+            "    result = {'annotation_layer_id': annotation_layer_id, 'layer_name': layer_name, 'temporary': temporary, 'annotation_count': len(annotations), 'tag': 'gimp-mcp-annotation'}",
+            "except Exception:",
+            "    try:",
+            "        if layer is not None:",
+            "            image.remove_layer(layer)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    try:",
+            "        del parasite",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
             "Gimp.displays_flush()",
             "print(json.dumps(result, sort_keys=True))",
         ]
@@ -1011,8 +1031,10 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         """
         code = [
             "from gi.repository import Gimp",
+            "import gc",
             "import json",
             "# __gimp_mcp_layer_version_stamp__",
+            "# __gimp_mcp_layer_version_lifecycle__",
             f"target = {py_literal(target)}",
             f"metadata = {py_literal(metadata)}",
             f"merge = {merge!r}",
@@ -1020,25 +1042,43 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            "if isinstance(target, dict) and target.get('layer_name'):\n"
-            "    layer = image.get_layer_by_name(target.get('layer_name'))\n"
-            "else:\n"
-            "    selected = image.get_selected_layers()\n"
+            "old_parasite = None",
+            "parasite = None",
+            "if isinstance(target, dict) and target.get('layer_name'):",
+            "    layer = image.get_layer_by_name(target.get('layer_name'))",
+            "else:",
+            "    selected = image.get_selected_layers()",
             "    layer = selected[0] if selected else None",
             "if layer is None: raise RuntimeError('Target layer not found')",
             "existing_metadata = {}",
-            "if merge:\n"
-            "    try:\n"
-            "        parasite = layer.get_parasite(metadata_namespace)\n"
-            "        if parasite:\n"
-            "            existing_metadata = json.loads(bytes(parasite.get_data()).decode('utf-8'))\n"
-            "    except Exception:\n"
-            "        existing_metadata = {}",
-            "merged_metadata = dict(existing_metadata)",
-            "merged_metadata.update(metadata)",
-            "parasite = Gimp.Parasite.new(metadata_namespace, 0, json.dumps(merged_metadata, sort_keys=True).encode('utf-8'))",
-            "layer.attach_parasite(parasite)",
-            "result = {'target': target, 'metadata_namespace': metadata_namespace, 'existing_metadata': existing_metadata, 'metadata': merged_metadata}",
+            "try:",
+            "    if merge:",
+            "        try:",
+            "            old_parasite = layer.get_parasite(metadata_namespace)",
+            "            if old_parasite:",
+            "                existing_metadata = json.loads(bytes(old_parasite.get_data()).decode('utf-8'))",
+            "        except Exception:",
+            "            existing_metadata = {}",
+            "    merged_metadata = dict(existing_metadata)",
+            "    merged_metadata.update(metadata)",
+            "    if old_parasite is not None:",
+            "        try:",
+            "            layer.detach_parasite(metadata_namespace)",
+            "        except Exception:",
+            "            pass",
+            "    parasite = Gimp.Parasite.new(metadata_namespace, 0, json.dumps(merged_metadata, sort_keys=True).encode('utf-8'))",
+            "    layer.attach_parasite(parasite)",
+            "    result = {'target': target, 'metadata_namespace': metadata_namespace, 'existing_metadata': existing_metadata, 'metadata': merged_metadata}",
+            "finally:",
+            "    try:",
+            "        del old_parasite",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del parasite",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
             "print(json.dumps(result, sort_keys=True))",
         ]
         try:
@@ -1086,6 +1126,77 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         except GimpCommandError as e:
             return OperationResult.fail(operation="add_alpha_channel", error=str(e)).model_dump()
 
+    @mcp.tool()
+    async def edit_channels(
+        action: str,
+        channel: dict[str, Any] | str | None = None,
+        name: str | None = None,
+    ) -> ToolResult:
+        """Create, inspect, duplicate, rename, or convert channels/selections.
 
+        Args:
+            action: Channel operation.
+            channel: Optional channel reference.
+            name: Optional new or target name.
 
+        Returns:
+            Operation result with channel metadata.
+        """
+        normalized = action.strip().lower().replace("-", "_")
+        if normalized not in SUPPORTED_CHANNEL_ACTIONS:
+            return OperationResult.fail(
+                operation="edit_channels", error="unsupported channel action"
+            ).model_dump()
+        payload: dict[str, Any] = {
+            "action": normalized,
+            "channel": channel,
+            "name": name,
+            "channels": [],
+            "selection_changed": normalized.endswith("selection"),
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="edit_channels",
+            marker="__gimp_mcp_edit_channels__",
+            payload=payload,
+            message="Channel operation prepared",
+        )
 
+    @mcp.tool()
+    async def manage_channels(
+        action: str = "list",
+        channel_ref: dict[str, Any] | str | None = None,
+        name: str | None = None,
+        visible: bool | None = None,
+    ) -> ToolResult:
+        """Manage saved channels through a consolidated action tool.
+
+        Args:
+            action: list/create/rename/show/hide/to_selection/selection_to_channel.
+            channel_ref: Optional channel reference.
+            name: Optional channel name.
+            visible: Optional visibility flag for update actions.
+
+        Returns:
+            Operation result with stable channel IDs and selection-change flag.
+        """
+        normalized = action.strip().lower().replace("-", "_")
+        if normalized not in SUPPORTED_CHANNEL_ACTIONS:
+            return OperationResult.fail(
+                operation="manage_channels", error="unsupported channel action"
+            ).model_dump()
+        payload: dict[str, Any] = {
+            "action": normalized,
+            "channel_ref": channel_ref,
+            "name": name,
+            "visible": visible,
+            "channels": [],
+            "selection_changed": normalized in {"to_selection", "selection_to_channel"},
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="manage_channels",
+            marker="__gimp_mcp_manage_channels__",
+            payload=payload,
+            message="Channel management action prepared",
+        )

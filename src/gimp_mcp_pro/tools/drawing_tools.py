@@ -83,10 +83,49 @@ def _create_text_box_code(
     justify = str(style.get("justify", "left")).lower().replace("-", "_")
     justify_expr = TEXT_JUSTIFICATION_MAP.get(justify, "Gimp.TextJustification.LEFT")
     layer_name = name or (text[:32] if text else "Text box")
+    lifecycle_lines = [
+        "text_layer = None",
+        "text_color = None",
+        "try:",
+        "    fonts = Gimp.fonts_get_list('')",
+        "    font_values = fonts[-1] if isinstance(fonts, tuple) else fonts",
+        "    font_names = [str(item.get_name() if hasattr(item, 'get_name') else item) for item in (font_values or [])]",
+        "    warnings = []",
+        "    if font_name not in font_names and font_names:",
+        "        warnings.append({'code': 'font_fallback', 'requested': font_name})",
+        "    text_layer = Gimp.TextLayer.new(image, text, font_name, font_size, Gimp.Unit.pixel())",
+        "    if text_layer is None: raise RuntimeError('Could not create text layer')",
+        "    text_layer.set_name(layer_name)",
+        "    image.insert_layer(text_layer, None, 0)",
+        "    text_layer.set_offsets(x, y)",
+        "    text_layer.resize(width, height)",
+        f"    text_layer.set_justification({justify_expr})",
+        f"    text_color = Gegl.Color.new({py_literal(color)})",
+        "    text_layer.set_color(text_color)",
+        "    result = {'layer_id': int(text_layer.get_id()) if hasattr(text_layer, 'get_id') else None, 'bounds': {'x': x, 'y': y, 'width': width, 'height': height}, 'warnings': warnings}",
+        "except Exception:",
+        "    try:",
+        "        if text_layer is not None:",
+        "            image.remove_layer(text_layer)",
+        "    except Exception:",
+        "        pass",
+        "    raise",
+        "finally:",
+        "    try:",
+        "        del text_color",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del text_layer",
+        "    except Exception:",
+        "        pass",
+        "    gc.collect()",
+    ]
     return [
         "from gi.repository import Gimp, Gegl",
-        "import json",
+        "import gc, json",
         "# __gimp_mcp_create_text_box__",
+        "# __gimp_mcp_text_layer_lifecycle__",
         f"text = {py_literal(text)}",
         f"x = {x}",
         f"y = {y}",
@@ -98,21 +137,8 @@ def _create_text_box_code(
         "images = Gimp.get_images()",
         "if not images: raise RuntimeError('No images are open')",
         "image = images[0]",
-        "fonts = Gimp.fonts_get_list('')",
-        "font_values = fonts[-1] if isinstance(fonts, tuple) else fonts",
-        "font_names = [str(item.get_name() if hasattr(item, 'get_name') else item) for item in (font_values or [])]",
-        "warnings = []",
-        "if font_name not in font_names and font_names:\n"
-        "    warnings.append({'code': 'font_fallback', 'requested': font_name})",
-        "text_layer = Gimp.TextLayer.new(image, text, font_name, font_size, Gimp.Unit.pixel())",
-        "text_layer.set_name(layer_name)",
-        "image.insert_layer(text_layer, None, 0)",
-        "text_layer.set_offsets(x, y)",
-        "text_layer.resize(width, height)",
-        f"text_layer.set_justification({justify_expr})",
-        f"text_layer.set_color(Gegl.Color.new({py_literal(color)}))",
+        "\n".join(lifecycle_lines),
         "Gimp.displays_flush()",
-        "result = {'layer_id': int(text_layer.get_id()) if hasattr(text_layer, 'get_id') else None, 'bounds': {'x': x, 'y': y, 'width': width, 'height': height}, 'warnings': warnings}",
         "print(json.dumps(result))",
     ]
 
@@ -243,16 +269,41 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = ["from gi.repository import Gimp, Gegl"]
-        if color:
-            c = Color(value=color)
-            code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
-
-        code += _get_drawable_code() + [
-            f"Gimp.context_set_brush_size({brush_size})",
-            f"Gimp.pencil(drawable, [{x1}, {y1}, {x2}, {y2}])",
-            "Gimp.displays_flush()",
+        draw_color_expr = Color(value=color).to_gegl_code() if color else "None"
+        lifecycle_lines = [
+            "# __gimp_mcp_drawing_context_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_brush_size = Gimp.context_get_brush_size()",
+            "draw_color = None",
+            "try:",
+            f"    draw_color = {draw_color_expr}",
+            "    if draw_color is not None:",
+            "        Gimp.context_set_foreground(draw_color)",
+            f"    Gimp.context_set_brush_size({brush_size})",
+            f"    Gimp.pencil(drawable, [{x1}, {y1}, {x2}, {y2}])",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_brush_size(previous_brush_size)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del draw_color",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
         ]
+        code = (
+            ["from gi.repository import Gimp, Gegl", "import gc"]
+            + _get_drawable_code()
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -661,24 +712,62 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 operation="gradient_fill", error="supersample_threshold must be non-negative"
             ).model_dump()
 
-        code = ["from gi.repository import Gimp, Gegl"]
+        foreground_expr = "None"
+        background_expr = "None"
         if foreground_color:
             try:
                 fg = Color(value=foreground_color)
             except ValueError as exc:
                 return OperationResult.fail(operation="gradient_fill", error=str(exc)).model_dump()
-            code.append(f"Gimp.context_set_foreground({fg.to_gegl_code()})")
+            foreground_expr = fg.to_gegl_code()
         if background_color:
             try:
                 bg = Color(value=background_color)
             except ValueError as exc:
                 return OperationResult.fail(operation="gradient_fill", error=str(exc)).model_dump()
-            code.append(f"Gimp.context_set_background({bg.to_gegl_code()})")
+            background_expr = bg.to_gegl_code()
 
-        code += _get_drawable_code() + [
-            f"Gimp.Drawable.edit_gradient_fill(drawable, {gradient_expr}, {offset}, {supersample}, {supersample_max_depth}, {supersample_threshold}, {dither}, {x1}, {y1}, {x2}, {y2})",
-            "Gimp.displays_flush()",
+        lifecycle_lines = [
+            "# __gimp_mcp_gradient_context_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_background = Gimp.context_get_background()",
+            "gradient_foreground = None",
+            "gradient_background = None",
+            "try:",
+            f"    gradient_foreground = {foreground_expr}",
+            f"    gradient_background = {background_expr}",
+            "    if gradient_foreground is not None:",
+            f"        Gimp.context_set_foreground({foreground_expr})",
+            "    if gradient_background is not None:",
+            f"        Gimp.context_set_background({background_expr})",
+            f"    Gimp.Drawable.edit_gradient_fill(drawable, {gradient_expr}, {offset}, {supersample}, {supersample_max_depth}, {supersample_threshold}, {dither}, {x1}, {y1}, {x2}, {y2})",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_background(previous_background)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del gradient_foreground",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del gradient_background",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
         ]
+        code = (
+            ["from gi.repository import Gimp, Gegl", "import gc"]
+            + _get_drawable_code()
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(

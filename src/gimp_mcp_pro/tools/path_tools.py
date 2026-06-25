@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from gimp_mcp_pro.models.common import Color, OperationResult, SelectionOp, py_literal
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.tools.roadmap_tools import SUPPORTED_PATH_ACTIONS, _execute_json_tool
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import SELECTION_OP_MAP
 
@@ -282,8 +283,119 @@ def register_path_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
         except GimpCommandError as e:
             return OperationResult.fail(operation="remove_path", error=str(e)).model_dump()
 
+    @mcp.tool()
+    async def edit_paths(
+        action: str,
+        path: dict[str, Any] | str | None = None,
+        points: list[Any] | None = None,
+        stroke_options: dict[str, Any] | None = None,
+    ) -> ToolResult:
+        """Inspect, create, transform, stroke, fill, or convert paths.
 
+        Args:
+            action: Path operation.
+            path: Optional path reference.
+            points: Optional typed point list.
+            stroke_options: Optional stroke/fill options.
 
+        Returns:
+            Operation result with path metadata and warnings.
+        """
+        normalized = action.strip().lower().replace("-", "_")
+        if normalized not in SUPPORTED_PATH_ACTIONS:
+            return OperationResult.fail(
+                operation="edit_paths", error="unsupported path action"
+            ).model_dump()
+        payload = {
+            "action": normalized,
+            "path": path,
+            "points": points or [],
+            "stroke_options": stroke_options or {},
+            "paths": [],
+            "warnings": [],
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="edit_paths",
+            marker="__gimp_mcp_edit_paths__",
+            payload=payload,
+            message="Path operation prepared",
+        )
 
+    @mcp.tool()
+    async def create_and_edit_paths(
+        action: str,
+        points: list[Any] | None = None,
+        closed: bool = False,
+        path_ref: dict[str, Any] | str | None = None,
+        name: str | None = None,
+    ) -> ToolResult:
+        """Create, list, rename, or update vector paths from typed point data.
 
+        Args:
+            action: create/update/list/rename/delete path action.
+            points: Optional flat or object point list.
+            closed: Whether a created path should be closed.
+            path_ref: Optional existing path reference.
+            name: Optional target path name.
 
+        Returns:
+            Operation result with paths and active path metadata.
+        """
+        normalized = action.strip().lower().replace("-", "_")
+        if normalized not in {"create", "update", "list", "rename", "delete"}:
+            return OperationResult.fail(
+                operation="create_and_edit_paths", error="unsupported path action"
+            ).model_dump()
+        payload = {
+            "action": normalized,
+            "points": points or [],
+            "closed": closed,
+            "path_ref": path_ref,
+            "name": name,
+            "paths": [],
+            "active_path": None,
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="create_and_edit_paths",
+            marker="__gimp_mcp_create_and_edit_paths__",
+            payload=payload,
+            message="Path create/edit action prepared",
+        )
+
+    @mcp.tool()
+    async def stroke_or_fill_path(
+        path_ref: dict[str, Any] | str,
+        mode: str,
+        paint: dict[str, Any] | None = None,
+    ) -> ToolResult:
+        """Stroke or fill a vector path with supplied paint settings.
+
+        Args:
+            path_ref: Existing path reference.
+            mode: ``stroke`` or ``fill``.
+            paint: Optional paint settings.
+
+        Returns:
+            Operation result with changed bounds and paint settings.
+        """
+        normalized = mode.strip().lower().replace("-", "_")
+        if normalized not in {"stroke", "fill"}:
+            return OperationResult.fail(
+                operation="stroke_or_fill_path", error="mode must be stroke or fill"
+            ).model_dump()
+        payload = {
+            "path_ref": path_ref,
+            "mode": normalized,
+            "paint": paint or {},
+            "changed_bounds": None,
+            "undo_group": True,
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="stroke_or_fill_path",
+            marker="__gimp_mcp_stroke_or_fill_path__",
+            payload=payload,
+            message="Path stroke/fill action prepared",
+        )

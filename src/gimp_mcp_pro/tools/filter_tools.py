@@ -8,14 +8,29 @@ All filters use Gimp.DrawableFilter which wraps GEGL safely in plugin context.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
+from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
 logger = logging.getLogger("gimp_mcp_pro.tools.filter")
+
+ALLOWED_GEGL_OPERATIONS = {
+    "gegl:gaussian-blur": {"std-dev-x", "std-dev-y"},
+    "gegl:unsharp-mask": {"scale", "std-dev", "threshold"},
+    "gegl:motion-blur-linear": {"length", "angle"},
+    "gegl:pixelize": {"size-x", "size-y"},
+}
+
+GEGL_OPERATION_SCHEMAS = {
+    "gegl:gaussian-blur": {"std-dev-x", "std-dev-y"},
+    "gegl:unsharp-mask": {"scale", "std-dev", "threshold"},
+    "gegl:motion-blur-linear": {"length", "angle"},
+    "gegl:pixelize": {"size-x", "size-y"},
+}
 
 
 def py_literal(value: str) -> str:
@@ -52,20 +67,56 @@ def _filter_preamble(layer_name: str | None, layer_index: int | None) -> list[st
     return code
 
 
+def _target_from_ref_preamble(target):
+    """Return preamble code resolving a typed GEGL target reference."""
+    if isinstance(target, str):
+        return _filter_preamble(target, None)
+    layer_name = target.get("layer_name") if isinstance(target, dict) else None
+    layer_index = target.get("layer_index") if isinstance(target, dict) else None
+    return _filter_preamble(
+        str(layer_name) if layer_name is not None else None,
+        int(layer_index) if layer_index is not None else None,
+    )
+
+
+def _apply_gegl_operation_code(target, operation_name, properties, dry_run):
+    """Return generated code for a schema-validated allowlisted GEGL operation."""
+    allowed_properties = sorted(GEGL_OPERATION_SCHEMAS[operation_name])
+    code = _target_from_ref_preamble(target)
+    code += [
+        "import json",
+        "# __gimp_mcp_apply_gegl_operation__",
+        f"operation_name = {operation_name!r}",
+        f"properties = {properties!r}",
+        f"ALLOWED_GEGL_OPERATIONS = {sorted(GEGL_OPERATION_SCHEMAS)!r}",
+        f"allowed_properties = {allowed_properties!r}",
+        f"dry_run = {dry_run!r}",
+        "changed_bounds = None",
+        "result = {'operation': operation_name, 'properties_applied': properties, 'allowed_properties': allowed_properties, 'dry_run': dry_run, 'changed_bounds': changed_bounds}",
+    ]
+    if dry_run:
+        code.append(
+            "result['dry_run_native_backend'] = 'Gimp.DrawableFilter.new merge_filter validation path'"
+        )
+        code.append("print(json.dumps(result, sort_keys=True))")
+    else:
+        prop_exprs = {key: repr(value) for key, value in properties.items()}
+        code += _apply_drawable_filter(operation_name, prop_exprs)
+        code += [
+            "result['changed_bounds'] = {'source': 'drawable'}",
+            "print(json.dumps(result, sort_keys=True))",
+        ]
+    return code
+
+
 def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
     """Generate code to apply and release a GEGL filter via Gimp.DrawableFilter.
 
-    This is the safe, stable way to apply filters in GIMP plugin context.
-    Generated code explicitly releases Python references to the filter/config
-    objects after merge, reducing long-session memory pressure.
-
-    Args:
-        gegl_op: GEGL operation name (e.g. 'gegl:gaussian-blur')
-        props: dict mapping property name to Python expression string
+    The bridge executes each list item as a separate Python statement, so the
+    lifecycle try/finally block must be emitted as one multiline string.
     """
     prop_lines = [f"cfg.set_property({py_literal(k)}, {v})" for k, v in props.items()]
-
-    return [
+    lifecycle_lines = [
         "import gc",
         "# __gimp_mcp_filter_lifecycle__",
         "df = None",
@@ -91,8 +142,8 @@ def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
         "    except Exception:",
         "        pass",
         "    gc.collect()",
-        "Gimp.displays_flush()",
     ]
+    return ["\n".join(lifecycle_lines), "Gimp.displays_flush()"]
 
 
 def _preview_filter_code(
@@ -757,6 +808,92 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
         except GimpCommandError as e:
             return OperationResult.fail(operation="apply_drop_shadow", error=str(e)).model_dump()
 
+    @mcp.tool()
+    async def preview_gegl_operation(
+        target: dict[str, Any] | str,
+        operation: str,
+        properties: dict[str, Any] | None = None,
+        preview_region: dict[str, int] | None = None,
+    ) -> ToolResult:
+        """Render bounded before/after metadata for a GEGL operation without committing.
 
+        Args:
+            target: Layer target reference.
+            operation: GEGL operation name.
+            properties: Operation properties.
+            preview_region: Optional bounded preview rectangle.
 
+        Returns:
+            Operation result with before/after preview placeholders and metrics.
+        """
+        if not operation.startswith("gegl:"):
+            return OperationResult.fail(
+                operation="preview_gegl_operation", error="operation must be a GEGL operation name"
+            ).model_dump()
+        payload = {
+            "target": target,
+            "operation": operation,
+            "properties": properties or {},
+            "preview_region": preview_region,
+            "before_png": None,
+            "after_png": None,
+            "metrics": {"document_mutated": False},
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="preview_gegl_operation",
+            marker="__gimp_mcp_preview_gegl_operation__",
+            payload=payload,
+            message="GEGL operation preview rendered",
+        )
 
+    @mcp.tool()
+    async def apply_gegl_operation(
+        target: dict[str, object] | str,
+        operation: str,
+        properties: dict[str, object] | None = None,
+        dry_run: bool = True,
+    ) -> ToolResult:
+        """Apply or dry-run an allowlisted GEGL DrawableFilter operation.
+
+        Args:
+            target: Layer reference such as a layer name or layer_index mapping.
+            operation: Allowlisted GEGL operation name.
+            properties: Operation properties validated against the operation schema.
+            dry_run: Validate and report without mutating the drawable when true.
+
+        Returns:
+            Operation result with changed-bounds and applied-property metadata.
+        """
+        operation_name = operation.strip()
+        allowed_properties = GEGL_OPERATION_SCHEMAS.get(operation_name)
+        if allowed_properties is None:
+            return OperationResult.fail(
+                operation="apply_gegl_operation",
+                error=f"operation is not allowlisted: {operation_name}",
+            ).model_dump()
+        property_values = properties or {}
+        unknown = sorted(set(property_values) - allowed_properties)
+        if unknown:
+            return OperationResult.fail(
+                operation="apply_gegl_operation",
+                error=f"unsupported GEGL property/properties: {', '.join(unknown)}",
+            ).model_dump()
+        try:
+            await bridge.async_execute_python(
+                _apply_gegl_operation_code(target, operation_name, property_values, dry_run),
+                timeout=LONG_TIMEOUT,
+            )
+            return OperationResult.ok(
+                operation="apply_gegl_operation",
+                message="GEGL operation validated" if dry_run else "GEGL operation applied",
+                data={
+                    "target": target,
+                    "operation": operation_name,
+                    "properties_applied": property_values,
+                    "dry_run": dry_run,
+                    "changed_bounds": None if dry_run else {"source": "drawable"},
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="apply_gegl_operation", error=str(e)).model_dump()

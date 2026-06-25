@@ -1600,10 +1600,15 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             MCP Image object containing PNG data that the AI can view directly.
         """
         params: CommandParams = {}
-        if max_width is not None:
-            params["max_width"] = max_width
-        if max_height is not None:
-            params["max_height"] = max_height
+        for field_name, value in {"max_width": max_width, "max_height": max_height}.items():
+            if value is None:
+                continue
+            if value < 1 or value > 4096:
+                return OperationResult.fail(
+                    operation="get_image_bitmap",
+                    error=f"{field_name} must be between 1 and 4096",
+                ).model_dump()
+            params[field_name] = value
 
         if any(v is not None for v in [region_x, region_y, region_width, region_height]):
             if not all(v is not None for v in [region_x, region_y, region_width, region_height]):
@@ -1611,6 +1616,21 @@ def register_inspect_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                     operation="get_image_bitmap",
                     error="All region parameters (region_x, region_y, region_width, region_height) "
                     "must be specified together",
+                ).model_dump()
+            if region_width is None or region_height is None:
+                return OperationResult.fail(
+                    operation="get_image_bitmap",
+                    error="region_width and region_height must be specified",
+                ).model_dump()
+            if region_width < 1 or region_width > 4096:
+                return OperationResult.fail(
+                    operation="get_image_bitmap",
+                    error="region_width must be between 1 and 4096",
+                ).model_dump()
+            if region_height < 1 or region_height > 4096:
+                return OperationResult.fail(
+                    operation="get_image_bitmap",
+                    error="region_height must be between 1 and 4096",
                 ).model_dump()
             params["region"] = {
                 "origin_x": region_x,

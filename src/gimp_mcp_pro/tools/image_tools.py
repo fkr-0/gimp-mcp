@@ -10,14 +10,32 @@ from typing import Any
 
 from gimp_mcp_pro.models.common import FillType, OperationResult, py_literal
 from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
+from gimp_mcp_pro.tools.roadmap_tools import (
+    SUPPORTED_GUIDE_GRID_ACTIONS,
+    _execute_json_tool,
+    _validate_formats,
+)
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
-from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool, _validate_formats
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, IMAGE_BASE_TYPE_MAP
 
 logger = logging.getLogger("gimp_mcp_pro.tools.image")
 
 VALID_COLOR_PROFILE_ACTIONS = {"inspect", "assign", "convert"}
+
+
+def _unsafe_local_path_reason(path: str, *, field: str) -> str | None:
+    """Return a reason when a local file path is unsafe for generated GIMP code."""
+    value = str(path).strip()
+    if not value:
+        return f"unsafe {field}: path cannot be empty"
+    if "\x00" in value:
+        return f"unsafe {field}: NUL bytes are not allowed"
+    normalized = value.replace("\\", "/")
+    parts = [part for part in normalized.split("/") if part]
+    if ".." in parts:
+        return f"unsafe {field}: parent traversal is not allowed"
+    return None
 
 
 def _get_active_image_code() -> list[str]:
@@ -481,11 +499,17 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 operation="export_with_manifest",
                 error=f"unsupported format: {format}",
             ).model_dump()
+        unsafe_reason = _unsafe_local_path_reason(destination, field="destination")
+        if unsafe_reason:
+            return OperationResult.fail(
+                operation="export_with_manifest", error=unsafe_reason
+            ).model_dump()
         settings = export_settings or {}
         code = [
             "from gi.repository import Gimp, Gio",
-            "import json, os, time",
+            "import gc, json, os, time",
             "# __gimp_mcp_export_with_manifest__",
+            "# __gimp_mcp_export_with_manifest_lifecycle__",
             f"format_name = {py_literal(format_name)}",
             f"destination = {py_literal(destination)}",
             f"include_sidecar = {include_sidecar!r}",
@@ -494,25 +518,55 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open in GIMP')",
             "image = images[0]",
-            "file_obj = Gio.File.new_for_path(destination)",
-            "export_proc = Gimp.get_pdb().lookup_procedure(procedure_name)",
-            "if export_proc is None: raise RuntimeError(f'Export procedure not found: {procedure_name}')",
-            "config = export_proc.create_config()",
-            "try: config.set_property('image', image)\nexcept Exception: pass",
-            "try: config.set_property('file', file_obj)\nexcept Exception: pass",
-            "try: config.set_property('drawables', image.get_layers())\nexcept Exception: pass",
-            "for key, value in export_settings.items():\n"
-            "    try:\n"
-            "        config.set_property(key, value)\n"
-            "    except Exception:\n"
+            "file_obj = None",
+            "export_proc = None",
+            "config = None",
+            "manifest_fh = None",
+            "try:",
+            "    file_obj = Gio.File.new_for_path(destination)",
+            "    export_proc = Gimp.get_pdb().lookup_procedure(procedure_name)",
+            "    if export_proc is None: raise RuntimeError(f'Export procedure not found: {procedure_name}')",
+            "    config = export_proc.create_config()",
+            "    try:\n        config.set_property('image', image)\n    except Exception:\n        pass",
+            "    try:\n        config.set_property('file', file_obj)\n    except Exception:\n        pass",
+            "    try:\n        config.set_property('drawables', image.get_layers())\n    except Exception:\n        pass",
+            "    for key, value in export_settings.items():\n"
+            "        try:\n"
+            "            config.set_property(key, value)\n"
+            "        except Exception:\n"
+            "            pass",
+            "    export_proc.run(config)",
+            "    manifest = {'format': format_name, 'destination': destination, 'procedure': procedure_name, 'settings': export_settings, 'image': {'width': image.get_width(), 'height': image.get_height()}, 'timestamp': time.time()}",
+            "    manifest_path = destination + '.manifest.json'",
+            "    if include_sidecar:\n"
+            "        manifest_fh = open(manifest_path, 'w', encoding='utf-8')\n"
+            "        json.dump(manifest, manifest_fh, sort_keys=True, indent=2)\n"
+            "        manifest_fh.close()\n"
+            "        manifest_fh = None",
+            "    result = {'file': destination, 'format': format_name, 'manifest': manifest, 'manifest_path': manifest_path if include_sidecar else None}",
+            "finally:",
+            "    try:",
+            "        if manifest_fh is not None:",
+            "            manifest_fh.close()",
+            "    except Exception:",
             "        pass",
-            "export_proc.run(config)",
-            "manifest = {'format': format_name, 'destination': destination, 'procedure': procedure_name, 'settings': export_settings, 'image': {'width': image.get_width(), 'height': image.get_height()}, 'timestamp': time.time()}",
-            "manifest_path = destination + '.manifest.json'",
-            "if include_sidecar:\n"
-            "    with open(manifest_path, 'w', encoding='utf-8') as fh:\n"
-            "        json.dump(manifest, fh, sort_keys=True, indent=2)",
-            "result = {'file': destination, 'format': format_name, 'manifest': manifest, 'manifest_path': manifest_path if include_sidecar else None}",
+            "    try:",
+            "        del manifest_fh",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del config",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del export_proc",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del file_obj",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
             "print(json.dumps(result, sort_keys=True))",
         ]
         try:
@@ -545,6 +599,9 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result confirming export.
         """
+        unsafe_reason = _unsafe_local_path_reason(file_path, field="file_path")
+        if unsafe_reason:
+            return OperationResult.fail(operation="export_image", error=unsafe_reason).model_dump()
         params = ExportImageParams(
             file_path=file_path,
             format=format,
@@ -556,40 +613,57 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         # Build export code based on format
         ext = params.file_path.rsplit(".", 1)[-1].lower() if "." in params.file_path else "png"
         fmt = params.format.value if params.format else ext
+        procedure_name = (
+            "file-png-export"
+            if fmt == "png"
+            else "file-jpeg-export"
+            if fmt in ("jpeg", "jpg")
+            else None
+        )
 
         code = _get_active_image_code() + [
             "from gi.repository import Gio",
-            f"file_obj = Gio.File.new_for_path({py_literal(params.file_path)})",
+            "import gc",
+            "# __gimp_mcp_image_export_lifecycle__",
+            "file_obj = None",
+            "export_proc = None",
+            "config = None",
+            "try:",
+            f"    file_obj = Gio.File.new_for_path({py_literal(params.file_path)})",
         ]
-
-        if fmt == "png":
+        if procedure_name is not None:
             code += [
-                "export_proc = Gimp.get_pdb().lookup_procedure('file-png-export')",
-                "if not export_proc: raise RuntimeError('PNG export procedure not found')",
-                "config = export_proc.create_config()",
-                "config.set_property('image', image)",
-                "config.set_property('file', file_obj)",
-                "try: config.set_property('drawables', image.get_layers())\nexcept: pass",
-                "export_proc.run(config)",
+                f"    export_proc = Gimp.get_pdb().lookup_procedure({py_literal(procedure_name)})",
+                f"    if not export_proc: raise RuntimeError({py_literal(procedure_name + ' procedure not found')})",
+                "    config = export_proc.create_config()",
+                "    config.set_property('image', image)",
+                "    config.set_property('file', file_obj)",
+                "    try:\n        config.set_property('drawables', image.get_layers())\n    except Exception:\n        pass",
             ]
-        elif fmt in ("jpeg", "jpg"):
-            code += [
-                "export_proc = Gimp.get_pdb().lookup_procedure('file-jpeg-export')",
-                "if not export_proc: raise RuntimeError('JPEG export procedure not found')",
-                "config = export_proc.create_config()",
-                "config.set_property('image', image)",
-                "config.set_property('file', file_obj)",
-                f"try: config.set_property('quality', {params.quality / 100.0})\nexcept: pass",
-                "try: config.set_property('drawables', image.get_layers())\nexcept: pass",
-                "export_proc.run(config)",
-            ]
+            if fmt in ("jpeg", "jpg"):
+                code.append(
+                    f"    try:\n        config.set_property('quality', {params.quality / 100.0})\n    except Exception:\n        pass"
+                )
+            code.append("    export_proc.run(config)")
         else:
-            # Generic fallback using Gimp.file_save
-            code += [
-                "Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, image, file_obj)",
-            ]
-
-        code.append(f"print({py_literal(f'Exported to {params.file_path}')})")
+            code.append("    Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, image, file_obj)")
+        code += [
+            "finally:",
+            "    try:",
+            "        del config",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del export_proc",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del file_obj",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+            f"print({py_literal(f'Exported to {params.file_path}')})",
+        ]
 
         try:
             await bridge.async_execute_python(code, timeout=60.0)
@@ -642,10 +716,24 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             Operation result with info about the new image.
         """
         code = _get_active_image_code() + [
-            "new_image = image.duplicate()",
-            "try:\n    Gimp.Display.new(new_image)\nexcept Exception:\n    pass",
-            "Gimp.displays_flush()",
-            "print(f'{new_image.get_width()}x{new_image.get_height()}')",
+            "import gc",
+            "# __gimp_mcp_duplicate_image_lifecycle__",
+            "new_image = None",
+            "display = None",
+            "try:",
+            "    new_image = image.duplicate()",
+            "    try:",
+            "        display = Gimp.Display.new(new_image)",
+            "    except Exception:",
+            "        pass",
+            "    Gimp.displays_flush()",
+            "    print(f'{new_image.get_width()}x{new_image.get_height()}')",
+            "finally:",
+            "    try:",
+            "        del display",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
         ]
         try:
             await bridge.async_execute_python(code)
@@ -656,8 +744,121 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         except GimpCommandError as e:
             return OperationResult.fail(operation="duplicate_image", error=str(e)).model_dump()
 
+    @mcp.tool()
+    async def import_as_layer_with_metadata(
+        source: str,
+        layer_name: str | None = None,
+        placement: dict[str, int] | None = None,
+    ) -> ToolResult:
+        """Import an external image as a layer with provenance metadata.
 
+        Args:
+            source: Controlled local source path.
+            layer_name: Optional layer name.
+            placement: Optional x/y placement.
 
+        Returns:
+            Operation result with layer and provenance metadata.
+        """
+        unsafe_reason = _unsafe_local_path_reason(source, field="source")
+        if unsafe_reason:
+            return OperationResult.fail(
+                operation="import_as_layer_with_metadata", error=unsafe_reason
+            ).model_dump()
+        payload = {
+            "source": source,
+            "layer_name": layer_name,
+            "placement": placement or {},
+            "layer_id": None,
+            "metadata": {"source": source},
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="import_as_layer_with_metadata",
+            marker="__gimp_mcp_import_as_layer_with_metadata__",
+            payload=payload,
+            message="Import as layer prepared",
+        )
 
+    @mcp.tool()
+    async def batch_export_variants(
+        variants: list[dict[str, Any]],
+        base_path: str,
+        overwrite: bool = False,
+    ) -> ToolResult:
+        """Export multiple bounded variants from the active image.
 
+        Args:
+            variants: Variant definitions with format and optional dimensions.
+            base_path: Controlled output base path.
+            overwrite: Whether existing files may be overwritten.
 
+        Returns:
+            Operation result with exported files and warnings.
+        """
+        unsupported = _validate_formats([variant.get("format", "") for variant in variants])
+        if unsupported:
+            return OperationResult.fail(
+                operation="batch_export_variants",
+                error=f"unsupported format(s): {', '.join(unsupported)}",
+            ).model_dump()
+        unsafe_reason = _unsafe_local_path_reason(base_path, field="base_path")
+        if unsafe_reason:
+            return OperationResult.fail(
+                operation="batch_export_variants", error=unsafe_reason
+            ).model_dump()
+        payload = {
+            "variants": variants,
+            "base_path": base_path,
+            "overwrite": overwrite,
+            "files": [],
+            "warnings": [],
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="batch_export_variants",
+            marker="__gimp_mcp_batch_export_variants__",
+            payload=payload,
+            message="Batch export variants prepared",
+        )
+
+    @mcp.tool()
+    async def manage_guides_and_grid(
+        action: str = "list",
+        orientation: str | None = None,
+        position: float | None = None,
+        guide_id: int | None = None,
+        grid: dict[str, Any] | None = None,
+    ) -> ToolResult:
+        """Create, list, move, remove guides, or set document grid settings.
+
+        Args:
+            action: list/add/move/remove/set_grid.
+            orientation: Optional horizontal/vertical orientation.
+            position: Optional guide position.
+            guide_id: Optional existing guide ID.
+            grid: Optional grid settings.
+
+        Returns:
+            Operation result with guides and grid metadata.
+        """
+        normalized = action.strip().lower().replace("-", "_")
+        if normalized not in SUPPORTED_GUIDE_GRID_ACTIONS:
+            return OperationResult.fail(
+                operation="manage_guides_and_grid", error="unsupported guide/grid action"
+            ).model_dump()
+        payload: dict[str, Any] = {
+            "action": normalized,
+            "orientation": orientation,
+            "position": position,
+            "guide_id": guide_id,
+            "grid": grid or {},
+            "guides": [],
+        }
+        return await _execute_json_tool(
+            bridge,
+            operation="manage_guides_and_grid",
+            marker="__gimp_mcp_manage_guides_and_grid__",
+            payload=payload,
+            message="Guide/grid management action prepared",
+        )

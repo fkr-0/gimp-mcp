@@ -68,16 +68,37 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         checkpoint_id = str(uuid.uuid4())
         safe_label = label.strip() or "checkpoint"
         code = [
-            "import json, os, tempfile, uuid",
+            "import gc, json, os, tempfile, uuid",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
             "checkpoint_id = str(uuid.uuid4())",
             "checkpoint_dir = os.path.join(tempfile.gettempdir(), 'gimp-mcp-checkpoints')",
             "os.makedirs(checkpoint_dir, exist_ok=True)",
-            "duplicate = image.duplicate()",
             f"include_xcf_copy = {include_xcf_copy!r}",
             "xcf_path = os.path.join(checkpoint_dir, checkpoint_id + '.xcf') if include_xcf_copy else None",
+        ]
+        if include_xcf_copy:
+            checkpoint_lifecycle = [
+                "# __gimp_mcp_checkpoint_lifecycle__",
+                "duplicate = None",
+                "try:",
+                "    duplicate = image.duplicate()",
+                "    # Future native XCF save hook uses xcf_path; duplicate is still cleaned if save fails.",
+                "finally:",
+                "    try:",
+                "        if duplicate is not None:",
+                "            duplicate.delete()",
+                "    except Exception:",
+                "        pass",
+                "    try:",
+                "        del duplicate",
+                "    except Exception:",
+                "        pass",
+                "    gc.collect()",
+            ]
+            code.append("\n".join(checkpoint_lifecycle))
+        code += [
             "metadata = {'checkpoint_id': checkpoint_id, 'label': "
             + repr(safe_label)
             + ", 'include_xcf_copy': include_xcf_copy, 'xcf_path': xcf_path, 'image_id': int(image.get_id()) if hasattr(image, 'get_id') else None}",
