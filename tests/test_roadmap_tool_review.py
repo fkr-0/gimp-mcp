@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from scripts import compat
+
 ROOT = Path(__file__).resolve().parents[1]
 ROADMAP_SOURCE = ROOT / "src" / "gimp_mcp_pro" / "tools" / "roadmap_tools.py"
 FEATURES = ROOT / "features.yml"
@@ -76,3 +78,38 @@ def test_features_yml_marks_promoted_roadmap_tools_finalized() -> None:
     issue = next(item for item in tasks["issues"] if item["id"] == "GIMP-MCP-005")
     assert issue["status"] == "implemented"
     assert issue["remaining_open_features"] == []
+
+
+def test_implemented_roadmap_issue_has_no_stale_partial_or_duplicate_completion_entries() -> None:
+    """Finished roadmap tools must not remain as partial or duplicate task entries."""
+    tasks = yaml.safe_load(TASKS.read_text())
+    issue = next(item for item in tasks["issues"] if item["id"] == "GIMP-MCP-005")
+
+    assert issue["status"] == "implemented"
+    assert issue["remaining_open_features"] == []
+    completed = issue.get("completed_this_pass", [])
+    feature_ids = [entry["feature_id"] for entry in completed]
+    assert len(feature_ids) == len(set(feature_ids))
+    assert all("status" not in entry for entry in completed)
+
+    roadmap = yaml.safe_load(FEATURES.read_text())
+    implemented_this_pass = {
+        (feature["id"], feature["name"])
+        for feature in roadmap["features"]
+        if feature["status"] == "implemented_this_pass"
+    }
+    completed_pairs = {(entry["feature_id"], entry["tool"]) for entry in completed}
+    assert completed_pairs == implemented_this_pass
+
+    registry = compat.extract_source_tool_registry()
+    assert issue["registry_total"] == sum(len(names) for names in registry.values())
+
+
+def test_promoted_tools_are_not_tracked_by_missing_roadmap_fixtures() -> None:
+    """Finished and native-tested tools should not live in missing-roadmap fixtures."""
+    stale_paths = [
+        ROOT / "tests" / "roadmap_tool_cases.py",
+        ROOT / "tests" / "test_missing_roadmap_tools.py",
+    ]
+    for path in stale_paths:
+        assert not path.exists()

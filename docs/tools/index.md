@@ -10,18 +10,17 @@ Total tools: **171**
 | Category | Tools | Page |
 |---|---:|---|
 | Agent Tools | 3 | [agent_tools](agent_tools.md) |
-| Color Adjustments | 21 | [color_tools](color_tools.md) |
+| Color Adjustments | 22 | [color_tools](color_tools.md) |
 | Drawing and Text | 13 | [drawing_tools](drawing_tools.md) |
-| Filters and Effects | 11 | [filter_tools](filter_tools.md) |
+| Filters and Effects | 13 | [filter_tools](filter_tools.md) |
 | Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
 | gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
 | History | 6 | [history_tools](history_tools.md) |
-| Image Management | 12 | [image_tools](image_tools.md) |
+| Image Management | 15 | [image_tools](image_tools.md) |
 | Inspection | 17 | [inspect_tools](inspect_tools.md) |
-| Layer Operations | 22 | [layer_tools](layer_tools.md) |
-| Vector Paths | 5 | [path_tools](path_tools.md) |
-| PDB and Escape Hatch | 2 | [pdb_tools](pdb_tools.md) |
-| Roadmap Tools | 12 | [roadmap_tools](roadmap_tools.md) |
+| Layer Operations | 24 | [layer_tools](layer_tools.md) |
+| Vector Paths | 8 | [path_tools](path_tools.md) |
+| PDB and Escape Hatch | 5 | [pdb_tools](pdb_tools.md) |
 | Selections | 14 | [selection_tools](selection_tools.md) |
 | Target Resolution | 3 | [target_tools](target_tools.md) |
 | Transforms | 15 | [transform_tools](transform_tools.md) |
@@ -57,6 +56,7 @@ Total tools: **171**
 - [`analyze_color_palette`](color_tools.md#analyze-color-palette) — Extract a deterministic approximate color palette for a layer or region.
 - [`sample_pixels`](color_tools.md#sample-pixels) — Sample colors at multiple points or over a rectangular grid.
 - [`sample_color`](color_tools.md#sample-color) — Pick/sample a color from a pixel in the image.
+- [`palette_create_or_update`](color_tools.md#palette-create-or-update) — Create, inspect, or update a palette from provided colors.
 
 ### Drawing and Text
 
@@ -87,6 +87,8 @@ Total tools: **171**
 - [`apply_noise`](filter_tools.md#apply-noise) — Add random noise to a layer.
 - [`apply_median`](filter_tools.md#apply-median) — Apply median filter (denoise) to a layer.
 - [`apply_drop_shadow`](filter_tools.md#apply-drop-shadow) — Apply a drop shadow effect to a layer.
+- [`preview_gegl_operation`](filter_tools.md#preview-gegl-operation) — Render bounded before/after metadata for a GEGL operation without committing.
+- [`apply_gegl_operation`](filter_tools.md#apply-gegl-operation) — Apply or dry-run an allowlisted GEGL DrawableFilter operation.
 
 ### Repeatable Flows and Macros
 
@@ -130,6 +132,9 @@ Total tools: **171**
 - [`export_image`](image_tools.md#export-image) — Export the active image to a file.
 - [`flatten_image`](image_tools.md#flatten-image) — Flatten all layers into a single layer.
 - [`duplicate_image`](image_tools.md#duplicate-image) — Duplicate the entire active image (all layers, channels, paths).
+- [`import_as_layer_with_metadata`](image_tools.md#import-as-layer-with-metadata) — Import an external image as a layer with provenance metadata.
+- [`batch_export_variants`](image_tools.md#batch-export-variants) — Export multiple bounded variants from the active image.
+- [`manage_guides_and_grid`](image_tools.md#manage-guides-and-grid) — Create, list, move, remove guides, or set document grid settings.
 
 ### Inspection
 
@@ -175,6 +180,8 @@ Total tools: **171**
 - [`remove_visual_annotations`](layer_tools.md#remove-visual-annotations) — Remove MCP-managed annotation layers only.
 - [`layer_version_stamp`](layer_tools.md#layer-version-stamp) — Attach namespaced MCP provenance metadata to a layer.
 - [`add_alpha_channel`](layer_tools.md#add-alpha-channel) — Add an alpha (transparency) channel to a layer.
+- [`edit_channels`](layer_tools.md#edit-channels) — Create, inspect, duplicate, rename, or convert channels/selections.
+- [`manage_channels`](layer_tools.md#manage-channels) — Manage saved channels through a consolidated action tool.
 
 ### Vector Paths
 
@@ -183,26 +190,17 @@ Total tools: **171**
 - [`path_to_selection`](path_tools.md#path-to-selection) — Convert a vector path to the current selection.
 - [`stroke_path`](path_tools.md#stroke-path) — Stroke a vector path onto a layer using the current or supplied context.
 - [`remove_path`](path_tools.md#remove-path) — Remove a vector path from the active image.
+- [`edit_paths`](path_tools.md#edit-paths) — Inspect, create, transform, stroke, fill, or convert paths.
+- [`create_and_edit_paths`](path_tools.md#create-and-edit-paths) — Create, list, rename, or update vector paths from typed point data.
+- [`stroke_or_fill_path`](path_tools.md#stroke-or-fill-path) — Stroke or fill a vector path with supplied paint settings.
 
 ### PDB and Escape Hatch
 
 - [`search_pdb`](pdb_tools.md#search-pdb) — Search GIMP's Procedure Database for available operations.
+- [`execute_pdb_call`](pdb_tools.md#execute-pdb-call) — Validate and optionally execute an allowlisted typed PDB procedure call.
 - [`execute_python`](pdb_tools.md#execute-python) — Execute raw Python code in GIMP's PyGObject console.
-
-### Roadmap Tools
-
-- [`edit_channels`](roadmap_tools.md#edit-channels) — Create, inspect, duplicate, rename, or convert channels/selections.
-- [`manage_channels`](roadmap_tools.md#manage-channels) — Manage saved channels through a consolidated action tool.
-- [`edit_paths`](roadmap_tools.md#edit-paths) — Inspect, create, transform, stroke, fill, or convert paths.
-- [`create_and_edit_paths`](roadmap_tools.md#create-and-edit-paths) — Create, list, rename, or update vector paths from typed point data.
-- [`stroke_or_fill_path`](roadmap_tools.md#stroke-or-fill-path) — Stroke or fill a vector path with supplied paint settings.
-- [`palette_create_or_update`](roadmap_tools.md#palette-create-or-update) — Create, inspect, or update a palette from provided colors.
-- [`import_as_layer_with_metadata`](roadmap_tools.md#import-as-layer-with-metadata) — Import an external image as a layer with provenance metadata.
-- [`batch_export_variants`](roadmap_tools.md#batch-export-variants) — Export multiple bounded variants from the active image.
-- [`pdb_introspect_typed`](roadmap_tools.md#pdb-introspect-typed) — Return typed PDB procedure metadata for safer wrapper generation.
-- [`safe_python_eval`](roadmap_tools.md#safe-python-eval) — Run restricted diagnostic Python only when explicitly debug-enabled.
-- [`manage_guides_and_grid`](roadmap_tools.md#manage-guides-and-grid) — Create, list, move, remove guides, or set document grid settings.
-- [`preview_gegl_operation`](roadmap_tools.md#preview-gegl-operation) — Render bounded before/after metadata for a GEGL operation without committing.
+- [`pdb_introspect_typed`](pdb_tools.md#pdb-introspect-typed) — Return typed PDB procedure metadata for safer wrapper generation.
+- [`safe_python_eval`](pdb_tools.md#safe-python-eval) — Run restricted diagnostic Python only when explicitly debug-enabled.
 
 ### Selections
 

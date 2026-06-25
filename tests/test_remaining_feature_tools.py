@@ -143,3 +143,38 @@ async def test_preview_filter_rejects_unknown_filter_before_bridge_call() -> Non
     assert result["success"] is False
     assert "Unsupported filter" in result["error"]
     assert bridge.calls == []
+
+
+@pytest.mark.asyncio
+async def test_create_checkpoint_does_not_duplicate_image_without_xcf_copy() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_history_tools(mcp, bridge)
+
+    result = await mcp.tools["create_checkpoint"](label="metadata only", include_xcf_copy=False)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "duplicate = image.duplicate()" not in generated
+    assert "include_xcf_copy = False" in generated
+
+
+@pytest.mark.asyncio
+async def test_create_checkpoint_xcf_copy_releases_duplicate_image_ref() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_history_tools(mcp, bridge)
+
+    result = await mcp.tools["create_checkpoint"](label="with copy", include_xcf_copy=True)
+
+    assert result["success"] is True
+    generated_items = bridge.calls[-1][1]
+    generated = "\n".join(generated_items)
+    assert "# __gimp_mcp_checkpoint_lifecycle__" in generated
+    assert "duplicate = None" in generated
+    assert "duplicate = image.duplicate()" in generated
+    assert "finally:" in generated
+    assert "duplicate.delete()" in generated
+    assert "del duplicate" in generated
+    assert "gc.collect()" in generated
+    assert "try:" not in generated_items

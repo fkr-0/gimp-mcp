@@ -25,10 +25,11 @@ Source module: `src/gimp_mcp_pro/tools/color_tools.py`
 | [`analyze_color_palette`](#analyze-color-palette) | Extract a deterministic approximate color palette for a layer or region. | 5 |
 | [`sample_pixels`](#sample-pixels) | Sample colors at multiple points or over a rectangular grid. | 7 |
 | [`sample_color`](#sample-color) | Pick/sample a color from a pixel in the image. | 3 |
+| [`palette_create_or_update`](#palette-create-or-update) | Create, inspect, or update a palette from provided colors. | 4 |
 
 ## `adjust_brightness_contrast` {#adjust-brightness-contrast}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:481`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:482`
 
 ```python
 async def adjust_brightness_contrast(brightness: int = 0, contrast: int = 0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -69,7 +70,7 @@ Returns:
 
 ## `adjust_hue_saturation` {#adjust-hue-saturation}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:518`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:519`
 
 ```python
 async def adjust_hue_saturation(hue: float = 0.0, saturation: float = 0.0, lightness: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -112,7 +113,7 @@ Returns:
 
 ## `adjust_color_balance` {#adjust-color-balance}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:559`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:560`
 
 ```python
 async def adjust_color_balance(range: str = 'midtones', cyan_red: float = 0.0, magenta_green: float = 0.0, yellow_blue: float = 0.0, preserve_luminosity: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -159,7 +160,7 @@ Returns:
 
 ## `adjust_levels` {#adjust-levels}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:628`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:629`
 
 ```python
 async def adjust_levels(input_low: int = 0, input_high: int = 255, gamma: float = 1.0, output_low: int = 0, output_high: int = 255, channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -212,7 +213,7 @@ Returns:
 
 ## `adjust_curves` {#adjust-curves}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:691`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:692`
 
 ```python
 async def adjust_curves(control_points: list[float], channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -260,7 +261,7 @@ Returns:
 
 ## `desaturate` {#desaturate}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:745`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:746`
 
 ```python
 async def desaturate(method: str = 'luminosity', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -303,7 +304,7 @@ Returns:
 
 ## `invert_colors` {#invert-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:789`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:790`
 
 ```python
 async def invert_colors(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -342,7 +343,7 @@ Returns:
 
 ## `apply_threshold` {#apply-threshold}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:817`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:818`
 
 ```python
 async def apply_threshold(low: int = 128, high: int = 255, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -385,7 +386,7 @@ Returns:
 
 ## `posterize` {#posterize}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:852`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:853`
 
 ```python
 async def posterize(levels: int = 4, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -424,7 +425,7 @@ Returns:
 
 ## `color_to_alpha` {#color-to-alpha}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:884`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:885`
 
 ```python
 async def color_to_alpha(color: str = 'white', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -467,7 +468,7 @@ Returns:
 
 ## `auto_white_balance` {#auto-white-balance}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:927`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:928`
 
 ```python
 async def auto_white_balance(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -506,7 +507,7 @@ Returns:
 
 ## `brush_inventory` {#brush-inventory}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:956`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:957`
 
 ```python
 async def brush_inventory(asset_types: list[str] | None = None, filter: str | None = None, limit: int = 100, include_current: bool = True) -> ToolResult
@@ -547,7 +548,7 @@ Returns:
 
 ## `set_paint_resource` {#set-paint-resource}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1004`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1005`
 
 ```python
 async def set_paint_resource(resource_type: str, name: str) -> ToolResult
@@ -584,7 +585,7 @@ Returns:
 
 ## `set_paint_context` {#set-paint-context}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1037`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1038`
 
 ```python
 async def set_paint_context(brush: str | None = None, size: float | None = None, opacity: float | None = None, dynamics: str | None = None, pattern: str | None = None, gradient: str | None = None, foreground: str | None = None, background: str | None = None) -> ToolResult
@@ -633,7 +634,7 @@ Returns:
 
 ## `resource_catalog` {#resource-catalog}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1098`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1099`
 
 ```python
 async def resource_catalog(resource_type: str, query: str | None = None, limit: int = 50, include_optional: bool = True) -> ToolResult
@@ -674,7 +675,7 @@ Returns:
 
 ## `list_gimp_resources` {#list-gimp-resources}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1147`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1148`
 
 ```python
 async def list_gimp_resources(resource_type: str = 'all', limit: int = 100) -> ToolResult
@@ -711,7 +712,7 @@ Returns:
 
 ## `get_colors` {#get-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1228`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1229`
 
 ```python
 async def get_colors() -> ToolResult
@@ -741,7 +742,7 @@ Returns:
 
 ## `swap_colors` {#swap-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1275`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1276`
 
 ```python
 async def swap_colors() -> ToolResult
@@ -767,7 +768,7 @@ Returns:
 
 ## `analyze_color_palette` {#analyze-color-palette}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1295`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1296`
 
 ```python
 async def analyze_color_palette(max_colors: int = 8, ignore_transparent: bool = True, region: dict[str, Any] | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -813,7 +814,7 @@ Contract:
 
 ## `sample_pixels` {#sample-pixels}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1368`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1369`
 
 ```python
 async def sample_pixels(points: list[dict[str, Any]] | None = None, grid: dict[str, Any] | None = None, sample_merged: bool = False, sample_average: bool = False, average_radius: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -860,7 +861,7 @@ Returns:
 
 ## `sample_color` {#sample-color}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1441`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1442`
 
 ```python
 async def sample_color(x: int, y: int, sample_merged: bool = False) -> ToolResult
@@ -897,3 +898,44 @@ Args:
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
+
+## `palette_create_or_update` {#palette-create-or-update}
+
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1497`
+
+```python
+async def palette_create_or_update(action: str, palette_name: str, colors: list[dict[str, Any]] | None = None, overwrite: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `action` | create/update/inspect. |
+| `palette_name` | Palette name. |
+| `colors` | Optional named color entries. |
+| `overwrite` | Allow replacing an existing palette. |
+
+## Returns
+
+Operation result with palette metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create, inspect, or update a palette from provided colors.
+
+Args:
+    action: create/update/inspect.
+    palette_name: Palette name.
+    colors: Optional named color entries.
+    overwrite: Allow replacing an existing palette.
+
+Returns:
+    Operation result with palette metadata.

@@ -396,12 +396,37 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
                 "if not sel: raise RuntimeError('No active layer')",
                 "drawable = sel[0]",
             ]
-        if color_expr is not None:
-            code.append(f"Gimp.context_set_foreground({color_expr})")
-        if brush_size is not None:
-            code.append(f"Gimp.context_set_line_width({brush_size})")
-        code += [
-            "Gimp.Drawable.edit_stroke_selection(drawable)",
+        stroke_color_expr = color_expr or "None"
+        line_width_expr = repr(brush_size) if brush_size is not None else "None"
+        lifecycle_lines = [
+            "# __gimp_mcp_selection_stroke_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_line_width = Gimp.context_get_line_width()",
+            "stroke_color = None",
+            "try:",
+            f"    stroke_color = {stroke_color_expr}",
+            "    if stroke_color is not None:",
+            f"        Gimp.context_set_foreground({stroke_color_expr})",
+            f"    if {line_width_expr} is not None:",
+            f"        Gimp.context_set_line_width({line_width_expr})",
+            "    Gimp.Drawable.edit_stroke_selection(drawable)",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_line_width(previous_line_width)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del stroke_color",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
+        code = ["import gc"] + code + [
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:
@@ -472,13 +497,44 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
                 "if not sel: raise RuntimeError('No active layer')",
                 "drawable = sel[0]",
             ]
-        if color_expr is not None:
-            code.append(f"Gimp.context_set_foreground({color_expr})")
-        code += [
-            f"Gimp.context_set_sample_threshold({threshold / 255.0})",
-            f"Gimp.context_set_sample_merged({sample_merged})",
-            "drawable = locals().get('drawable', locals().get('target'))",
-            f"Gimp.Drawable.edit_bucket_fill(drawable, Gimp.FillType.FOREGROUND, {x}, {y})",
+        fill_color_expr = color_expr or "None"
+        threshold_expr = repr(threshold / 255.0)
+        sample_merged_expr = repr(sample_merged)
+        lifecycle_lines = [
+            "# __gimp_mcp_selection_bucket_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_sample_threshold = Gimp.context_get_sample_threshold()",
+            "previous_sample_merged = Gimp.context_get_sample_merged()",
+            "fill_color = None",
+            "try:",
+            f"    fill_color = {fill_color_expr}",
+            "    if fill_color is not None:",
+            f"        Gimp.context_set_foreground({fill_color_expr})",
+            f"    Gimp.context_set_sample_threshold({threshold_expr})",
+            f"    Gimp.context_set_sample_merged({sample_merged_expr})",
+            "    drawable = locals().get('drawable', locals().get('target'))",
+            f"    Gimp.Drawable.edit_bucket_fill(drawable, Gimp.FillType.FOREGROUND, {x}, {y})",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_sample_threshold(previous_sample_threshold)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_sample_merged(previous_sample_merged)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del fill_color",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
+        code = ["import gc"] + code + [
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:

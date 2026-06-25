@@ -25,7 +25,6 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.path_tools import register_path_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
-from gimp_mcp_pro.tools.roadmap_tools import register_roadmap_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
@@ -201,7 +200,6 @@ def register_functions() -> list[RegisterFn]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
-        register_roadmap_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
         register_flow_tools,
     ]

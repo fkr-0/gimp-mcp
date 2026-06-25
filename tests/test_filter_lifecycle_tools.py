@@ -55,3 +55,23 @@ async def test_preview_filter_removes_temporary_layer_on_filter_failure_and_rele
     assert "del cfg" in generated
     assert "del df" in generated
     assert "gc.collect()" in generated
+
+
+@pytest.mark.asyncio
+async def test_committed_filter_lifecycle_block_is_single_exec_unit() -> None:
+    """GIMP bridge executes each code-list item separately, so try/finally must be one item."""
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_filter_tools(mcp, bridge)
+
+    result = await mcp.tools["apply_gaussian_blur"](radius_x=3.0, radius_y=4.0, layer_index=0)
+
+    assert result["success"] is True
+    generated_items = bridge.calls[-1][1]
+    assert "try:" not in generated_items
+    lifecycle_blocks = [
+        item for item in generated_items if "# __gimp_mcp_filter_lifecycle__" in item
+    ]
+    assert len(lifecycle_blocks) == 1
+    assert "try:\n    df = Gimp.DrawableFilter.new" in lifecycle_blocks[0]
+    assert "finally:\n    try:" in lifecycle_blocks[0]

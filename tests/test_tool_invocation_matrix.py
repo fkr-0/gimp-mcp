@@ -32,13 +32,12 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.path_tools import register_path_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
-from gimp_mcp_pro.tools.roadmap_tools import register_roadmap_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.tools.types import AsyncToolBridge
 from gimp_mcp_pro.utils.errors import GimpCommandError
-from tests.roadmap_tool_cases import ROADMAP_TOOL_CASES
+from tests.promoted_tool_cases import PROMOTED_TOOL_CASES
 from tests.test_flow_models import flow_payload
 
 AsyncRegisteredTool = Callable[..., Awaitable[ToolResult]]
@@ -444,7 +443,6 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
-        register_roadmap_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
         lambda mcp, bridge: register_flow_tools(
             mcp, bridge, store=matrix_flow_store(), registry_factory=matrix_flow_registry_factory
@@ -703,7 +701,9 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "undo": ((), {"steps": 1}),
 }
 
-TOOL_SUCCESS_CASES.update({name: ((), case["kwargs"]) for name, case in ROADMAP_TOOL_CASES.items()})
+TOOL_SUCCESS_CASES.update(
+    {name: ((), case["kwargs"]) for name, case in PROMOTED_TOOL_CASES.items()}
+)
 TOOL_SUCCESS_CASES.update(
     {
         "align_and_distribute_layers": (

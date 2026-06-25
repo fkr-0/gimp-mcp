@@ -16,10 +16,13 @@ Source module: `src/gimp_mcp_pro/tools/image_tools.py`
 | [`export_image`](#export-image) | Export the active image to a file. | 3 |
 | [`flatten_image`](#flatten-image) | Flatten all layers into a single layer. | 0 |
 | [`duplicate_image`](#duplicate-image) | Duplicate the entire active image (all layers, channels, paths). | 0 |
+| [`import_as_layer_with_metadata`](#import-as-layer-with-metadata) | Import an external image as a layer with provenance metadata. | 3 |
+| [`batch_export_variants`](#batch-export-variants) | Export multiple bounded variants from the active image. | 3 |
+| [`manage_guides_and_grid`](#manage-guides-and-grid) | Create, list, move, remove guides, or set document grid settings. | 5 |
 
 ## `create_image` {#create-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:68`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:69`
 
 ```python
 async def create_image(width: int, height: int, color_mode: str = 'rgb', fill: str = 'white') -> ToolResult
@@ -63,7 +66,7 @@ Returns:
 
 ## `add_guide` {#add-guide}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:141`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:142`
 
 ```python
 async def add_guide(orientation: str = 'horizontal', position: int = 0) -> ToolResult
@@ -100,7 +103,7 @@ Returns:
 
 ## `delete_guide` {#delete-guide}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:177`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:178`
 
 ```python
 async def delete_guide(guide_id: int) -> ToolResult
@@ -135,7 +138,7 @@ Returns:
 
 ## `list_guides` {#list-guides}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:204`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:205`
 
 ```python
 async def list_guides() -> ToolResult
@@ -161,7 +164,7 @@ Returns:
 
 ## `set_image_grid` {#set-image-grid}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:245`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:246`
 
 ```python
 async def set_image_grid(xspacing: float = 10.0, yspacing: float = 10.0, xoffset: float = 0.0, yoffset: float = 0.0, style: str = 'intersections') -> ToolResult
@@ -204,7 +207,7 @@ Returns:
 
 ## `color_management_profile` {#color-management-profile}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:305`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:306`
 
 ```python
 async def color_management_profile(action: str = 'inspect', profile_ref: str | None = None, rendering_intent: str = 'perceptual', confirm: bool = False) -> ToolResult
@@ -245,7 +248,7 @@ Returns:
 
 ## `list_images` {#list-images}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:360`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:361`
 
 ```python
 async def list_images() -> ToolResult
@@ -275,7 +278,7 @@ Returns:
 
 ## `get_image_info` {#get-image-info}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:416`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:417`
 
 ```python
 async def get_image_info() -> ToolResult
@@ -311,7 +314,7 @@ Returns:
 
 ## `export_with_manifest` {#export-with-manifest}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:449`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:450`
 
 ```python
 async def export_with_manifest(format: str, destination: str, include_sidecar: bool = True, export_settings: dict[str, Any] | None = None) -> ToolResult
@@ -352,7 +355,7 @@ Returns:
 
 ## `export_image` {#export-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:528`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:529`
 
 ```python
 async def export_image(file_path: str, format: str | None = None, quality: int = 85) -> ToolResult
@@ -395,7 +398,7 @@ Returns:
 
 ## `flatten_image` {#flatten-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:604`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:605`
 
 ```python
 async def flatten_image() -> ToolResult
@@ -429,7 +432,7 @@ Returns:
 
 ## `duplicate_image` {#duplicate-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:633`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:634`
 
 ```python
 async def duplicate_image() -> ToolResult
@@ -456,3 +459,124 @@ Notes:
 
 Returns:
     Operation result with info about the new image.
+
+## `import_as_layer_with_metadata` {#import-as-layer-with-metadata}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:660`
+
+```python
+async def import_as_layer_with_metadata(source: str, layer_name: str | None = None, placement: dict[str, int] | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `source` | Controlled local source path. |
+| `layer_name` | Optional layer name. |
+| `placement` | Optional x/y placement. |
+
+## Returns
+
+Operation result with layer and provenance metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Import an external image as a layer with provenance metadata.
+
+Args:
+    source: Controlled local source path.
+    layer_name: Optional layer name.
+    placement: Optional x/y placement.
+
+Returns:
+    Operation result with layer and provenance metadata.
+
+## `batch_export_variants` {#batch-export-variants}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:691`
+
+```python
+async def batch_export_variants(variants: list[dict[str, Any]], base_path: str, overwrite: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `variants` | Variant definitions with format and optional dimensions. |
+| `base_path` | Controlled output base path. |
+| `overwrite` | Whether existing files may be overwritten. |
+
+## Returns
+
+Operation result with exported files and warnings.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Export multiple bounded variants from the active image.
+
+Args:
+    variants: Variant definitions with format and optional dimensions.
+    base_path: Controlled output base path.
+    overwrite: Whether existing files may be overwritten.
+
+Returns:
+    Operation result with exported files and warnings.
+
+## `manage_guides_and_grid` {#manage-guides-and-grid}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:728`
+
+```python
+async def manage_guides_and_grid(action: str = 'list', orientation: str | None = None, position: float | None = None, guide_id: int | None = None, grid: dict[str, Any] | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `action` | list/add/move/remove/set_grid. |
+| `orientation` | Optional horizontal/vertical orientation. |
+| `position` | Optional guide position. |
+| `guide_id` | Optional existing guide ID. |
+| `grid` | Optional grid settings. |
+
+## Returns
+
+Operation result with guides and grid metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create, list, move, remove guides, or set document grid settings.
+
+Args:
+    action: list/add/move/remove/set_grid.
+    orientation: Optional horizontal/vertical orientation.
+    position: Optional guide position.
+    guide_id: Optional existing guide ID.
+    grid: Optional grid settings.
+
+Returns:
+    Operation result with guides and grid metadata.

@@ -108,3 +108,24 @@ async def test_list_gimp_resources_queries_brush_pattern_font_gradient_lists() -
     assert "resources['fonts'] = _resource_names(Gimp.fonts_get_list(''))[:5]" in generated
     assert "resources['gradients'] = _resource_names(Gimp.gradients_get_list(''))[:5]" in generated
     assert "print(json.dumps(resources))" in generated
+
+
+@pytest.mark.asyncio
+async def test_color_to_alpha_releases_drawable_filter_refs() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["color_to_alpha"]("white")
+
+    assert result["success"] is True
+    generated_items = bridge.calls[-1][1]
+    generated = "\n".join(generated_items)
+    assert "# __gimp_mcp_color_to_alpha_lifecycle__" in generated
+    assert "df = None" in generated
+    assert "cfg = None" in generated
+    assert "finally:" in generated
+    assert "del cfg" in generated
+    assert "del df" in generated
+    assert "gc.collect()" in generated
+    assert "try:" not in generated_items

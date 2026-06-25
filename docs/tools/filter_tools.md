@@ -15,10 +15,12 @@ Source module: `src/gimp_mcp_pro/tools/filter_tools.py`
 | [`apply_noise`](#apply-noise) | Add random noise to a layer. | 3 |
 | [`apply_median`](#apply-median) | Apply median filter (denoise) to a layer. | 3 |
 | [`apply_drop_shadow`](#apply-drop-shadow) | Apply a drop shadow effect to a layer. | 7 |
+| [`preview_gegl_operation`](#preview-gegl-operation) | Render bounded before/after metadata for a GEGL operation without committing. | 4 |
+| [`apply_gegl_operation`](#apply-gegl-operation) | Apply or dry-run an allowlisted GEGL DrawableFilter operation. | 4 |
 
 ## `preview_filter` {#preview-filter}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:193`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:292`
 
 ```python
 async def preview_filter(filter: str, parameters: dict[str, object] | None = None, preview_mode: str = 'temporary_layer', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -65,7 +67,7 @@ Contract:
 
 ## `commit_filter_preview` {#commit-filter-preview}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:247`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:346`
 
 ```python
 async def commit_filter_preview(preview_id: str, action: str, committed_name: str | None = None) -> ToolResult
@@ -108,7 +110,7 @@ Contract:
 
 ## `apply_gaussian_blur` {#apply-gaussian-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:296`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:395`
 
 ```python
 async def apply_gaussian_blur(radius_x: float = 5.0, radius_y: float | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -153,7 +155,7 @@ Returns:
 
 ## `apply_motion_blur` {#apply-motion-blur}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:339`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:438`
 
 ```python
 async def apply_motion_blur(blur_type: str = 'linear', length: float = 10.0, angle: float = 0.0, center_x: float = 0.0, center_y: float = 0.0, factor: float = 0.1, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -202,7 +204,7 @@ Returns:
 
 ## `apply_unsharp_mask` {#apply-unsharp-mask}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:420`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:519`
 
 ```python
 async def apply_unsharp_mask(amount: float = 0.5, radius: float = 3.0, threshold: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -249,7 +251,7 @@ Returns:
 
 ## `apply_pixelize` {#apply-pixelize}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:463`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:562`
 
 ```python
 async def apply_pixelize(block_width: int = 10, block_height: int | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -293,7 +295,7 @@ Returns:
 
 ## `apply_edge_detect` {#apply-edge-detect}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:505`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:604`
 
 ```python
 async def apply_edge_detect(method: str = 'sobel', amount: float = 1.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -338,7 +340,7 @@ Returns:
 
 ## `apply_emboss` {#apply-emboss}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:547`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:646`
 
 ```python
 async def apply_emboss(azimuth: float = 315.0, elevation: float = 45.0, depth: int = 2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -383,7 +385,7 @@ Returns:
 
 ## `apply_noise` {#apply-noise}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:587`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:686`
 
 ```python
 async def apply_noise(amount: float = 0.2, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -425,7 +427,7 @@ Returns:
 
 ## `apply_median` {#apply-median}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:624`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:723`
 
 ```python
 async def apply_median(radius: int = 3, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -466,7 +468,7 @@ Returns:
 
 ## `apply_drop_shadow` {#apply-drop-shadow}
 
-Source: `src/gimp_mcp_pro/tools/filter_tools.py:659`
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:758`
 
 ```python
 async def apply_drop_shadow(offset_x: float = 4.0, offset_y: float = 4.0, blur_radius: float = 8.0, color: str = 'black', opacity: float = 60.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -512,3 +514,85 @@ Args:
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
+
+## `preview_gegl_operation` {#preview-gegl-operation}
+
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:816`
+
+```python
+async def preview_gegl_operation(target: dict[str, Any] | str, operation: str, properties: dict[str, Any] | None = None, preview_region: dict[str, int] | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `target` | Layer target reference. |
+| `operation` | GEGL operation name. |
+| `properties` | Operation properties. |
+| `preview_region` | Optional bounded preview rectangle. |
+
+## Returns
+
+Operation result with before/after preview placeholders and metrics.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Render bounded before/after metadata for a GEGL operation without committing.
+
+Args:
+    target: Layer target reference.
+    operation: GEGL operation name.
+    properties: Operation properties.
+    preview_region: Optional bounded preview rectangle.
+
+Returns:
+    Operation result with before/after preview placeholders and metrics.
+
+## `apply_gegl_operation` {#apply-gegl-operation}
+
+Source: `src/gimp_mcp_pro/tools/filter_tools.py:855`
+
+```python
+async def apply_gegl_operation(target: dict[str, object] | str, operation: str, properties: dict[str, object] | None = None, dry_run: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `target` | Layer reference such as a layer name or layer_index mapping. |
+| `operation` | Allowlisted GEGL operation name. |
+| `properties` | Operation properties validated against the operation schema. |
+| `dry_run` | Validate and report without mutating the drawable when true. |
+
+## Returns
+
+Operation result with changed-bounds and applied-property metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Apply or dry-run an allowlisted GEGL DrawableFilter operation.
+
+Args:
+    target: Layer reference such as a layer name or layer_index mapping.
+    operation: Allowlisted GEGL operation name.
+    properties: Operation properties validated against the operation schema.
+    dry_run: Validate and report without mutating the drawable when true.
+
+Returns:
+    Operation result with changed-bounds and applied-property metadata.

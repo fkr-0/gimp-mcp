@@ -26,10 +26,12 @@ Source module: `src/gimp_mcp_pro/tools/layer_tools.py`
 | [`remove_visual_annotations`](#remove-visual-annotations) | Remove MCP-managed annotation layers only. | 2 |
 | [`layer_version_stamp`](#layer-version-stamp) | Attach namespaced MCP provenance metadata to a layer. | 3 |
 | [`add_alpha_channel`](#add-alpha-channel) | Add an alpha (transparency) channel to a layer. | 2 |
+| [`edit_channels`](#edit-channels) | Create, inspect, duplicate, rename, or convert channels/selections. | 3 |
+| [`manage_channels`](#manage-channels) | Manage saved channels through a consolidated action tool. | 4 |
 
 ## `create_layer` {#create-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:110`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:111`
 
 ```python
 async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mode: str = 'normal', fill: str = 'transparent', has_alpha: bool = True, position: int = 0, width: int | None = None, height: int | None = None) -> ToolResult
@@ -86,7 +88,7 @@ Returns:
 
 ## `list_layers` {#list-layers}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:187`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:188`
 
 ```python
 async def list_layers() -> ToolResult
@@ -116,7 +118,7 @@ Returns:
 
 ## `set_active_layer` {#set-active-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:234`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:235`
 
 ```python
 async def set_active_layer(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -157,7 +159,7 @@ Returns:
 
 ## `delete_layer` {#delete-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:277`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:278`
 
 ```python
 async def delete_layer(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -194,7 +196,7 @@ Returns:
 
 ## `set_layer_opacity` {#set-layer-opacity}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:310`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:311`
 
 ```python
 async def set_layer_opacity(opacity: float, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -233,7 +235,7 @@ Returns:
 
 ## `set_layer_visibility` {#set-layer-visibility}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:345`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:346`
 
 ```python
 async def set_layer_visibility(visible: bool, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -272,7 +274,7 @@ Returns:
 
 ## `set_layer_mode` {#set-layer-mode}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:376`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:377`
 
 ```python
 async def set_layer_mode(blend_mode: str, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -315,7 +317,7 @@ Returns:
 
 ## `duplicate_layer` {#duplicate-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:420`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:421`
 
 ```python
 async def duplicate_layer(layer_name: str | None = None, layer_index: int | None = None, new_name: str | None = None) -> ToolResult
@@ -354,7 +356,7 @@ Returns:
 
 ## `merge_visible_layers` {#merge-visible-layers}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:456`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:457`
 
 ```python
 async def merge_visible_layers() -> ToolResult
@@ -386,7 +388,7 @@ Returns:
 
 ## `add_layer_mask` {#add-layer-mask}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:484`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:485`
 
 ```python
 async def add_layer_mask(mask_type: str = 'white', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -425,7 +427,7 @@ Returns:
 
 ## `get_layer_mask_info` {#get-layer-mask-info}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:529`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:530`
 
 ```python
 async def get_layer_mask_info(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -462,7 +464,7 @@ Returns:
 
 ## `set_layer_mask_state` {#set-layer-mask-state}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:572`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:573`
 
 ```python
 async def set_layer_mask_state(edit_mask: bool | None = None, show_mask: bool | None = None, apply_mask: bool | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -505,7 +507,7 @@ Returns:
 
 ## `remove_layer_mask` {#remove-layer-mask}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:617`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:618`
 
 ```python
 async def remove_layer_mask(apply: bool = False, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -544,7 +546,7 @@ Returns:
 
 ## `create_layer_group` {#create-layer-group}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:649`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:650`
 
 ```python
 async def create_layer_group(name: str = 'Group', position: int = 0, parent_group_name: str | None = None, parent_group_index: int | None = None) -> ToolResult
@@ -585,7 +587,7 @@ Returns:
 
 ## `move_layer_to_group` {#move-layer-to-group}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:706`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:707`
 
 ```python
 async def move_layer_to_group(layer_name: str | None = None, layer_index: int | None = None, group_name: str | None = None, group_index: int | None = None, position: int = 0) -> ToolResult
@@ -628,7 +630,7 @@ Returns:
 
 ## `list_channels` {#list-channels}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:758`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:759`
 
 ```python
 async def list_channels() -> ToolResult
@@ -654,7 +656,7 @@ Returns:
 
 ## `save_selection_to_channel` {#save-selection-to-channel}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:800`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:801`
 
 ```python
 async def save_selection_to_channel(name: str = 'Selection') -> ToolResult
@@ -689,7 +691,7 @@ Returns:
 
 ## `channel_to_selection` {#channel-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:837`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:838`
 
 ```python
 async def channel_to_selection(channel_name: str | None = None, channel_index: int | None = None, operation: str = 'replace') -> ToolResult
@@ -728,7 +730,7 @@ Returns:
 
 ## `create_visual_annotation_layer` {#create-visual-annotation-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:881`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:882`
 
 ```python
 async def create_visual_annotation_layer(annotations: list[dict[str, object]], layer_name: str | None = None, temporary: bool = True) -> ToolResult
@@ -767,7 +769,7 @@ Returns:
 
 ## `remove_visual_annotations` {#remove-visual-annotations}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:940`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:960`
 
 ```python
 async def remove_visual_annotations(annotation_layer_ids: list[int] | None = None, remove_all_mcp_annotations: bool = False) -> ToolResult
@@ -804,7 +806,7 @@ Returns:
 
 ## `layer_version_stamp` {#layer-version-stamp}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:996`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1016`
 
 ```python
 async def layer_version_stamp(target: dict[str, object] | str, metadata: dict[str, object], merge: bool = True) -> ToolResult
@@ -843,7 +845,7 @@ Returns:
 
 ## `add_alpha_channel` {#add-alpha-channel}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:1059`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1099`
 
 ```python
 async def add_alpha_channel(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -881,3 +883,83 @@ Args:
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
+
+## `edit_channels` {#edit-channels}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1129`
+
+```python
+async def edit_channels(action: str, channel: dict[str, Any] | str | None = None, name: str | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `action` | Channel operation. |
+| `channel` | Optional channel reference. |
+| `name` | Optional new or target name. |
+
+## Returns
+
+Operation result with channel metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create, inspect, duplicate, rename, or convert channels/selections.
+
+Args:
+    action: Channel operation.
+    channel: Optional channel reference.
+    name: Optional new or target name.
+
+Returns:
+    Operation result with channel metadata.
+
+## `manage_channels` {#manage-channels}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1165`
+
+```python
+async def manage_channels(action: str = 'list', channel_ref: dict[str, Any] | str | None = None, name: str | None = None, visible: bool | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `action` | list/create/rename/show/hide/to_selection/selection_to_channel. |
+| `channel_ref` | Optional channel reference. |
+| `name` | Optional channel name. |
+| `visible` | Optional visibility flag for update actions. |
+
+## Returns
+
+Operation result with stable channel IDs and selection-change flag.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Manage saved channels through a consolidated action tool.
+
+Args:
+    action: list/create/rename/show/hide/to_selection/selection_to_channel.
+    channel_ref: Optional channel reference.
+    name: Optional channel name.
+    visible: Optional visibility flag for update actions.
+
+Returns:
+    Operation result with stable channel IDs and selection-change flag.

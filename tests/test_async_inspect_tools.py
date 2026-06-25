@@ -95,3 +95,42 @@ async def test_get_image_bitmap_async_tool_builds_region_dict() -> None:
     assert result["success"] is True
     assert result["data"]["format"] == "png"
     assert result["data"]["width"] == 8
+
+
+class RecordingBitmapBridge(AsyncFakeBridge):
+    def __init__(self) -> None:
+        self.bitmap_calls: list[dict[str, object]] = []
+
+    async def async_get_image_bitmap(self, max_width=None, max_height=None, region=None):
+        self.bitmap_calls.append({"max_width": max_width, "max_height": max_height, "region": region})
+        return await super().async_get_image_bitmap(max_width, max_height, region)
+
+
+def _registered_tools_with_bridge(bridge: AsyncFakeBridge) -> dict[str, object]:
+    mcp = CaptureMCP()
+    register_inspect_tools(mcp, bridge)
+    return mcp.tools
+
+
+@pytest.mark.asyncio
+async def test_get_image_bitmap_rejects_unbounded_dimensions_before_bridge_call() -> None:
+    bridge = RecordingBitmapBridge()
+    tool = _registered_tools_with_bridge(bridge)["get_image_bitmap"]
+
+    result = await tool(max_width=8192, max_height=8192)
+
+    assert result["success"] is False
+    assert "between 1 and 4096" in result["error"]
+    assert bridge.bitmap_calls == []
+
+
+@pytest.mark.asyncio
+async def test_get_image_bitmap_rejects_unbounded_region_before_bridge_call() -> None:
+    bridge = RecordingBitmapBridge()
+    tool = _registered_tools_with_bridge(bridge)["get_image_bitmap"]
+
+    result = await tool(region_x=0, region_y=0, region_width=10000, region_height=10000)
+
+    assert result["success"] is False
+    assert "region_width" in result["error"]
+    assert bridge.bitmap_calls == []
