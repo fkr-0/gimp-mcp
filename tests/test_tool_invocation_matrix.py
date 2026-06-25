@@ -32,11 +32,13 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.path_tools import register_path_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
+from gimp_mcp_pro.tools.roadmap_tools import register_roadmap_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.tools.types import AsyncToolBridge
 from gimp_mcp_pro.utils.errors import GimpCommandError
+from tests.roadmap_tool_cases import ROADMAP_TOOL_CASES
 from tests.test_flow_models import flow_payload
 
 AsyncRegisteredTool = Callable[..., Awaitable[ToolResult]]
@@ -442,6 +444,7 @@ def registered_tools(bridge: AsyncToolBridge) -> dict[str, AsyncRegisteredTool]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
+        register_roadmap_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
         lambda mcp, bridge: register_flow_tools(
             mcp, bridge, store=matrix_flow_store(), registry_factory=matrix_flow_registry_factory
@@ -510,7 +513,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "content_bounds": ((), {"target": "active_layer", "threshold": 0.05}),
     "create_checkpoint": ((), {"label": "matrix checkpoint", "include_xcf_copy": False}),
     "crop_image": ((1, 2, 100, 80), {}),
-    "commit_filter_preview": (("Preview: gegl:gaussian-blur", "commit"), {"committed_name": "Committed blur"}),
+    "commit_filter_preview": (
+        ("Preview: gegl:gaussian-blur", "commit"),
+        {"committed_name": "Committed blur"},
+    ),
     "crop_to_selection": ((), {}),
     "deactivate_flow": (("prepare-product-image",), {}),
     "delete_layer": ((), {"layer_index": 0}),
@@ -589,10 +595,6 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
             "layer_index": 0,
         },
     ),
-    "commit_filter_preview": (
-        (),
-        {"preview_id": "Preview: gegl:gaussian-blur", "action": "commit", "committed_name": "Committed blur"},
-    ),
     "prepare_export_checklist": (
         (),
         {
@@ -609,7 +611,12 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
     "smart_crop_or_resize": (
         (),
-        {"mode": "crop", "target_size": {"width": 320, "height": 200}, "anchor": "center", "dry_run": True},
+        {
+            "mode": "crop",
+            "target_size": {"width": 320, "height": 200},
+            "anchor": "center",
+            "dry_run": True,
+        },
     ),
     "create_path": (([0, 0, 20, 0, 20, 20],), {"name": "Path 1", "closed": True}),
     "run_flow": (("prepare-product-image", {"width": 800, "image": 1, "sharpen": False}), {}),
@@ -675,7 +682,6 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
         },
     ),
     "set_paint_resource": (("brush", "2. Hardness 050"), {}),
-    "smart_crop_or_resize": ((), {"mode": "crop", "target_size": {"width": 320, "height": 200}, "anchor": "center", "dry_run": True}),
     "set_foreground_color": (("#000000",), {}),
     "set_layer_mask_state": (
         (),
@@ -696,6 +702,64 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "unpin_flow": (("prepare-product-image",), {}),
     "undo": ((), {"steps": 1}),
 }
+
+TOOL_SUCCESS_CASES.update({name: ((), case["kwargs"]) for name, case in ROADMAP_TOOL_CASES.items()})
+TOOL_SUCCESS_CASES.update(
+    {
+        "align_and_distribute_layers": (
+            (),
+            {
+                "layers": [{"layer_name": "A"}, {"layer_name": "B"}],
+                "align": "center_x",
+                "distribute": "horizontal",
+                "reference": "canvas",
+                "dry_run": True,
+            },
+        ),
+        "color_management_profile": ((), {"action": "inspect"}),
+        "create_text_box": (
+            (),
+            {
+                "text": "Hello",
+                "rectangle": {"x": 12, "y": 24, "width": 320, "height": 80},
+                "style": {"font": "Sans", "font_size": 24, "color": "#445566", "justify": "center"},
+                "name": "Title text",
+            },
+        ),
+        "create_visual_annotation_layer": (
+            (),
+            {
+                "annotations": [
+                    {"type": "box", "x": 1, "y": 2, "width": 10, "height": 12, "color": "#ff0000"}
+                ],
+                "temporary": True,
+            },
+        ),
+        "export_with_manifest": (
+            (),
+            {"format": "png", "destination": "/tmp/gimp-mcp-export.png", "include_sidecar": False},
+        ),
+        "find_similar_regions": (
+            (),
+            {
+                "color": "#112233",
+                "alpha_range": {"min": 0.25, "max": 1.0},
+                "region": {"x": 10, "y": 20, "width": 100, "height": 80},
+                "tolerance": 0.12,
+                "max_regions": 8,
+            },
+        ),
+        "layer_version_stamp": (
+            (),
+            {"target": {"layer_name": "Layer 1"}, "metadata": {"operation": "test"}, "merge": True},
+        ),
+        "remove_visual_annotations": ((), {"remove_all_mcp_annotations": True}),
+        "resource_catalog": (
+            (),
+            {"resource_type": "brush", "query": "Hardness", "limit": 10, "include_optional": True},
+        ),
+    }
+)
 
 
 @pytest.mark.asyncio
@@ -718,7 +782,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 148
+    assert len(TOOL_SUCCESS_CASES) == 171
 
 
 @pytest.mark.asyncio

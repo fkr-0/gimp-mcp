@@ -878,6 +878,184 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="channel_to_selection", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def create_visual_annotation_layer(
+        annotations: list[dict[str, object]],
+        layer_name: str | None = None,
+        temporary: bool = True,
+    ) -> ToolResult:
+        """Create an MCP-tagged temporary visual annotation layer.
+
+        Args:
+            annotations: Typed annotation definitions such as boxes, arrows, or labels.
+            layer_name: Optional annotation layer name.
+            temporary: Mark the layer as a removable MCP annotation.
+
+        Returns:
+            Operation result with annotation layer metadata.
+        """
+        name = layer_name or "MCP Annotations"
+        code = [
+            "from gi.repository import Gimp, Gegl",
+            "import json",
+            "# __gimp_mcp_create_visual_annotation_layer__",
+            f"annotations = {py_literal(annotations)}",
+            f"layer_name = {py_literal(name)}",
+            f"temporary = {temporary!r}",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "layer = Gimp.Layer.new(image, layer_name, image.get_width(), image.get_height(), Gimp.ImageType.RGBA_IMAGE, 100, Gimp.LayerMode.NORMAL)",
+            "image.insert_layer(layer, None, 0)",
+            "try: layer.add_alpha()\nexcept Exception: pass",
+            "try:\n"
+            "    parasite = Gimp.Parasite.new('gimp-mcp-annotation', 0, json.dumps({'temporary': temporary, 'annotations': annotations}).encode('utf-8'))\n"
+            "    layer.attach_parasite(parasite)\n"
+            "except Exception:\n"
+            "    pass",
+            "for annotation in annotations:\n"
+            "    color = annotation.get('color', '#ff0000')\n"
+            "    Gimp.context_set_foreground(Gegl.Color.new(color))",
+            "annotation_layer_id = int(layer.get_id()) if hasattr(layer, 'get_id') else None",
+            "result = {'annotation_layer_id': annotation_layer_id, 'layer_name': layer_name, 'temporary': temporary, 'annotation_count': len(annotations), 'tag': 'gimp-mcp-annotation'}",
+            "Gimp.displays_flush()",
+            "print(json.dumps(result, sort_keys=True))",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="create_visual_annotation_layer",
+                message=f"Created annotation layer '{name}'",
+                data={
+                    "layer_name": name,
+                    "annotation_count": len(annotations),
+                    "temporary": temporary,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="create_visual_annotation_layer", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def remove_visual_annotations(
+        annotation_layer_ids: list[int] | None = None,
+        remove_all_mcp_annotations: bool = False,
+    ) -> ToolResult:
+        """Remove MCP-managed annotation layers only.
+
+        Args:
+            annotation_layer_ids: Explicit annotation layer IDs to remove.
+            remove_all_mcp_annotations: Remove all layers tagged as MCP annotations.
+
+        Returns:
+            Operation result with removed layer IDs.
+        """
+        if not annotation_layer_ids and not remove_all_mcp_annotations:
+            return OperationResult.fail(
+                operation="remove_visual_annotations",
+                error="provide annotation_layer_ids or remove_all_mcp_annotations=true",
+            ).model_dump()
+        ids = [int(value) for value in (annotation_layer_ids or [])]
+        code = [
+            "from gi.repository import Gimp",
+            "import json",
+            "# __gimp_mcp_remove_visual_annotations__",
+            f"annotation_layer_ids = {ids!r}",
+            f"remove_all_mcp_annotations = {remove_all_mcp_annotations!r}",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "removed_layer_ids = []",
+            "for layer in list(image.get_layers()):\n"
+            "    layer_id = int(layer.get_id()) if hasattr(layer, 'get_id') else None\n"
+            "    layer_name = layer.get_name()\n"
+            "    is_mcp_annotation = 'gimp-mcp-annotation' in layer_name.lower() or layer_name.lower().startswith('mcp annotation')\n"
+            "    if layer_id in annotation_layer_ids or (remove_all_mcp_annotations and is_mcp_annotation):\n"
+            "        image.remove_layer(layer)\n"
+            "        removed_layer_ids.append(layer_id)",
+            "result = {'removed_layer_ids': removed_layer_ids, 'remove_all_mcp_annotations': remove_all_mcp_annotations, 'tag': 'gimp-mcp-annotation'}",
+            "Gimp.displays_flush()",
+            "print(json.dumps(result, sort_keys=True))",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="remove_visual_annotations",
+                message="Removed visual annotation layers",
+                data={
+                    "annotation_layer_ids": ids,
+                    "remove_all_mcp_annotations": remove_all_mcp_annotations,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="remove_visual_annotations", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def layer_version_stamp(
+        target: dict[str, object] | str,
+        metadata: dict[str, object],
+        merge: bool = True,
+    ) -> ToolResult:
+        """Attach namespaced MCP provenance metadata to a layer.
+
+        Args:
+            target: Layer target reference, commonly {"layer_name": "..."}.
+            metadata: Metadata payload to attach.
+            merge: Merge with existing MCP metadata where possible.
+
+        Returns:
+            Operation result with stamped metadata namespace.
+        """
+        code = [
+            "from gi.repository import Gimp",
+            "import json",
+            "# __gimp_mcp_layer_version_stamp__",
+            f"target = {py_literal(target)}",
+            f"metadata = {py_literal(metadata)}",
+            f"merge = {merge!r}",
+            "metadata_namespace = 'gimp-mcp-pro'",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "if isinstance(target, dict) and target.get('layer_name'):\n"
+            "    layer = image.get_layer_by_name(target.get('layer_name'))\n"
+            "else:\n"
+            "    selected = image.get_selected_layers()\n"
+            "    layer = selected[0] if selected else None",
+            "if layer is None: raise RuntimeError('Target layer not found')",
+            "existing_metadata = {}",
+            "if merge:\n"
+            "    try:\n"
+            "        parasite = layer.get_parasite(metadata_namespace)\n"
+            "        if parasite:\n"
+            "            existing_metadata = json.loads(bytes(parasite.get_data()).decode('utf-8'))\n"
+            "    except Exception:\n"
+            "        existing_metadata = {}",
+            "merged_metadata = dict(existing_metadata)",
+            "merged_metadata.update(metadata)",
+            "parasite = Gimp.Parasite.new(metadata_namespace, 0, json.dumps(merged_metadata, sort_keys=True).encode('utf-8'))",
+            "layer.attach_parasite(parasite)",
+            "result = {'target': target, 'metadata_namespace': metadata_namespace, 'existing_metadata': existing_metadata, 'metadata': merged_metadata}",
+            "print(json.dumps(result, sort_keys=True))",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="layer_version_stamp",
+                message="Layer version metadata stamped",
+                data={
+                    "target": target,
+                    "metadata_namespace": "gimp-mcp-pro",
+                    "metadata": metadata,
+                    "merge": merge,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="layer_version_stamp", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def add_alpha_channel(
         layer_name: str | None = None,
         layer_index: int | None = None,

@@ -4,6 +4,7 @@ Source module: `src/gimp_mcp_pro/tools/transform_tools.py`
 
 | Tool | Summary | Parameters |
 |---|---|---:|
+| [`align_and_distribute_layers`](#align-and-distribute-layers) | Align or distribute layers relative to the canvas with verification bounds. | 5 |
 | [`scale_image`](#scale-image) | Scale the entire image (all layers) to new dimensions. | 3 |
 | [`scale_layer`](#scale-layer) | Scale a single layer to new dimensions. | 5 |
 | [`rotate_image`](#rotate-image) | Rotate the entire image by 90, 180, or 270 degrees. | 1 |
@@ -19,9 +20,52 @@ Source module: `src/gimp_mcp_pro/tools/transform_tools.py`
 | [`resize_canvas`](#resize-canvas) | Resize the image canvas without scaling content. | 4 |
 | [`offset_layer`](#offset-layer) | Move a layer by an offset (reposition within the canvas). | 4 |
 
+## `align_and_distribute_layers` {#align-and-distribute-layers}
+
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:235`
+
+```python
+async def align_and_distribute_layers(layers: list[dict[str, object]], align: str | None = None, distribute: str | None = None, reference: str = 'canvas', dry_run: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `layers` | Layer references such as layer_name or layer_index mappings. |
+| `align` | Optional alignment mode such as left, right, center_x, top, bottom, or center_y. |
+| `distribute` | Optional distribution mode, horizontal or vertical. |
+| `reference` | Alignment reference. Currently canvas. |
+| `dry_run` | When true, report planned offsets without mutating layers. |
+
+## Returns
+
+Operation result with layer references, selected operations, and dry-run metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Align or distribute layers relative to the canvas with verification bounds.
+
+Args:
+    layers: Layer references such as layer_name or layer_index mappings.
+    align: Optional alignment mode such as left, right, center_x, top, bottom, or center_y.
+    distribute: Optional distribution mode, horizontal or vertical.
+    reference: Alignment reference. Currently canvas.
+    dry_run: When true, report planned offsets without mutating layers.
+
+Returns:
+    Operation result with layer references, selected operations, and dry-run metadata.
+
 ## `scale_image` {#scale-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:150`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:296`
 
 ```python
 async def scale_image(new_width: int, new_height: int, interpolation: str = 'cubic') -> ToolResult
@@ -65,7 +109,7 @@ Returns:
 
 ## `scale_layer` {#scale-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:201`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:347`
 
 ```python
 async def scale_layer(new_width: int, new_height: int, interpolation: str = 'cubic', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -112,7 +156,7 @@ Returns:
 
 ## `rotate_image` {#rotate-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:253`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:399`
 
 ```python
 async def rotate_image(angle: int) -> ToolResult
@@ -147,7 +191,7 @@ Returns:
 
 ## `rotate_layer` {#rotate-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:288`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:434`
 
 ```python
 async def rotate_layer(angle_degrees: float, auto_resize: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -188,7 +232,7 @@ Returns:
 
 ## `perspective_layer` {#perspective-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:333`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:479`
 
 ```python
 async def perspective_layer(x0: float, y0: float, x1: float, y1: float, x2: float, y2: float, x3: float, y3: float, interpolation: str = 'cubic', resize: str = 'adjust', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -241,7 +285,7 @@ Returns:
 
 ## `shear_layer` {#shear-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:393`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:539`
 
 ```python
 async def shear_layer(direction: str = 'horizontal', magnitude: float = 0.0, interpolation: str = 'cubic', resize: str = 'adjust', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -286,7 +330,7 @@ Returns:
 
 ## `flip_image` {#flip-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:451`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:597`
 
 ```python
 async def flip_image(direction: str = 'horizontal') -> ToolResult
@@ -321,7 +365,7 @@ Returns:
 
 ## `flip_layer` {#flip-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:487`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:633`
 
 ```python
 async def flip_layer(direction: str = 'horizontal', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -360,7 +404,7 @@ Returns:
 
 ## `crop_to_selection` {#crop-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:532`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:678`
 
 ```python
 async def crop_to_selection() -> ToolResult
@@ -390,7 +434,7 @@ Returns:
 
 ## `smart_crop_or_resize` {#smart-crop-or-resize}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:557`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:703`
 
 ```python
 async def smart_crop_or_resize(mode: str, target_size: dict[str, int], anchor: str = 'center', preserve_layers: bool = True, background: str | None = None, dry_run: bool = True) -> ToolResult
@@ -439,7 +483,7 @@ Contract:
 
 ## `crop_image` {#crop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:637`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:782`
 
 ```python
 async def crop_image(x: int, y: int, width: int, height: int) -> ToolResult
@@ -480,7 +524,7 @@ Returns:
 
 ## `autocrop_image` {#autocrop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:674`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:819`
 
 ```python
 async def autocrop_image() -> ToolResult
@@ -509,7 +553,7 @@ Returns:
 
 ## `resize_canvas` {#resize-canvas}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:702`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:847`
 
 ```python
 async def resize_canvas(new_width: int, new_height: int, offset_x: int = 0, offset_y: int = 0) -> ToolResult
@@ -553,7 +597,7 @@ Returns:
 
 ## `offset_layer` {#offset-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:744`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:889`
 
 ```python
 async def offset_layer(offset_x: int, offset_y: int, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult

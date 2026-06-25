@@ -79,7 +79,6 @@ def _layer_target(layer_name: str | None, layer_index: int | None) -> list[str]:
         ]
 
 
-
 def _anchor_offsets_code() -> str:
     """Return generated helper code for explicit anchor offsets."""
     return (
@@ -143,8 +142,155 @@ def _smart_crop_or_resize_code(
     return code
 
 
+def _layer_ref_lookup_lines(layer_refs: list[dict[str, object]]) -> list[str]:
+    lines = ["target_layers = []"]
+    for index, ref in enumerate(layer_refs):
+        name = ref.get("layer_name") if isinstance(ref, dict) else None
+        layer_index = ref.get("layer_index") if isinstance(ref, dict) else None
+        if name is not None:
+            lines.append(f"layer_{index} = image.get_layer_by_name({py_literal(str(name))})")
+        elif layer_index is not None:
+            idx = int(str(layer_index))
+            lines.append(
+                f"layer_{index} = all_layers[{idx}] if 0 <= {idx} < len(all_layers) else None"
+            )
+        else:
+            lines.append(
+                f"layer_{index} = all_layers[{index}] if {index} < len(all_layers) else None"
+            )
+        lines.append(
+            f"if layer_{index} is None: raise RuntimeError('Layer reference {index} not found')"
+        )
+        lines.append(f"target_layers.append(layer_{index})")
+    return lines
+
+
+def _align_and_distribute_layers_code(
+    layer_refs: list[dict[str, object]],
+    align: str | None,
+    distribute: str | None,
+    reference: str,
+    dry_run: bool,
+) -> list[str]:
+    lookup = _layer_ref_lookup_lines(layer_refs)
+    return [
+        "import json",
+        "# __gimp_mcp_align_and_distribute_layers__",
+        f"align = {py_literal(align)}",
+        f"distribute = {py_literal(distribute)}",
+        f"reference = {py_literal(reference)}",
+        f"dry_run = {dry_run!r}",
+        *_img_preamble(),
+        "all_layers = list(image.get_layers())",
+        *lookup,
+        "def safe_call(fn, default=None):\n"
+        "    try:\n"
+        "        return fn()\n"
+        "    except Exception:\n"
+        "        return default",
+        "def offsets(layer):\n"
+        "    off = safe_call(lambda: layer.get_offsets(), None)\n"
+        "    if hasattr(off, 'offset_x'): return off.offset_x, off.offset_y\n"
+        "    try: return off[0], off[1]\n"
+        "    except Exception: return 0, 0",
+        "def bounds(layer):\n"
+        "    x, y = offsets(layer)\n"
+        "    return {'x': x, 'y': y, 'width': layer.get_width(), 'height': layer.get_height(), 'right': x + layer.get_width(), 'bottom': y + layer.get_height()}",
+        "canvas = {'x': 0, 'y': 0, 'width': image.get_width(), 'height': image.get_height(), 'right': image.get_width(), 'bottom': image.get_height()}",
+        "old_bounds = [bounds(layer) for layer in target_layers]",
+        "new_bounds = []",
+        "warnings = []",
+        "for idx, layer in enumerate(target_layers):\n"
+        "    b = dict(old_bounds[idx])\n"
+        "    locked = bool(safe_call(lambda layer=layer: layer.get_lock_position(), False))\n"
+        "    if locked:\n"
+        "        warnings.append({'layer': safe_call(lambda layer=layer: layer.get_name(), str(idx)), 'code': 'locked_layer'})\n"
+        "        new_bounds.append(b)\n"
+        "        continue\n"
+        "    nx, ny = b['x'], b['y']\n"
+        "    if align == 'left': nx = canvas['x']\n"
+        "    elif align == 'right': nx = canvas['right'] - b['width']\n"
+        "    elif align == 'center_x': nx = canvas['x'] + (canvas['width'] - b['width']) // 2\n"
+        "    elif align == 'top': ny = canvas['y']\n"
+        "    elif align == 'bottom': ny = canvas['bottom'] - b['height']\n"
+        "    elif align == 'center_y': ny = canvas['y'] + (canvas['height'] - b['height']) // 2\n"
+        "    if distribute == 'horizontal' and len(target_layers) > 1:\n"
+        "        nx = canvas['x'] + int(idx * (canvas['width'] - b['width']) / max(1, len(target_layers) - 1))\n"
+        "    if distribute == 'vertical' and len(target_layers) > 1:\n"
+        "        ny = canvas['y'] + int(idx * (canvas['height'] - b['height']) / max(1, len(target_layers) - 1))\n"
+        "    b.update({'x': nx, 'y': ny, 'right': nx + b['width'], 'bottom': ny + b['height']})\n"
+        "    new_bounds.append(b)\n"
+        "    if not dry_run:\n"
+        "        layer.set_offsets(nx, ny)",
+        "if not dry_run: Gimp.displays_flush()",
+        "moved_layers = [{'old_bounds': old_bounds[i], 'new_bounds': new_bounds[i]} for i in range(len(new_bounds))]",
+        "print(json.dumps({'moved_layers': moved_layers, 'old_bounds': old_bounds, 'new_bounds': new_bounds, 'warnings': warnings, 'dry_run': dry_run}))",
+    ]
+
+
 def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all transform tools with the MCP server."""
+
+    @mcp.tool()
+    async def align_and_distribute_layers(
+        layers: list[dict[str, object]],
+        align: str | None = None,
+        distribute: str | None = None,
+        reference: str = "canvas",
+        dry_run: bool = False,
+    ) -> ToolResult:
+        """Align or distribute layers relative to the canvas with verification bounds.
+
+        Args:
+            layers: Layer references such as layer_name or layer_index mappings.
+            align: Optional alignment mode such as left, right, center_x, top, bottom, or center_y.
+            distribute: Optional distribution mode, horizontal or vertical.
+            reference: Alignment reference. Currently canvas.
+            dry_run: When true, report planned offsets without mutating layers.
+
+        Returns:
+            Operation result with layer references, selected operations, and dry-run metadata.
+        """
+        valid_align = {None, "left", "right", "center_x", "top", "bottom", "center_y"}
+        valid_distribute = {None, "horizontal", "vertical"}
+        if align not in valid_align:
+            return OperationResult.fail(
+                operation="align_and_distribute_layers", error="unsupported align value"
+            ).model_dump()
+        if distribute not in valid_distribute:
+            return OperationResult.fail(
+                operation="align_and_distribute_layers", error="unsupported distribute value"
+            ).model_dump()
+        if reference != "canvas":
+            return OperationResult.fail(
+                operation="align_and_distribute_layers",
+                error="only canvas reference is currently supported",
+            ).model_dump()
+        if not layers:
+            return OperationResult.fail(
+                operation="align_and_distribute_layers", error="at least one layer is required"
+            ).model_dump()
+        try:
+            await bridge.async_execute_python(
+                _align_and_distribute_layers_code(layers, align, distribute, reference, dry_run)
+            )
+            return OperationResult.ok(
+                operation="align_and_distribute_layers",
+                message="Layer alignment/distribution planned"
+                if dry_run
+                else "Layer alignment/distribution applied",
+                data={
+                    "layers": layers,
+                    "align": align,
+                    "distribute": distribute,
+                    "reference": reference,
+                    "dry_run": dry_run,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="align_and_distribute_layers", error=str(e)
+            ).model_dump()
 
     @mcp.tool()
     async def scale_image(
@@ -617,7 +763,9 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="smart_crop_or_resize",
-                message="Smart crop/resize plan generated" if dry_run else "Smart crop/resize applied",
+                message="Smart crop/resize plan generated"
+                if dry_run
+                else "Smart crop/resize applied",
                 data={
                     "mode": normalized_mode,
                     "target_size": {"width": target_width, "height": target_height},
@@ -628,10 +776,7 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
                 },
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(
-                operation="smart_crop_or_resize", error=str(e)
-            ).model_dump()
-
+            return OperationResult.fail(operation="smart_crop_or_resize", error=str(e)).model_dump()
 
     @mcp.tool()
     async def crop_image(

@@ -139,7 +139,6 @@ def _preview_filter_spec(
     raise ValueError(f"Unsupported filter: {filter_name}")
 
 
-
 def _commit_filter_preview_code(
     preview_id: str,
     action: str,
@@ -275,9 +274,7 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
                 operation="commit_filter_preview",
                 error="preview_id is required",
             ).model_dump()
-        code = _commit_filter_preview_code(
-            preview_id.strip(), normalized_action, committed_name
-        )
+        code = _commit_filter_preview_code(preview_id.strip(), normalized_action, committed_name)
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -294,7 +291,6 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
             return OperationResult.fail(
                 operation="commit_filter_preview", error=str(e)
             ).model_dump()
-
 
     @mcp.tool()
     async def apply_gaussian_blur(

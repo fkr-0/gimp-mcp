@@ -12,6 +12,7 @@ Source module: `src/gimp_mcp_pro/tools/drawing_tools.py`
 | [`draw_rectangle`](#draw-rectangle) | Draw a rectangle (filled or outline only). | 7 |
 | [`draw_ellipse`](#draw-ellipse) | Draw an ellipse/circle (filled or outline only). | 7 |
 | [`draw_polygon`](#draw-polygon) | Draw a polygon (filled or outline). | 4 |
+| [`create_text_box`](#create-text-box) | Create a new text layer at an explicit rectangle with styling. | 4 |
 | [`add_text`](#add-text) | Add a text layer to the image. | 7 |
 | [`gradient_fill`](#gradient-fill) | Fill the current drawable/selection with a gradient between two points. | 12 |
 | [`edit_text_layer`](#edit-text-layer) | Edit an existing text layer's content and core text properties. | 7 |
@@ -19,7 +20,7 @@ Source module: `src/gimp_mcp_pro/tools/drawing_tools.py`
 
 ## `set_foreground_color` {#set-foreground-color}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:73`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:124`
 
 ```python
 async def set_foreground_color(color: str) -> ToolResult
@@ -58,7 +59,7 @@ Returns:
 
 ## `set_background_color` {#set-background-color}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:103`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:154`
 
 ```python
 async def set_background_color(color: str) -> ToolResult
@@ -93,7 +94,7 @@ Returns:
 
 ## `fill_selection` {#fill-selection}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:129`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:180`
 
 ```python
 async def fill_selection(fill_type: str = 'foreground', color: str | None = None) -> ToolResult
@@ -140,7 +141,7 @@ Returns:
 
 ## `draw_line` {#draw-line}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:176`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:227`
 
 ```python
 async def draw_line(x1: float, y1: float, x2: float, y2: float, color: str | None = None, brush_size: float = 2.0) -> ToolResult
@@ -183,7 +184,7 @@ Returns:
 
 ## `draw_brush_stroke` {#draw-brush-stroke}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:215`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:266`
 
 ```python
 async def draw_brush_stroke(points: list[float], tool: str = 'pencil', color: str | None = None, brush_size: float = 2.0) -> ToolResult
@@ -230,7 +231,7 @@ Returns:
 
 ## `draw_rectangle` {#draw-rectangle}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:271`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:322`
 
 ```python
 async def draw_rectangle(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
@@ -279,7 +280,7 @@ Returns:
 
 ## `draw_ellipse` {#draw-ellipse}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:330`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:381`
 
 ```python
 async def draw_ellipse(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
@@ -326,7 +327,7 @@ Returns:
 
 ## `draw_polygon` {#draw-polygon}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:385`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:436`
 
 ```python
 async def draw_polygon(points: list[float], filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
@@ -370,9 +371,50 @@ Args:
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
+## `create_text_box` {#create-text-box}
+
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:497`
+
+```python
+async def create_text_box(text: str, rectangle: dict[str, int], style: dict[str, object] | None = None, name: str | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `text` | Text content for the new layer. |
+| `rectangle` | Mapping with x, y, width, and height. |
+| `style` | Optional font, font_size, color, and justification settings. |
+| `name` | Optional layer name. |
+
+## Returns
+
+Operation result with requested text-box bounds and style metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create a new text layer at an explicit rectangle with styling.
+
+Args:
+    text: Text content for the new layer.
+    rectangle: Mapping with x, y, width, and height.
+    style: Optional font, font_size, color, and justification settings.
+    name: Optional layer name.
+
+Returns:
+    Operation result with requested text-box bounds and style metadata.
+
 ## `add_text` {#add-text}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:446`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:545`
 
 ```python
 async def add_text(text: str, x: float = 0.0, y: float = 0.0, font_name: str = 'Sans', font_size: float = 24.0, color: str | None = None, layer_name: str = 'Text') -> ToolResult
@@ -421,7 +463,7 @@ Returns:
 
 ## `gradient_fill` {#gradient-fill}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:516`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:615`
 
 ```python
 async def gradient_fill(x1: float, y1: float, x2: float, y2: float, gradient_type: str = 'linear', foreground_color: str | None = None, background_color: str | None = None, offset: float = 0.0, dither: bool = True, supersample: bool = False, supersample_max_depth: int = 3, supersample_threshold: float = 0.2) -> ToolResult
@@ -478,7 +520,7 @@ Returns:
 
 ## `edit_text_layer` {#edit-text-layer}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:602`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:701`
 
 ```python
 async def edit_text_layer(text: str | None = None, layer_name: str | None = None, layer_index: int | None = None, font_name: str | None = None, font_size: float | None = None, color: str | None = None, justification: str | None = None) -> ToolResult
@@ -525,7 +567,7 @@ Returns:
 
 ## `edit_clear` {#edit-clear}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:720`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:819`
 
 ```python
 async def edit_clear() -> ToolResult

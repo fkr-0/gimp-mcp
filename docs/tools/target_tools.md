@@ -4,12 +4,56 @@ Source module: `src/gimp_mcp_pro/tools/target_tools.py`
 
 | Tool | Summary | Parameters |
 |---|---|---:|
+| [`find_similar_regions`](#find-similar-regions) | Find simple deterministic pixel regions matching color/alpha criteria. | 5 |
 | [`resolve_target`](#resolve-target) | Resolve a user or agent target reference into concrete GIMP object IDs. | 3 |
 | [`validate_targets`](#validate-targets) | Validate that proposed targets still exist and support required actions. | 2 |
 
+## `find_similar_regions` {#find-similar-regions}
+
+Source: `src/gimp_mcp_pro/tools/target_tools.py:245`
+
+```python
+async def find_similar_regions(color: str | None = None, alpha_range: dict[str, float] | None = None, region: dict[str, float] | None = None, tolerance: float = 0.1, max_regions: int = 20) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `color` | Optional hex RGB color to match approximately. |
+| `alpha_range` | Optional min/max alpha range from 0.0 to 1.0. |
+| `region` | Optional rectangle limiting the sampled search area. |
+| `tolerance` | Euclidean RGB tolerance from 0.0 to 1.0. |
+| `max_regions` | Maximum region candidates to return. |
+
+## Returns
+
+Operation result with deterministic region candidates and confidence scores.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Find simple deterministic pixel regions matching color/alpha criteria.
+
+Args:
+    color: Optional hex RGB color to match approximately.
+    alpha_range: Optional min/max alpha range from 0.0 to 1.0.
+    region: Optional rectangle limiting the sampled search area.
+    tolerance: Euclidean RGB tolerance from 0.0 to 1.0.
+    max_regions: Maximum region candidates to return.
+
+Returns:
+    Operation result with deterministic region candidates and confidence scores.
+
 ## `resolve_target` {#resolve-target}
 
-Source: `src/gimp_mcp_pro/tools/target_tools.py:171`
+Source: `src/gimp_mcp_pro/tools/target_tools.py:303`
 
 ```python
 async def resolve_target(query: str, target_types: list[str] | None = None, require_unique: bool = False) -> ToolResult
@@ -53,7 +97,7 @@ Returns:
 
 ## `validate_targets` {#validate-targets}
 
-Source: `src/gimp_mcp_pro/tools/target_tools.py:219`
+Source: `src/gimp_mcp_pro/tools/target_tools.py:351`
 
 ```python
 async def validate_targets(targets: list[Any], required_capabilities: list[str] | None = None) -> ToolResult

@@ -22,6 +22,9 @@ Source module: `src/gimp_mcp_pro/tools/layer_tools.py`
 | [`list_channels`](#list-channels) | List custom channels in the active image. | 0 |
 | [`save_selection_to_channel`](#save-selection-to-channel) | Save the current selection mask as a named custom channel. | 1 |
 | [`channel_to_selection`](#channel-to-selection) | Convert a custom channel into the current selection. | 3 |
+| [`create_visual_annotation_layer`](#create-visual-annotation-layer) | Create an MCP-tagged temporary visual annotation layer. | 3 |
+| [`remove_visual_annotations`](#remove-visual-annotations) | Remove MCP-managed annotation layers only. | 2 |
+| [`layer_version_stamp`](#layer-version-stamp) | Attach namespaced MCP provenance metadata to a layer. | 3 |
 | [`add_alpha_channel`](#add-alpha-channel) | Add an alpha (transparency) channel to a layer. | 2 |
 
 ## `create_layer` {#create-layer}
@@ -723,9 +726,124 @@ Args:
 Returns:
     Operation result dictionary with channel-to-selection metadata.
 
-## `add_alpha_channel` {#add-alpha-channel}
+## `create_visual_annotation_layer` {#create-visual-annotation-layer}
 
 Source: `src/gimp_mcp_pro/tools/layer_tools.py:881`
+
+```python
+async def create_visual_annotation_layer(annotations: list[dict[str, object]], layer_name: str | None = None, temporary: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `annotations` | Typed annotation definitions such as boxes, arrows, or labels. |
+| `layer_name` | Optional annotation layer name. |
+| `temporary` | Mark the layer as a removable MCP annotation. |
+
+## Returns
+
+Operation result with annotation layer metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create an MCP-tagged temporary visual annotation layer.
+
+Args:
+    annotations: Typed annotation definitions such as boxes, arrows, or labels.
+    layer_name: Optional annotation layer name.
+    temporary: Mark the layer as a removable MCP annotation.
+
+Returns:
+    Operation result with annotation layer metadata.
+
+## `remove_visual_annotations` {#remove-visual-annotations}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:940`
+
+```python
+async def remove_visual_annotations(annotation_layer_ids: list[int] | None = None, remove_all_mcp_annotations: bool = False) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `annotation_layer_ids` | Explicit annotation layer IDs to remove. |
+| `remove_all_mcp_annotations` | Remove all layers tagged as MCP annotations. |
+
+## Returns
+
+Operation result with removed layer IDs.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Remove MCP-managed annotation layers only.
+
+Args:
+    annotation_layer_ids: Explicit annotation layer IDs to remove.
+    remove_all_mcp_annotations: Remove all layers tagged as MCP annotations.
+
+Returns:
+    Operation result with removed layer IDs.
+
+## `layer_version_stamp` {#layer-version-stamp}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:996`
+
+```python
+async def layer_version_stamp(target: dict[str, object] | str, metadata: dict[str, object], merge: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `target` | Layer target reference, commonly {"layer_name": "..."}. |
+| `metadata` | Metadata payload to attach. |
+| `merge` | Merge with existing MCP metadata where possible. |
+
+## Returns
+
+Operation result with stamped metadata namespace.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Attach namespaced MCP provenance metadata to a layer.
+
+Args:
+    target: Layer target reference, commonly {"layer_name": "..."}.
+    metadata: Metadata payload to attach.
+    merge: Merge with existing MCP metadata where possible.
+
+Returns:
+    Operation result with stamped metadata namespace.
+
+## `add_alpha_channel` {#add-alpha-channel}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1059`
 
 ```python
 async def add_alpha_channel(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult

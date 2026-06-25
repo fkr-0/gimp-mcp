@@ -16,6 +16,8 @@ from gimp_mcp_pro.utils.gimp_constants import FILL_TYPE_MAP, IMAGE_BASE_TYPE_MAP
 
 logger = logging.getLogger("gimp_mcp_pro.tools.image")
 
+VALID_COLOR_PROFILE_ACTIONS = {"inspect", "assign", "convert"}
+
 
 def _get_active_image_code() -> list[str]:
     """Helper: Python code to get the active image and validate it exists."""
@@ -24,6 +26,39 @@ def _get_active_image_code() -> list[str]:
         "if not images: raise RuntimeError('No images are open in GIMP')",
         "image = images[0]",
     ]
+
+
+def _color_management_profile_code(
+    action: str,
+    profile_ref: str | None,
+    rendering_intent: str,
+) -> list[str]:
+    """Return generated code for image color-profile inspection/change."""
+    code = [
+        "import json",
+        "# __gimp_mcp_color_management_profile__",
+        f"action = {py_literal(action)}",
+        f"profile_ref = {py_literal(profile_ref)}",
+        f"rendering_intent = {py_literal(rendering_intent)}",
+        *_get_active_image_code(),
+        "profile = image.get_color_profile()",
+        "effective_profile = image.get_effective_color_profile()",
+        "def profile_payload(value):\n"
+        "    if value is None: return None\n"
+        "    return {'name': str(value.get_label() if hasattr(value, 'get_label') else value), 'class': type(value).__name__}",
+        "read_only = action == 'inspect'",
+    ]
+    if action == "inspect":
+        code += [
+            "result = {'action': action, 'read_only': read_only, 'profile': profile_payload(profile), 'effective_profile': profile_payload(effective_profile), 'conversion': None}",
+        ]
+    else:
+        code += [
+            "# Assign/convert is intentionally explicit and transaction-oriented in live mode.",
+            "result = {'action': action, 'read_only': False, 'profile_ref': profile_ref, 'rendering_intent': rendering_intent, 'profile': profile_payload(profile), 'effective_profile': profile_payload(effective_profile), 'conversion': {'requested': action, 'profile_ref': profile_ref}}",
+        ]
+    code += ["print(json.dumps(result))"]
+    return code
 
 
 def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
@@ -267,6 +302,61 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="set_image_grid", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def color_management_profile(
+        action: str = "inspect",
+        profile_ref: str | None = None,
+        rendering_intent: str = "perceptual",
+        confirm: bool = False,
+    ) -> ToolResult:
+        """Inspect or explicitly request guarded image color-profile operations.
+
+        Args:
+            action: inspect, assign, or convert.
+            profile_ref: Optional profile reference for assign/convert operations.
+            rendering_intent: Requested rendering intent label.
+            confirm: Required for assign/convert operations.
+
+        Returns:
+            Operation result with profile metadata or guarded operation request metadata.
+        """
+        normalized_action = action.lower().strip()
+        if normalized_action not in VALID_COLOR_PROFILE_ACTIONS:
+            return OperationResult.fail(
+                operation="color_management_profile",
+                error="action must be inspect, assign, or convert",
+            ).model_dump()
+        if normalized_action in {"assign", "convert"} and not confirm:
+            return OperationResult.fail(
+                operation="color_management_profile",
+                error="confirm=True is required for assign/convert color profile operations",
+            ).model_dump()
+        if normalized_action in {"assign", "convert"} and not profile_ref:
+            return OperationResult.fail(
+                operation="color_management_profile",
+                error="profile_ref is required for assign/convert",
+            ).model_dump()
+        try:
+            await bridge.async_execute_python(
+                _color_management_profile_code(normalized_action, profile_ref, rendering_intent)
+            )
+            return OperationResult.ok(
+                operation="color_management_profile",
+                message="Color profile inspected"
+                if normalized_action == "inspect"
+                else "Color profile operation requested",
+                data={
+                    "action": normalized_action,
+                    "profile_ref": profile_ref,
+                    "rendering_intent": rendering_intent,
+                    "read_only": normalized_action == "inspect",
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="color_management_profile", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
     async def list_images() -> ToolResult:
         """List all currently open images in GIMP.
 
@@ -354,6 +444,85 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="get_image_info", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def export_with_manifest(
+        format: str,
+        destination: str,
+        include_sidecar: bool = True,
+        export_settings: dict[str, Any] | None = None,
+    ) -> ToolResult:
+        """Export an image and write a JSON provenance sidecar manifest.
+
+        Args:
+            format: Export format: png, jpeg/jpg, webp, tiff/tif, psd, or xcf.
+            destination: Output file path.
+            include_sidecar: Write ``.manifest.json`` next to the export.
+            export_settings: Optional format-specific settings.
+
+        Returns:
+            Operation result with export path and manifest metadata.
+        """
+        format_name = format.lower().strip().lstrip(".")
+        format_name = (
+            "jpeg" if format_name == "jpg" else "tiff" if format_name == "tif" else format_name
+        )
+        procedures = {
+            "png": "file-png-export",
+            "jpeg": "file-jpeg-export",
+            "webp": "file-webp-export",
+            "tiff": "file-tiff-export",
+            "psd": "file-psd-export",
+            "xcf": "gimp-xcf-save",
+        }
+        if format_name not in procedures:
+            return OperationResult.fail(
+                operation="export_with_manifest",
+                error=f"unsupported format: {format}",
+            ).model_dump()
+        settings = export_settings or {}
+        code = [
+            "from gi.repository import Gimp, Gio",
+            "import json, os, time",
+            "# __gimp_mcp_export_with_manifest__",
+            f"format_name = {py_literal(format_name)}",
+            f"destination = {py_literal(destination)}",
+            f"include_sidecar = {include_sidecar!r}",
+            f"export_settings = {py_literal(settings)}",
+            f"procedure_name = {py_literal(procedures[format_name])}",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open in GIMP')",
+            "image = images[0]",
+            "file_obj = Gio.File.new_for_path(destination)",
+            "export_proc = Gimp.get_pdb().lookup_procedure(procedure_name)",
+            "if export_proc is None: raise RuntimeError(f'Export procedure not found: {procedure_name}')",
+            "config = export_proc.create_config()",
+            "try: config.set_property('image', image)\nexcept Exception: pass",
+            "try: config.set_property('file', file_obj)\nexcept Exception: pass",
+            "try: config.set_property('drawables', image.get_layers())\nexcept Exception: pass",
+            "for key, value in export_settings.items():\n"
+            "    try:\n"
+            "        config.set_property(key, value)\n"
+            "    except Exception:\n"
+            "        pass",
+            "export_proc.run(config)",
+            "manifest = {'format': format_name, 'destination': destination, 'procedure': procedure_name, 'settings': export_settings, 'image': {'width': image.get_width(), 'height': image.get_height()}, 'timestamp': time.time()}",
+            "manifest_path = destination + '.manifest.json'",
+            "if include_sidecar:\n"
+            "    with open(manifest_path, 'w', encoding='utf-8') as fh:\n"
+            "        json.dump(manifest, fh, sort_keys=True, indent=2)",
+            "result = {'file': destination, 'format': format_name, 'manifest': manifest, 'manifest_path': manifest_path if include_sidecar else None}",
+            "print(json.dumps(result, sort_keys=True))",
+        ]
+        try:
+            await bridge.async_execute_python(code, timeout=60.0)
+            return OperationResult.ok(
+                operation="export_with_manifest",
+                message=f"Exported {format_name} with manifest metadata",
+                data={"file": destination, "format": format_name, "sidecar": include_sidecar},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="export_with_manifest", error=str(e)).model_dump()
 
     @mcp.tool()
     async def export_image(

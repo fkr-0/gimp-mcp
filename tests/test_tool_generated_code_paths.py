@@ -32,10 +32,12 @@ from gimp_mcp_pro.tools.inspect_tools import register_inspect_tools
 from gimp_mcp_pro.tools.layer_tools import register_layer_tools
 from gimp_mcp_pro.tools.path_tools import register_path_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
+from gimp_mcp_pro.tools.roadmap_tools import register_roadmap_tools
 from gimp_mcp_pro.tools.selection_tools import register_selection_tools
 from gimp_mcp_pro.tools.target_tools import register_target_tools
 from gimp_mcp_pro.tools.transform_tools import register_transform_tools
 from gimp_mcp_pro.utils.errors import GimpCommandError
+from tests.roadmap_tool_cases import ROADMAP_TOOL_CASES
 from tests.test_flow_models import flow_payload
 
 Tool = Callable[..., Awaitable[dict[str, Any]]]
@@ -293,6 +295,7 @@ def registered_tools(bridge: ScriptedBridge) -> dict[str, Tool]:
         register_transform_tools,
         register_filter_tools,
         register_color_tools,
+        register_roadmap_tools,
         lambda mcp, bridge: register_gimp_dev_tools(mcp, bridge, FakeGimpDevAdapter()),
         lambda mcp, bridge: register_flow_tools(
             mcp,
@@ -337,7 +340,11 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "content_bounds": {"target": "active_layer", "threshold": 0.05, "include_sample_points": True},
     "create_checkpoint": {"label": "matrix checkpoint", "include_xcf_copy": False},
     "crop_image": {"x": 1, "y": 2, "width": 32, "height": 24},
-    "commit_filter_preview": {"preview_id": "Preview: gegl:gaussian-blur", "action": "commit", "committed_name": "Committed blur"},
+    "commit_filter_preview": {
+        "preview_id": "Preview: gegl:gaussian-blur",
+        "action": "commit",
+        "committed_name": "Committed blur",
+    },
     "delete_layer": {"layer_index": 0},
     "delete_guide": {"guide_id": 7},
     "deactivate_flow": {"flow_id": "prepare-product-image"},
@@ -463,7 +470,12 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
         "background": "#ffffff",
     },
     "set_paint_resource": {"resource_type": "brush", "name": "2. Hardness 050"},
-    "smart_crop_or_resize": {"mode": "crop", "target_size": {"width": 320, "height": 200}, "anchor": "center", "dry_run": True},
+    "smart_crop_or_resize": {
+        "mode": "crop",
+        "target_size": {"width": 320, "height": 200},
+        "anchor": "center",
+        "dry_run": True,
+    },
     "set_foreground_color": {"color": "#000000"},
     "set_layer_mask_state": {
         "edit_mask": True,
@@ -489,6 +501,56 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "unpin_flow": {"flow_id": "prepare-product-image"},
     "validate_flow": {"flow_id": "prepare-product-image"},
 }
+
+SUCCESS_TOOL_ARGS.update({name: case["kwargs"] for name, case in ROADMAP_TOOL_CASES.items()})
+SUCCESS_TOOL_ARGS.update(
+    {
+        "align_and_distribute_layers": {
+            "layers": [{"layer_name": "A"}, {"layer_name": "B"}],
+            "align": "center_x",
+            "distribute": "horizontal",
+            "reference": "canvas",
+            "dry_run": True,
+        },
+        "color_management_profile": {"action": "inspect"},
+        "create_text_box": {
+            "text": "Hello",
+            "rectangle": {"x": 12, "y": 24, "width": 320, "height": 80},
+            "style": {"font": "Sans", "font_size": 24, "color": "#445566", "justify": "center"},
+            "name": "Title text",
+        },
+        "create_visual_annotation_layer": {
+            "annotations": [
+                {"type": "box", "x": 1, "y": 2, "width": 10, "height": 12, "color": "#ff0000"}
+            ],
+            "temporary": True,
+        },
+        "export_with_manifest": {
+            "format": "png",
+            "destination": "/tmp/gimp-mcp-export.png",
+            "include_sidecar": False,
+        },
+        "find_similar_regions": {
+            "color": "#112233",
+            "alpha_range": {"min": 0.25, "max": 1.0},
+            "region": {"x": 10, "y": 20, "width": 100, "height": 80},
+            "tolerance": 0.12,
+            "max_regions": 8,
+        },
+        "layer_version_stamp": {
+            "target": {"layer_name": "Layer 1"},
+            "metadata": {"operation": "test"},
+            "merge": True,
+        },
+        "remove_visual_annotations": {"remove_all_mcp_annotations": True},
+        "resource_catalog": {
+            "resource_type": "brush",
+            "query": "Hardness",
+            "limit": 10,
+            "include_optional": True,
+        },
+    }
+)
 
 
 @pytest.mark.asyncio

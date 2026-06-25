@@ -340,6 +340,35 @@ def _brush_inventory_code(
     return code
 
 
+def _resource_catalog_code(
+    resource_type: str,
+    query: str | None,
+    limit: int,
+    include_optional: bool,
+) -> list[str]:
+    """Return generated code for bounded searchable resource catalog."""
+    call = PAINT_RESOURCE_LIST_CALLS.get(resource_type)
+    if call is None:
+        call = "None"
+    return _resource_common_code() + [
+        "# __gimp_mcp_resource_catalog__",
+        f"resource_type = {py_literal(resource_type)}",
+        f"query = {py_literal((query or '').lower())}",
+        f"limit = {limit!r}",
+        f"include_optional = {include_optional!r}",
+        "resources = []",
+        "optional_capability = None",
+        f"raw_names = _resource_names({call}) if {call!r} != 'None' else []",
+        "if query:\n    raw_names = [name for name in raw_names if query in name.lower()]",
+        "for index, name in enumerate(raw_names[:limit]):\n"
+        "    resources.append({'type': resource_type, 'name': name, 'index': index})",
+        "if not resources and resource_type in {'dynamics', 'tool_presets'}:\n"
+        "    optional_capability = {'available': False, 'resource_type': resource_type, 'reason': 'GIMP API list function not exposed'}",
+        "result = {'resource_type': resource_type, 'resources': resources, 'count': len(resources), 'limit': limit, 'query': query, 'optional_capability': optional_capability}",
+        "print(json.dumps(result))",
+    ]
+
+
 def _set_paint_resource_code(resource_type: str, resource_name: str) -> list[str]:
     """Return generated Python code that validates and sets one paint resource."""
     resource_names_call = PAINT_RESOURCE_LIST_CALLS[resource_type]
@@ -1064,6 +1093,55 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="set_paint_context", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def resource_catalog(
+        resource_type: str,
+        query: str | None = None,
+        limit: int = 50,
+        include_optional: bool = True,
+    ) -> ToolResult:
+        """List bounded searchable resources with optional capability notes.
+
+        Args:
+            resource_type: Resource kind such as brush, pattern, gradient, font, palette, dynamics, or tool preset.
+            query: Optional case-insensitive search string.
+            limit: Maximum number of resources to return.
+            include_optional: Include structured optional-capability notes for missing resource APIs.
+
+        Returns:
+            Operation result with resource records, count, and optional-capability metadata.
+        """
+        aliases = dict(PAINT_RESOURCE_ALIASES)
+        aliases.update(
+            {
+                "dynamic": "dynamics",
+                "dynamics": "dynamics",
+                "preset": "tool_presets",
+                "tool_preset": "tool_presets",
+                "tool_presets": "tool_presets",
+            }
+        )
+        key = aliases.get(resource_type.lower().strip().replace("-", "_"))
+        if key is None:
+            return OperationResult.fail(
+                operation="resource_catalog", error=f"unsupported resource_type: {resource_type}"
+            ).model_dump()
+        limit = max(1, min(1000, int(limit)))
+        try:
+            result = await bridge.async_execute_python(
+                _resource_catalog_code(key, query, limit, include_optional)
+            )
+            data = _json_from_bridge(result)
+            data.setdefault("resources", [])
+            data.setdefault("count", len(data.get("resources", [])))
+            return OperationResult.ok(
+                operation="resource_catalog",
+                message=f"Catalogued {data.get('count', 0)} {key} resource(s)",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="resource_catalog", error=str(e)).model_dump()
 
     @mcp.tool()
     async def list_gimp_resources(

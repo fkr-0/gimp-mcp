@@ -16,23 +16,19 @@ issues:
   - contract
   status: verified-local
   spec: compat.yml
-  goal: Verify and certify support for GIMP 3.2.4 through the dedicated compatibility
-    contract in compat.yml. The contract is now the normative source for API/interface
-    checks, smoke scenarios, evidence requirements, result schema, README claim gate,
-    and acceptance criteria.
+  goal: Verify and certify support for GIMP 3.2.4 through the dedicated compatibility contract
+    in compat.yml. The contract is now the normative source for API/interface checks, smoke
+    scenarios, evidence requirements, result schema, README claim gate, and acceptance criteria.
   checklist:
   - Maintain compat.yml as the detailed GIMP 3.2.4 verification contract.
   - Run the static checks from compat.yml and record results in compat.results.yml.
-  - Run the required live clean-profile GIMP 3.2.4 smoke scenarios and record exact
-    evidence.
+  - Run the required live clean-profile GIMP 3.2.4 smoke scenarios and record exact evidence.
   - Reconcile runtime MCP tool count with README/tool-reference claims.
   - Update README/setup compatibility statements only after the claim gate passes.
   acceptance:
   - compat.yml is committed and remains YAML-parseable.
-  - compat.results.yml contains at least one clean-profile GIMP 3.2.4 verification
-    run.
-  - All required compat.yml checks pass or have explicit waivers with linked follow-up
-    issues.
+  - compat.results.yml contains at least one clean-profile GIMP 3.2.4 verification run.
+  - All required compat.yml checks pass or have explicit waivers with linked follow-up issues.
   - README and setup instructions state only the actually verified compatibility status.
 - id: GIMP-MCP-002
   title: Add asynchronous bridge and tool execution path
@@ -47,26 +43,24 @@ issues:
   docs:
   - docs/async-tool-architecture.md
   - src/gimp_mcp_pro/protocol.py
-  goal: Add an asyncio-native bridge implementation while keeping the synchronous
-    bridge stable for existing callers, and make all MCP tool handlers async coroutine
-    functions.
+  goal: Add an asyncio-native bridge implementation while keeping the synchronous bridge stable
+    for existing callers, and make all MCP tool handlers async coroutine functions.
   checklist:
   - Design AsyncGimpBridge around asyncio.open_connection, StreamReader, and StreamWriter.
   - Preserve length-prefixed framing semantics and maximum-message-size checks.
-  - Add async send_command, execute_python, evaluate_python, get_image_bitmap, and
-    context helpers.
+  - Add async send_command, execute_python, evaluate_python, get_image_bitmap, and context
+    helpers.
   - Provide cancellation-safe timeout handling and clean connection teardown.
   - Convert all @mcp.tool handlers to async def.
   - Route all MCP tool bridge calls through async bridge methods.
-  - Type tool modules against AsyncToolBridge and MCPToolRegistrar protocols rather
-    than concrete implementations.
-  - Add tests for concurrent commands, timeout cancellation, oversized responses,
-    server disconnects, reconnect behavior, and async tool registration.
-  - Use AsyncGimpBridge for MCP server tool execution while keeping GimpBridge for
-    CLI/legacy callers.
+  - Type tool modules against AsyncToolBridge and MCPToolRegistrar protocols rather than concrete
+    implementations.
+  - Add tests for concurrent commands, timeout cancellation, oversized responses, server disconnects,
+    reconnect behavior, and async tool registration.
+  - Use AsyncGimpBridge for MCP server tool execution while keeping GimpBridge for CLI/legacy
+    callers.
   - Split shared command/result envelopes into gimp_mcp_pro.protocol.
-  - Annotate public MCP tool handlers with ToolResult rather than anonymous dict[str,
-    Any].
+  - Annotate public MCP tool handlers with ToolResult rather than anonymous dict[str, Any].
   - Annotate raw bridge transport responses with PluginResponse.
   - Add representative runtime invocation tests proving tools await async bridge methods.
   - Add static tests rejecting non-ToolResult tool return annotations.
@@ -82,8 +76,8 @@ issues:
   - Every @mcp.tool handler is annotated as returning ToolResult.
   - Both GimpBridge and AsyncGimpBridge satisfy the AsyncToolBridge protocol surface.
   - Representative registered tools invoke async bridge methods under pytest.
-  - Optional GIMP 3.2.4 capability failures are machine-readable and accepted by the
-    live smoke normalizer.
+  - Optional GIMP 3.2.4 capability failures are machine-readable and accepted by the live
+    smoke normalizer.
 - id: GIMP-MCP-003
   title: Introduce Pydantic settings and environment loading
   type: feature
@@ -92,16 +86,16 @@ issues:
   - configuration
   - pydantic-settings
   - env
-  goal: Replace hard-coded runtime defaults with typed settings loaded from environment
-    variables and optional project/user configuration.
+  goal: Replace hard-coded runtime defaults with typed settings loaded from environment variables
+    and optional project/user configuration.
   checklist:
   - Add pydantic-settings dependency.
-  - Define settings for host, port, timeout, long_timeout, max_message_size, reconnect
-    delays, log level, and optional plugin path.
+  - Define settings for host, port, timeout, long_timeout, max_message_size, reconnect delays,
+    log level, and optional plugin path.
   - Support GIMP_MCP_PRO_* environment variables.
   - Keep safe defaults matching current behavior.
-  - Add tests for default settings, env overrides, invalid env values, and explicit
-    constructor overrides.
+  - Add tests for default settings, env overrides, invalid env values, and explicit constructor
+    overrides.
   - Document settings in README and a dedicated configuration section.
   acceptance:
   - Runtime configuration is typed, validated, documented, and test-covered.
@@ -116,27 +110,23 @@ issues:
   - repl
   - projects
   - workflow
-  goal: Wire this fork into the local gimp.dev Projects workflow so async bridge work
-    can be driven from an interactive project REPL and validated through repeatable
-    project commands.
+  goal: Wire this fork into the local gimp.dev Projects workflow so async bridge work can
+    be driven from an interactive project REPL and validated through repeatable project commands.
   checklist:
   - Inspect the gimp.dev project conventions and available project commands.
-  - Add bridge/project commands for uv sync, tests, linting, async bridge tests, and
-    GIMP smoke tests.
-  - Create or document an async REPL workflow for manually driving AsyncGimpBridge
-    commands.
-  - Ensure commands work from /home/user/code/gimp-mcp and can be discovered by the
-    project manager.
+  - Add bridge/project commands for uv sync, tests, linting, async bridge tests, and GIMP
+    smoke tests.
+  - Create or document an async REPL workflow for manually driving AsyncGimpBridge commands.
+  - Ensure commands work from /home/user/code/gimp-mcp and can be discovered by the project
+    manager.
   - Add notes for how to run the REPL against a live GIMP 3.2.4 plugin instance.
   acceptance:
   - Project commands are discoverable and runnable through the workspace/project manager.
   - Async REPL workflow is documented and can connect to a live plugin instance.
-  - gimp.dev integration notes are captured without relying on undocumented local
-    assumptions.
+  - gimp.dev integration notes are captured without relying on undocumented local assumptions.
   status: open
 - id: GIMP-MCP-005
-  title: Reconcile features.yml with runtime registry and complete remaining agent
-    features
+  title: Reconcile features.yml with runtime registry and complete remaining agent features
   type: feature-backlog
   priority: high
   labels:
@@ -144,10 +134,9 @@ issues:
   - tool-registry
   - agent-workflows
   - tdd
-  status: partially-implemented
+  status: implemented
   goal: Keep features.yml synchronized with the real MCP registry and implement remaining
-    high-priority agent-facing features with focused RED/GREEN tests and matrix contract
-    updates.
+    high-priority agent-facing features with focused RED/GREEN tests and matrix contract updates.
   completed_this_pass:
   - feature_id: FEAT-004
     tool: create_contact_sheet
@@ -184,43 +173,93 @@ issues:
     tool: commit_filter_preview
   - feature_id: FEAT-025
     tool: smart_crop_or_resize
-  remaining_open_features:
-  - FEAT-009
-  - FEAT-020
-  - FEAT-022
-  - FEAT-023
-  - FEAT-024
-  - FEAT-027
-  - FEAT-029
-  - FEAT-030
-  - FEAT-031
-  - FEAT-034
-  - FEAT-035
-  - FEAT-036
-  - FEAT-038
-  - FEAT-039
-  - FEAT-044
-  - FEAT-047
-  - FEAT-048
-  - FEAT-049
-  - FEAT-050
-  - FEAT-052
-  - FEAT-054
-  - FEAT-055
-  - FEAT-056
-  - FEAT-057
+  - feature_id: FEAT-009
+    tool: find_similar_regions
+  - feature_id: FEAT-020
+    tool: create_text_box
+  - feature_id: FEAT-022
+    tool: edit_channels
+  - feature_id: FEAT-023
+    tool: edit_paths
+  - feature_id: FEAT-024
+    tool: align_and_distribute_layers
+  - feature_id: FEAT-029
+    tool: palette_create_or_update
+  - feature_id: FEAT-030
+    tool: export_with_manifest
+  - feature_id: FEAT-031
+    tool: import_as_layer_with_metadata
+  - feature_id: FEAT-034
+    tool: pdb_introspect_typed
+  - feature_id: FEAT-036
+    tool: safe_python_eval
+  - feature_id: FEAT-038
+    tool: create_visual_annotation_layer
+  - feature_id: FEAT-039
+    tool: remove_visual_annotations
+  - feature_id: FEAT-044
+    tool: layer_version_stamp
+  - feature_id: FEAT-047
+    tool: manage_channels
+  - feature_id: FEAT-048
+    tool: manage_guides_and_grid
+  - feature_id: FEAT-049
+    tool: create_and_edit_paths
+  - feature_id: FEAT-050
+    tool: stroke_or_fill_path
+  - feature_id: FEAT-052
+    tool: resource_catalog
+  - feature_id: FEAT-055
+    tool: preview_gegl_operation
+  - feature_id: FEAT-057
+    tool: batch_export_variants
+  - feature_id: FEAT-056
+    tool: color_management_profile
+    status: partial
+  - feature_id: FEAT-056
+    tool: color_management_profile
+  - feature_id: FEAT-022
+    tool: edit_channels
+    status: partial
+  - feature_id: FEAT-023
+    tool: edit_paths
+    status: partial
+  - feature_id: FEAT-029
+    tool: palette_create_or_update
+    status: partial
+  - feature_id: FEAT-034
+    tool: pdb_introspect_typed
+    status: partial
+  - feature_id: FEAT-047
+    tool: manage_channels
+    status: partial
+  - feature_id: FEAT-048
+    tool: manage_guides_and_grid
+    status: partial
+  - feature_id: FEAT-049
+    tool: create_and_edit_paths
+    status: partial
+  - feature_id: FEAT-050
+    tool: stroke_or_fill_path
+    status: partial
+  - feature_id: FEAT-052
+    tool: resource_catalog
+    status: partial
+  - feature_id: FEAT-035
+    tool: execute_pdb_call
+  - feature_id: FEAT-054
+    tool: apply_gegl_operation
+  remaining_open_features: []
   checklist:
-  - Reconcile implemented/partial/planned feature statuses against registered MCP
-    tools.
+  - Reconcile implemented/partial/planned feature statuses against registered MCP tools.
   - Implement FEAT-005 sample_pixels with explicit point and grid sampling.
   - Implement FEAT-014 compare_snapshots and FEAT-015 assert_image_state.
-  - Update public tool count and compatibility/docs contracts to 148 tools.
-  - Continue with remaining P1 features after completing FEAT-032 dry_run_macro and
-    FEAT-033 run_macro_transaction.
+  - Update public tool count and compatibility/docs contracts to 171 tools.
+  - Continue with remaining P1 features after completing FEAT-032 dry_run_macro and FEAT-033
+    run_macro_transaction.
   - Keep every new public tool in generated-code and invocation matrices.
   acceptance:
-  - features.yml and tasks.issues.yml are YAML-parseable and reflect current registry
-    state.
+  - features.yml and tasks.issues.yml are YAML-parseable and reflect current registry state.
   - New feature work follows RED/GREEN verification.
   - Focused, matrix, static, and full offline test suites pass before completion.
-  registry_total: 148
+  registry_total: 171

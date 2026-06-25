@@ -5,25 +5,26 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **148**
+Total tools: **171**
 
 | Category | Tools | Page |
 |---|---:|---|
 | Agent Tools | 3 | [agent_tools](agent_tools.md) |
-| Color Adjustments | 20 | [color_tools](color_tools.md) |
-| Drawing and Text | 12 | [drawing_tools](drawing_tools.md) |
+| Color Adjustments | 21 | [color_tools](color_tools.md) |
+| Drawing and Text | 13 | [drawing_tools](drawing_tools.md) |
 | Filters and Effects | 11 | [filter_tools](filter_tools.md) |
 | Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
 | gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
 | History | 6 | [history_tools](history_tools.md) |
-| Image Management | 10 | [image_tools](image_tools.md) |
+| Image Management | 12 | [image_tools](image_tools.md) |
 | Inspection | 17 | [inspect_tools](inspect_tools.md) |
-| Layer Operations | 19 | [layer_tools](layer_tools.md) |
+| Layer Operations | 22 | [layer_tools](layer_tools.md) |
 | Vector Paths | 5 | [path_tools](path_tools.md) |
 | PDB and Escape Hatch | 2 | [pdb_tools](pdb_tools.md) |
+| Roadmap Tools | 12 | [roadmap_tools](roadmap_tools.md) |
 | Selections | 14 | [selection_tools](selection_tools.md) |
-| Target Resolution | 2 | [target_tools](target_tools.md) |
-| Transforms | 14 | [transform_tools](transform_tools.md) |
+| Target Resolution | 3 | [target_tools](target_tools.md) |
+| Transforms | 15 | [transform_tools](transform_tools.md) |
 
 ## Tool inventory
 
@@ -49,6 +50,7 @@ Total tools: **148**
 - [`brush_inventory`](color_tools.md#brush-inventory) — List paint resources with current-context markers.
 - [`set_paint_resource`](color_tools.md#set-paint-resource) — Set one active paint resource by validated name.
 - [`set_paint_context`](color_tools.md#set-paint-context) — Set multiple paint context fields with validation and read-back.
+- [`resource_catalog`](color_tools.md#resource-catalog) — List bounded searchable resources with optional capability notes.
 - [`list_gimp_resources`](color_tools.md#list-gimp-resources) — List available GIMP brushes, patterns, fonts, and gradients.
 - [`get_colors`](color_tools.md#get-colors) — Get the current foreground and background colors.
 - [`swap_colors`](color_tools.md#swap-colors) — Swap foreground and background colors.
@@ -66,6 +68,7 @@ Total tools: **148**
 - [`draw_rectangle`](drawing_tools.md#draw-rectangle) — Draw a rectangle (filled or outline only).
 - [`draw_ellipse`](drawing_tools.md#draw-ellipse) — Draw an ellipse/circle (filled or outline only).
 - [`draw_polygon`](drawing_tools.md#draw-polygon) — Draw a polygon (filled or outline).
+- [`create_text_box`](drawing_tools.md#create-text-box) — Create a new text layer at an explicit rectangle with styling.
 - [`add_text`](drawing_tools.md#add-text) — Add a text layer to the image.
 - [`gradient_fill`](drawing_tools.md#gradient-fill) — Fill the current drawable/selection with a gradient between two points.
 - [`edit_text_layer`](drawing_tools.md#edit-text-layer) — Edit an existing text layer's content and core text properties.
@@ -120,8 +123,10 @@ Total tools: **148**
 - [`delete_guide`](image_tools.md#delete-guide) — Delete a guide from the active image by guide ID.
 - [`list_guides`](image_tools.md#list-guides) — List guides on the active image with ID, orientation, and position.
 - [`set_image_grid`](image_tools.md#set-image-grid) — Configure grid spacing, offset, and visual style on the active image.
+- [`color_management_profile`](image_tools.md#color-management-profile) — Inspect or explicitly request guarded image color-profile operations.
 - [`list_images`](image_tools.md#list-images) — List all currently open images in GIMP.
 - [`get_image_info`](image_tools.md#get-image-info) — Get detailed metadata about the active image (no bitmap data).
+- [`export_with_manifest`](image_tools.md#export-with-manifest) — Export an image and write a JSON provenance sidecar manifest.
 - [`export_image`](image_tools.md#export-image) — Export the active image to a file.
 - [`flatten_image`](image_tools.md#flatten-image) — Flatten all layers into a single layer.
 - [`duplicate_image`](image_tools.md#duplicate-image) — Duplicate the entire active image (all layers, channels, paths).
@@ -166,6 +171,9 @@ Total tools: **148**
 - [`list_channels`](layer_tools.md#list-channels) — List custom channels in the active image.
 - [`save_selection_to_channel`](layer_tools.md#save-selection-to-channel) — Save the current selection mask as a named custom channel.
 - [`channel_to_selection`](layer_tools.md#channel-to-selection) — Convert a custom channel into the current selection.
+- [`create_visual_annotation_layer`](layer_tools.md#create-visual-annotation-layer) — Create an MCP-tagged temporary visual annotation layer.
+- [`remove_visual_annotations`](layer_tools.md#remove-visual-annotations) — Remove MCP-managed annotation layers only.
+- [`layer_version_stamp`](layer_tools.md#layer-version-stamp) — Attach namespaced MCP provenance metadata to a layer.
 - [`add_alpha_channel`](layer_tools.md#add-alpha-channel) — Add an alpha (transparency) channel to a layer.
 
 ### Vector Paths
@@ -180,6 +188,21 @@ Total tools: **148**
 
 - [`search_pdb`](pdb_tools.md#search-pdb) — Search GIMP's Procedure Database for available operations.
 - [`execute_python`](pdb_tools.md#execute-python) — Execute raw Python code in GIMP's PyGObject console.
+
+### Roadmap Tools
+
+- [`edit_channels`](roadmap_tools.md#edit-channels) — Create, inspect, duplicate, rename, or convert channels/selections.
+- [`manage_channels`](roadmap_tools.md#manage-channels) — Manage saved channels through a consolidated action tool.
+- [`edit_paths`](roadmap_tools.md#edit-paths) — Inspect, create, transform, stroke, fill, or convert paths.
+- [`create_and_edit_paths`](roadmap_tools.md#create-and-edit-paths) — Create, list, rename, or update vector paths from typed point data.
+- [`stroke_or_fill_path`](roadmap_tools.md#stroke-or-fill-path) — Stroke or fill a vector path with supplied paint settings.
+- [`palette_create_or_update`](roadmap_tools.md#palette-create-or-update) — Create, inspect, or update a palette from provided colors.
+- [`import_as_layer_with_metadata`](roadmap_tools.md#import-as-layer-with-metadata) — Import an external image as a layer with provenance metadata.
+- [`batch_export_variants`](roadmap_tools.md#batch-export-variants) — Export multiple bounded variants from the active image.
+- [`pdb_introspect_typed`](roadmap_tools.md#pdb-introspect-typed) — Return typed PDB procedure metadata for safer wrapper generation.
+- [`safe_python_eval`](roadmap_tools.md#safe-python-eval) — Run restricted diagnostic Python only when explicitly debug-enabled.
+- [`manage_guides_and_grid`](roadmap_tools.md#manage-guides-and-grid) — Create, list, move, remove guides, or set document grid settings.
+- [`preview_gegl_operation`](roadmap_tools.md#preview-gegl-operation) — Render bounded before/after metadata for a GEGL operation without committing.
 
 ### Selections
 
@@ -200,11 +223,13 @@ Total tools: **148**
 
 ### Target Resolution
 
+- [`find_similar_regions`](target_tools.md#find-similar-regions) — Find simple deterministic pixel regions matching color/alpha criteria.
 - [`resolve_target`](target_tools.md#resolve-target) — Resolve a user or agent target reference into concrete GIMP object IDs.
 - [`validate_targets`](target_tools.md#validate-targets) — Validate that proposed targets still exist and support required actions.
 
 ### Transforms
 
+- [`align_and_distribute_layers`](transform_tools.md#align-and-distribute-layers) — Align or distribute layers relative to the canvas with verification bounds.
 - [`scale_image`](transform_tools.md#scale-image) — Scale the entire image (all layers) to new dimensions.
 - [`scale_layer`](transform_tools.md#scale-layer) — Scale a single layer to new dimensions.
 - [`rotate_image`](transform_tools.md#rotate-image) — Rotate the entire image by 90, 180, or 270 degrees.

@@ -164,8 +164,140 @@ def _validate_code(targets: list[Any], required_capabilities: list[str]) -> list
     ]
 
 
+def _find_similar_regions_code(
+    color: str | None,
+    alpha_min: float,
+    alpha_max: float,
+    region: dict[str, float] | None,
+    tolerance: float,
+    max_regions: int,
+) -> list[str]:
+    """Return generated code for deterministic approximate region matching."""
+    return [
+        "import json, math",
+        "# __gimp_mcp_find_similar_regions__",
+        f"target_color = {py_literal(color)}",
+        f"alpha_min = {alpha_min!r}",
+        f"alpha_max = {alpha_max!r}",
+        f"region = {py_literal(region)}",
+        f"tolerance = {tolerance!r}",
+        f"max_regions = {max_regions!r}",
+        "def safe_call(fn, default=None):\n"
+        "    try:\n"
+        "        return fn()\n"
+        "    except Exception:\n"
+        "        return default",
+        "def rgba_tuple(color_obj):\n"
+        "    rgba = safe_call(lambda: color_obj.get_rgba(), None)\n"
+        "    if rgba is None:\n"
+        "        return (0.0, 0.0, 0.0, 0.0)\n"
+        "    return (float(rgba.red), float(rgba.green), float(rgba.blue), float(rgba.alpha))",
+        "def parse_hex(value):\n"
+        "    if not value:\n"
+        "        return None\n"
+        "    value = value.lstrip('#')\n"
+        "    if len(value) != 6:\n"
+        "        return None\n"
+        "    return tuple(int(value[i:i+2], 16) / 255.0 for i in (0, 2, 4))",
+        "target_rgb = parse_hex(target_color)",
+        "images = Gimp.get_images()",
+        "if not images: raise RuntimeError('No images are open')",
+        "image = images[0]",
+        "selected = list(safe_call(lambda: image.get_selected_layers(), []) or [])",
+        "drawable = selected[0] if selected else (list(safe_call(lambda: image.get_layers(), []) or [None])[0])",
+        "if drawable is None: raise RuntimeError('No drawable available')",
+        "width = int(safe_call(lambda: drawable.get_width(), 0) or 0)",
+        "height = int(safe_call(lambda: drawable.get_height(), 0) or 0)",
+        "left = int(region.get('x', 0)) if region else 0",
+        "top = int(region.get('y', 0)) if region else 0",
+        "right = min(width, left + int(region.get('width', width))) if region else width",
+        "bottom = min(height, top + int(region.get('height', height))) if region else height",
+        "step = max(1, min(max(1, right-left), max(1, bottom-top)) // 48)",
+        "matches = []",
+        "for y in range(top, bottom, step):\n"
+        "    for x in range(left, right, step):\n"
+        "        try:\n"
+        "            rgba = rgba_tuple(drawable.get_pixel(x, y))\n"
+        "        except Exception:\n"
+        "            continue\n"
+        "        alpha = rgba[3]\n"
+        "        if alpha < alpha_min or alpha > alpha_max:\n"
+        "            continue\n"
+        "        if target_rgb is not None:\n"
+        "            dist = math.sqrt(sum((rgba[i] - target_rgb[i]) ** 2 for i in range(3))) / math.sqrt(3)\n"
+        "            if dist > tolerance:\n"
+        "                continue\n"
+        "            confidence = round(1.0 - dist, 6)\n"
+        "        else:\n"
+        "            confidence = 1.0\n"
+        "        matches.append({'x': x, 'y': y, 'width': step, 'height': step, 'confidence': confidence, 'alpha': round(alpha, 4)})",
+        "matches.sort(key=lambda item: item['confidence'], reverse=True)",
+        "regions = matches[:max_regions]",
+        "result = {'regions': regions, 'confidence': [item['confidence'] for item in regions], 'algorithm': 'deterministic_pixel_sampling', 'claims': {'semantic_recognition': False}}",
+        "print(json.dumps(result))",
+    ]
+
+
 def register_target_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register target resolution and validation tools with the MCP server."""
+
+    @mcp.tool()
+    async def find_similar_regions(
+        color: str | None = None,
+        alpha_range: dict[str, float] | None = None,
+        region: dict[str, float] | None = None,
+        tolerance: float = 0.1,
+        max_regions: int = 20,
+    ) -> ToolResult:
+        """Find simple deterministic pixel regions matching color/alpha criteria.
+
+        Args:
+            color: Optional hex RGB color to match approximately.
+            alpha_range: Optional min/max alpha range from 0.0 to 1.0.
+            region: Optional rectangle limiting the sampled search area.
+            tolerance: Euclidean RGB tolerance from 0.0 to 1.0.
+            max_regions: Maximum region candidates to return.
+
+        Returns:
+            Operation result with deterministic region candidates and confidence scores.
+        """
+        if tolerance < 0.0 or tolerance > 1.0:
+            return OperationResult.fail(
+                operation="find_similar_regions",
+                error="tolerance must be between 0.0 and 1.0",
+            ).model_dump()
+        alpha_range = alpha_range or {}
+        alpha_min = float(alpha_range.get("min", 0.0))
+        alpha_max = float(alpha_range.get("max", 1.0))
+        if alpha_min < 0.0 or alpha_max > 1.0 or alpha_min > alpha_max:
+            return OperationResult.fail(
+                operation="find_similar_regions",
+                error="alpha_range must be within 0.0..1.0 and min <= max",
+            ).model_dump()
+        if region is not None and (
+            float(region.get("width", 0)) <= 0 or float(region.get("height", 0)) <= 0
+        ):
+            return OperationResult.fail(
+                operation="find_similar_regions",
+                error="region width and height must be positive",
+            ).model_dump()
+        max_regions = max(1, min(200, int(max_regions)))
+        try:
+            result = await bridge.async_execute_python(
+                _find_similar_regions_code(
+                    color, alpha_min, alpha_max, region, tolerance, max_regions
+                )
+            )
+            data = _json_payload(result)
+            data.setdefault("regions", [])
+            data.setdefault("confidence", [])
+            return OperationResult.ok(
+                operation="find_similar_regions",
+                message=f"Found {len(data.get('regions', []))} similar region candidate(s)",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="find_similar_regions", error=str(e)).model_dump()
 
     @mcp.tool()
     async def resolve_target(

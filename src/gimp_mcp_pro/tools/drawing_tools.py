@@ -66,6 +66,57 @@ def _get_drawable_code() -> list[str]:
     ]
 
 
+def _create_text_box_code(
+    text: str,
+    rectangle: dict[str, int],
+    style: dict[str, object],
+    name: str | None,
+) -> list[str]:
+    """Return generated code that creates a styled text layer in a rectangle."""
+    x = int(rectangle["x"])
+    y = int(rectangle["y"])
+    width = int(rectangle["width"])
+    height = int(rectangle["height"])
+    font = str(style.get("font", "Sans"))
+    font_size = float(style.get("font_size", style.get("size", 24.0)))
+    color = str(style.get("color", "#000000"))
+    justify = str(style.get("justify", "left")).lower().replace("-", "_")
+    justify_expr = TEXT_JUSTIFICATION_MAP.get(justify, "Gimp.TextJustification.LEFT")
+    layer_name = name or (text[:32] if text else "Text box")
+    return [
+        "from gi.repository import Gimp, Gegl",
+        "import json",
+        "# __gimp_mcp_create_text_box__",
+        f"text = {py_literal(text)}",
+        f"x = {x}",
+        f"y = {y}",
+        f"width = {width}",
+        f"height = {height}",
+        f"font_name = {py_literal(font)}",
+        f"font_size = {font_size!r}",
+        f"layer_name = {py_literal(layer_name)}",
+        "images = Gimp.get_images()",
+        "if not images: raise RuntimeError('No images are open')",
+        "image = images[0]",
+        "fonts = Gimp.fonts_get_list('')",
+        "font_values = fonts[-1] if isinstance(fonts, tuple) else fonts",
+        "font_names = [str(item.get_name() if hasattr(item, 'get_name') else item) for item in (font_values or [])]",
+        "warnings = []",
+        "if font_name not in font_names and font_names:\n"
+        "    warnings.append({'code': 'font_fallback', 'requested': font_name})",
+        "text_layer = Gimp.TextLayer.new(image, text, font_name, font_size, Gimp.Unit.pixel())",
+        "text_layer.set_name(layer_name)",
+        "image.insert_layer(text_layer, None, 0)",
+        "text_layer.set_offsets(x, y)",
+        "text_layer.resize(width, height)",
+        f"text_layer.set_justification({justify_expr})",
+        f"text_layer.set_color(Gegl.Color.new({py_literal(color)}))",
+        "Gimp.displays_flush()",
+        "result = {'layer_id': int(text_layer.get_id()) if hasattr(text_layer, 'get_id') else None, 'bounds': {'x': x, 'y': y, 'width': width, 'height': height}, 'warnings': warnings}",
+        "print(json.dumps(result))",
+    ]
+
+
 def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all drawing tools with the MCP server."""
 
@@ -441,6 +492,54 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="draw_polygon", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def create_text_box(
+        text: str,
+        rectangle: dict[str, int],
+        style: dict[str, object] | None = None,
+        name: str | None = None,
+    ) -> ToolResult:
+        """Create a new text layer at an explicit rectangle with styling.
+
+        Args:
+            text: Text content for the new layer.
+            rectangle: Mapping with x, y, width, and height.
+            style: Optional font, font_size, color, and justification settings.
+            name: Optional layer name.
+
+        Returns:
+            Operation result with requested text-box bounds and style metadata.
+        """
+        if not text:
+            return OperationResult.fail(
+                operation="create_text_box", error="text must not be empty"
+            ).model_dump()
+        try:
+            int(rectangle["x"])
+            int(rectangle["y"])
+            width = int(rectangle["width"])
+            height = int(rectangle["height"])
+        except (KeyError, TypeError, ValueError):
+            return OperationResult.fail(
+                operation="create_text_box",
+                error="rectangle must include integer x, y, width, height",
+            ).model_dump()
+        if width <= 0 or height <= 0:
+            return OperationResult.fail(
+                operation="create_text_box", error="rectangle width and height must be positive"
+            ).model_dump()
+        try:
+            await bridge.async_execute_python(
+                _create_text_box_code(text, rectangle, style or {}, name)
+            )
+            return OperationResult.ok(
+                operation="create_text_box",
+                message="Text box created",
+                data={"text": text, "rectangle": rectangle, "style": style or {}, "name": name},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="create_text_box", error=str(e)).model_dump()
 
     @mcp.tool()
     async def add_text(
