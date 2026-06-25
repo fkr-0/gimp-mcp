@@ -12,7 +12,7 @@ from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
+from gimp_mcp_pro.tools.native_backend import execute_json_tool
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
@@ -839,7 +839,7 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
             "after_png": None,
             "metrics": {"document_mutated": False},
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="preview_gegl_operation",
             marker="__gimp_mcp_preview_gegl_operation__",

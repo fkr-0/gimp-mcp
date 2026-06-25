@@ -13,7 +13,7 @@ from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
+from gimp_mcp_pro.tools.native_backend import execute_json_tool
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
@@ -275,7 +275,7 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
             "signatures": [],
             "deprecation_notes": [],
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="pdb_introspect_typed",
             marker="__gimp_mcp_pdb_introspect_typed__",
@@ -319,7 +319,7 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
             "stderr": "",
             "result": None,
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="safe_python_eval",
             marker="__gimp_mcp_safe_python_eval__",

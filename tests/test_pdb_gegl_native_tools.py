@@ -6,7 +6,6 @@ import pytest
 
 from gimp_mcp_pro.tools.filter_tools import register_filter_tools
 from gimp_mcp_pro.tools.pdb_tools import register_pdb_tools
-from gimp_mcp_pro.tools.roadmap_tools import register_roadmap_tools
 from tests.test_tool_generated_code_paths import CaptureMCP, ScriptedBridge
 
 
@@ -91,11 +90,3 @@ async def test_apply_gegl_operation_rejects_unknown_property_before_bridge_call(
     assert result["success"] is False
     assert "property" in result["error"].lower()
     assert bridge.calls == []
-
-
-def test_moved_tools_are_no_longer_registered_by_roadmap_tools() -> None:
-    mcp = CaptureMCP()
-    register_roadmap_tools(mcp, ScriptedBridge())
-
-    assert "execute_pdb_call" not in mcp.tools
-    assert "apply_gegl_operation" not in mcp.tools

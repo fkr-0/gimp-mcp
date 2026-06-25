@@ -12,6 +12,7 @@ from scripts import compat
 
 ROOT = Path(__file__).resolve().parents[1]
 ROADMAP_SOURCE = ROOT / "src" / "gimp_mcp_pro" / "tools" / "roadmap_tools.py"
+NATIVE_BACKEND_SOURCE = ROOT / "src" / "gimp_mcp_pro" / "tools" / "native_backend.py"
 FEATURES = ROOT / "features.yml"
 TASKS = ROOT / "tasks.issues.yml"
 
@@ -34,6 +35,8 @@ ROADMAP_TOOL_TARGETS = {
 
 
 def _roadmap_tool_names() -> list[str]:
+    if not ROADMAP_SOURCE.exists():
+        return []
     tree = ast.parse(ROADMAP_SOURCE.read_text())
     names: list[str] = []
     for node in ast.walk(tree):
@@ -63,6 +66,25 @@ def test_roadmap_tools_have_been_promoted_to_category_modules() -> None:
         target_source = (ROOT / target_file).read_text()
         assert f"async def {tool_name}(" in target_source
         assert f"__gimp_mcp_{tool_name}__" in target_source
+
+
+def test_promoted_native_backend_helpers_are_no_longer_in_roadmap_tools() -> None:
+    """Shared native backend helpers should not live under a roadmap module name."""
+    assert not ROADMAP_SOURCE.exists()
+    assert NATIVE_BACKEND_SOURCE.exists()
+
+    native_source = NATIVE_BACKEND_SOURCE.read_text()
+    assert "async def execute_json_tool" in native_source
+    assert "def native_extra_for" in native_source
+    assert "def register_roadmap_tools" not in native_source
+
+    production_sources = [
+        path
+        for path in (ROOT / "src" / "gimp_mcp_pro").rglob("*.py")
+        if "__pycache__" not in path.parts
+    ]
+    for source_path in production_sources:
+        assert "roadmap_tools" not in source_path.read_text(), source_path
 
 
 def test_features_yml_marks_promoted_roadmap_tools_finalized() -> None:

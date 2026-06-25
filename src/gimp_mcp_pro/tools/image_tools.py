@@ -10,10 +10,10 @@ from typing import Any
 
 from gimp_mcp_pro.models.common import FillType, OperationResult, py_literal
 from gimp_mcp_pro.models.image import CreateImageParams, ExportImageParams
-from gimp_mcp_pro.tools.roadmap_tools import (
+from gimp_mcp_pro.tools.native_backend import (
     SUPPORTED_GUIDE_GRID_ACTIONS,
-    _execute_json_tool,
-    _validate_formats,
+    execute_json_tool,
+    validate_formats,
 )
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
@@ -772,7 +772,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "layer_id": None,
             "metadata": {"source": source},
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="import_as_layer_with_metadata",
             marker="__gimp_mcp_import_as_layer_with_metadata__",
@@ -796,7 +796,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result with exported files and warnings.
         """
-        unsupported = _validate_formats([variant.get("format", "") for variant in variants])
+        unsupported = validate_formats([variant.get("format", "") for variant in variants])
         if unsupported:
             return OperationResult.fail(
                 operation="batch_export_variants",
@@ -814,7 +814,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "files": [],
             "warnings": [],
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="batch_export_variants",
             marker="__gimp_mcp_batch_export_variants__",
@@ -855,7 +855,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "grid": grid or {},
             "guides": [],
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="manage_guides_and_grid",
             marker="__gimp_mcp_manage_guides_and_grid__",

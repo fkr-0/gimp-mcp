@@ -7,7 +7,7 @@ from typing import Any
 
 from gimp_mcp_pro.models.common import BlendMode, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
-from gimp_mcp_pro.tools.roadmap_tools import SUPPORTED_CHANNEL_ACTIONS, _execute_json_tool
+from gimp_mcp_pro.tools.native_backend import SUPPORTED_CHANNEL_ACTIONS, execute_json_tool
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 from gimp_mcp_pro.utils.gimp_constants import BLEND_MODE_MAP, FILL_TYPE_MAP, SELECTION_OP_MAP
@@ -1154,7 +1154,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "channels": [],
             "selection_changed": normalized.endswith("selection"),
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="edit_channels",
             marker="__gimp_mcp_edit_channels__",
@@ -1193,7 +1193,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "channels": [],
             "selection_changed": normalized in {"to_selection", "selection_to_channel"},
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="manage_channels",
             marker="__gimp_mcp_manage_channels__",

@@ -56,6 +56,32 @@ def _transform_resize_expr(resize: str) -> tuple[str, str]:
     return resolved, resize_map[resolved]
 
 
+def _transform_context_lifecycle_code(
+    interp_expr: str, resize_expr: str, transform_line: str
+) -> list[str]:
+    """Return generated code that restores interpolation/resize context."""
+    lines = [
+        "# __gimp_mcp_transform_context_lifecycle__",
+        "previous_interpolation = Gimp.context_get_interpolation()",
+        "previous_transform_resize = Gimp.context_get_transform_resize()",
+        "try:",
+        f"    Gimp.context_set_interpolation({interp_expr})",
+        f"    Gimp.context_set_transform_resize({resize_expr})",
+        f"    {transform_line}",
+        "finally:",
+        "    try:",
+        "        Gimp.context_set_interpolation(previous_interpolation)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        Gimp.context_set_transform_resize(previous_transform_resize)",
+        "    except Exception:",
+        "        pass",
+        "    gc.collect()",
+    ]
+    return ["import gc", "\n".join(lines), "Gimp.displays_flush()"]
+
+
 def _layer_target(layer_name: str | None, layer_index: int | None) -> list[str]:
     """Code to resolve a layer target."""
     if layer_name is not None:
@@ -509,17 +535,15 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         resolved_interpolation, interp_expr = _interpolation_expr(interpolation)
         resolved_resize, resize_expr = _transform_resize_expr(resize)
 
+        transform_line = (
+            "Gimp.Item.transform_perspective(target, "
+            f"{corners[0]}, {corners[1]}, {corners[2]}, {corners[3]}, "
+            f"{corners[4]}, {corners[5]}, {corners[6]}, {corners[7]})"
+        )
         code = (
             _img_preamble()
             + _layer_target(layer_name, layer_index)
-            + [
-                f"Gimp.context_set_interpolation({interp_expr})",
-                f"Gimp.context_set_transform_resize({resize_expr})",
-                "Gimp.Item.transform_perspective(target, "
-                f"{corners[0]}, {corners[1]}, {corners[2]}, {corners[3]}, "
-                f"{corners[4]}, {corners[5]}, {corners[6]}, {corners[7]})",
-                "Gimp.displays_flush()",
-            ]
+            + _transform_context_lifecycle_code(interp_expr, resize_expr, transform_line)
         )
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
@@ -568,15 +592,11 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         resolved_interpolation, interp_expr = _interpolation_expr(interpolation)
         resolved_resize, resize_expr = _transform_resize_expr(resize)
 
+        transform_line = f"Gimp.Item.transform_shear(target, {shear_expr}, {magnitude})"
         code = (
             _img_preamble()
             + _layer_target(layer_name, layer_index)
-            + [
-                f"Gimp.context_set_interpolation({interp_expr})",
-                f"Gimp.context_set_transform_resize({resize_expr})",
-                f"Gimp.Item.transform_shear(target, {shear_expr}, {magnitude})",
-                "Gimp.displays_flush()",
-            ]
+            + _transform_context_lifecycle_code(interp_expr, resize_expr, transform_line)
         )
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
@@ -825,14 +845,42 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
+        lifecycle_lines = [
+            "# __gimp_mcp_autocrop_lifecycle__",
+            "pdb = None",
+            "proc = None",
+            "cfg = None",
+            "try:",
+            "    pdb = Gimp.get_pdb()",
+            "    proc = pdb.lookup_procedure('gimp-image-autocrop')",
+            "    if not proc: raise RuntimeError('Autocrop procedure not found')",
+            "    cfg = proc.create_config()",
+            "    cfg.set_property('image', image)",
+            "    sel = image.get_selected_layers()",
+            "    if sel:",
+            "        try:",
+            "            cfg.set_property('drawable', sel[0])",
+            "        except Exception:",
+            "            pass",
+            "    proc.run(cfg)",
+            "finally:",
+            "    try:",
+            "        del cfg",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del proc",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del pdb",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = _img_preamble() + [
-            "pdb = Gimp.get_pdb()",
-            "proc = pdb.lookup_procedure('gimp-image-autocrop')",
-            "if not proc: raise RuntimeError('Autocrop procedure not found')",
-            "cfg = proc.create_config()",
-            "cfg.set_property('image', image)",
-            "sel = image.get_selected_layers()\nif sel:\n    try: cfg.set_property('drawable', sel[0])\n    except: pass",
-            "proc.run(cfg)",
+            "import gc",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:

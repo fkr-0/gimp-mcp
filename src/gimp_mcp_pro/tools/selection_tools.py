@@ -425,10 +425,14 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             "        pass",
             "    gc.collect()",
         ]
-        code = ["import gc"] + code + [
-            "\n".join(lifecycle_lines),
-            "Gimp.displays_flush()",
-        ]
+        code = (
+            ["import gc"]
+            + code
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -533,10 +537,14 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             "        pass",
             "    gc.collect()",
         ]
-        code = ["import gc"] + code + [
-            "\n".join(lifecycle_lines),
-            "Gimp.displays_flush()",
-        ]
+        code = (
+            ["import gc"]
+            + code
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(

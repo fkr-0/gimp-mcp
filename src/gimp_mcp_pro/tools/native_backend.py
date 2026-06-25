@@ -1,4 +1,4 @@
-"""Roadmap feature wrappers for remaining agent-facing MCP tools."""
+"""Shared generated-code backend helpers for native GIMP tool implementations."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import OperationResult
-from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+from gimp_mcp_pro.tools.types import AsyncToolBridge, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
-logger = logging.getLogger("gimp_mcp_pro.tools.roadmap")
+logger = logging.getLogger("gimp_mcp_pro.tools.native_backend")
 
 SUPPORTED_EXPORT_FORMATS = {"png", "jpeg", "jpg", "webp", "tiff", "tif", "psd", "xcf"}
 SUPPORTED_CHANNEL_ACTIONS = {
@@ -26,7 +26,6 @@ SUPPORTED_CHANNEL_ACTIONS = {
 }
 SUPPORTED_PATH_ACTIONS = {"list", "create", "rename", "delete", "to_selection", "stroke", "fill"}
 SUPPORTED_GUIDE_GRID_ACTIONS = {"list", "add", "move", "remove", "set_grid"}
-SUPPORTED_COLOR_PROFILE_ACTIONS = {"inspect", "assign", "convert"}
 
 
 def py_literal(value: object) -> str:
@@ -56,7 +55,7 @@ def _json_payload(result: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
-def _native_extra_for(operation: str, payload: dict[str, Any]) -> list[str]:
+def native_extra_for(operation: str, payload: dict[str, Any]) -> list[str]:
     """Return native GIMP backend code for promoted roadmap tools."""
     op = operation
     if op in {"edit_channels", "manage_channels"}:
@@ -225,7 +224,9 @@ def _native_extra_for(operation: str, payload: dict[str, Any]) -> list[str]:
     return []
 
 
-def _code(marker: str, payload: dict[str, Any], extra_lines: list[str] | None = None) -> list[str]:
+def build_json_code(
+    marker: str, payload: dict[str, Any], extra_lines: list[str] | None = None
+) -> list[str]:
     """Build a deterministic JSON-emitting code block for GIMP-side execution."""
     lines = [
         "from gi.repository import Gimp, Gegl",
@@ -233,13 +234,13 @@ def _code(marker: str, payload: dict[str, Any], extra_lines: list[str] | None = 
         f"# {marker}",
         f"result = {py_literal(payload)}",
     ]
-    lines.extend(_native_extra_for(payload.get("operation", ""), payload))
+    lines.extend(native_extra_for(payload.get("operation", ""), payload))
     lines.extend(extra_lines or [])
     lines.append("print(json.dumps(result, sort_keys=True))")
     return lines
 
 
-async def _execute_json_tool(
+async def execute_json_tool(
     bridge: AsyncToolBridge,
     *,
     operation: str,
@@ -251,7 +252,8 @@ async def _execute_json_tool(
     """Run generated GIMP code and return a structured operation result."""
     try:
         response = await bridge.async_execute_python(
-            _code(marker, dict(payload, operation=operation), extra_lines), timeout=LONG_TIMEOUT
+            build_json_code(marker, dict(payload, operation=operation), extra_lines),
+            timeout=LONG_TIMEOUT,
         )
         data = _json_payload(response)
         if not data:
@@ -261,28 +263,24 @@ async def _execute_json_tool(
         return OperationResult.fail(operation=operation, error=str(exc)).model_dump()
 
 
-def _normalise_format(value: object) -> str:
+def normalise_format(value: object) -> str:
     """Normalize an export format token."""
     return str(value).strip().lower().lstrip(".")
 
 
-def _validate_formats(formats: list[object]) -> list[str]:
+def validate_formats(formats: list[object]) -> list[str]:
     """Return unsupported export formats."""
     return [
         fmt
-        for fmt in (_normalise_format(item) for item in formats)
+        for fmt in (normalise_format(item) for item in formats)
         if fmt not in SUPPORTED_EXPORT_FORMATS
     ]
 
 
-def _validate_positive_size(width: object, height: object) -> tuple[int, int]:
+def validate_positive_size(width: object, height: object) -> tuple[int, int]:
     """Coerce and validate a positive two-dimensional size."""
     width_int = int(str(width))
     height_int = int(str(height))
     if width_int < 1 or height_int < 1:
         raise ValueError("width and height must be positive")
     return width_int, height_int
-
-
-def register_roadmap_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
-    """Register remaining roadmap feature tools with the MCP server."""

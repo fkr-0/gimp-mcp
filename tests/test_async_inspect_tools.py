@@ -102,7 +102,9 @@ class RecordingBitmapBridge(AsyncFakeBridge):
         self.bitmap_calls: list[dict[str, object]] = []
 
     async def async_get_image_bitmap(self, max_width=None, max_height=None, region=None):
-        self.bitmap_calls.append({"max_width": max_width, "max_height": max_height, "region": region})
+        self.bitmap_calls.append(
+            {"max_width": max_width, "max_height": max_height, "region": region}
+        )
         return await super().async_get_image_bitmap(max_width, max_height, region)
 
 

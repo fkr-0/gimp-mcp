@@ -11,7 +11,7 @@ from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
-from gimp_mcp_pro.tools.roadmap_tools import _execute_json_tool
+from gimp_mcp_pro.tools.native_backend import execute_json_tool
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
 
@@ -1548,7 +1548,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "action": normalized,
             "palette": {"name": palette_name, "colors": colors or [], "overwrite": overwrite},
         }
-        return await _execute_json_tool(
+        return await execute_json_tool(
             bridge,
             operation="palette_create_or_update",
             marker="__gimp_mcp_palette_create_or_update__",
