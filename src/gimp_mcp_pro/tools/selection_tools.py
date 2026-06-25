@@ -253,9 +253,9 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             f"Gimp.Image.select_contiguous_color(image, {_op_expr(operation)}, drawable, {x}, {y})",
             "Gimp.displays_flush()",
             "bounds = Gimp.Selection.bounds(image)",
-            "if len(bounds) == 6:",
-            "    _, non_empty, x1, y1, x2, y2 = bounds",
-            "else:",
+            "if len(bounds) == 6:\n"
+            "    _, non_empty, x1, y1, x2, y2 = bounds\n"
+            "else:\n"
             "    non_empty, x1, y1, x2, y2 = bounds",
             "print(json.dumps({'has_selection': bool(non_empty), "
             "'bounds': {'x': x1, 'y': y1, 'width': x2 - x1, 'height': y2 - y1}}))",
@@ -515,9 +515,9 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
             "bounds = Gimp.Selection.bounds(image)",
-            "if len(bounds) == 6:",
-            "    _, non_empty, x1, y1, x2, y2 = bounds",
-            "else:",
+            "if len(bounds) == 6:\n"
+            "    _, non_empty, x1, y1, x2, y2 = bounds\n"
+            "else:\n"
             "    non_empty, x1, y1, x2, y2 = bounds",
             "iw, ih = image.get_width(), image.get_height()",
             "is_all = non_empty and x1 == 0 and y1 == 0 and x2 == iw and y2 == ih",

@@ -16,12 +16,25 @@ Source: `src/gimp_mcp_pro/tools/agent_tools.py:104`
 async def begin_edit_transaction(label: str = 'AI edit transaction', capture_before_state: bool = False) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `label`
-- `capture_before_state`
+| Parameter | Description |
+|---|---|
+| `label` | Human-readable transaction label for logs and result metadata. |
+| `capture_before_state` | Include active image metadata in the result. |
 
-**Docstring**
+## Returns
+
+Operation result with transaction ID, undo-group state, and optional before-state metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Begin a reversible edit transaction backed by a GIMP undo group.
 
@@ -44,12 +57,25 @@ Source: `src/gimp_mcp_pro/tools/agent_tools.py:162`
 async def end_edit_transaction(transaction_id: str | None = None, require_known: bool = False) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `transaction_id`
-- `require_known`
+| Parameter | Description |
+|---|---|
+| `transaction_id` | Optional ID returned by begin_edit_transaction. |
+| `require_known` | Fail before touching GIMP when the transaction ID is not tracked. |
 
-**Docstring**
+## Returns
+
+Operation result with tracking and undo-group closure metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 End a tracked or best-effort GIMP undo transaction.
 
@@ -68,12 +94,25 @@ Source: `src/gimp_mcp_pro/tools/agent_tools.py:210`
 async def rollback_transaction(transaction_id: str | None = None, require_known: bool = False) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `transaction_id`
-- `require_known`
+| Parameter | Description |
+|---|---|
+| `transaction_id` | Optional ID returned by begin_edit_transaction. |
+| `require_known` | Fail before touching GIMP when the transaction ID is not tracked. |
 
-**Docstring**
+## Returns
+
+Operation result with tracking, undo-group, and rollback metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Rollback a transaction using GIMP undo where available.
 

@@ -178,6 +178,44 @@ def test_static_checks_do_not_duplicate_live_docs_contract(
     assert len(ids) == len(set(ids))
 
 
+def test_spawned_smoke_records_post_spawn_exception_without_duplicate_check_ids(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    """A post-spawn smoke exception must not be reported as a duplicate spawn check."""
+
+    class FakeProcess:
+        pid = 1234
+        stdout = None
+
+        def poll(self) -> int | None:
+            return None
+
+    parser = live.build_parser()
+    args = parser.parse_args(
+        ["--spawn", "--profile-dir", str(tmp_path), "--startup-timeout", "0.01"]
+    )
+    config = ServerConfig(gimp_host="127.0.0.1", gimp_port=43210, reconnect_delays=())
+
+    monkeypatch.setattr(live, "discover_gimp", lambda _explicit=None: "gimp-3.2")
+    monkeypatch.setattr(live, "spawn_gimp", lambda **_kwargs: FakeProcess())
+    monkeypatch.setattr(live, "wait_for_bridge", lambda *_args, **_kwargs: (True, "connected"))
+    monkeypatch.setattr(live, "stop_gimp", lambda _proc: None)
+
+    def run_smoke_stub(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        raise RuntimeError("Could not connect to GIMP at localhost:43210")
+
+    monkeypatch.setattr(live, "run_smoke", run_smoke_stub)
+
+    result = live.run_spawned_smoke(args, config)
+    ids = [check["id"] for check in result["checks"]]
+
+    assert ids == ["C-000-spawn-gimp", "C-005-autostart-server", "C-020-transport"]
+    assert len(ids) == len(set(ids))
+    assert result["checks"][-1]["status"] == "fail"
+    assert "Could not connect" in result["checks"][-1]["evidence"]["error"]
+
+
 def test_spawned_smoke_records_autostart_failure_without_full_matrix(
     tmp_path: Path,
     monkeypatch: Any,
@@ -209,21 +247,44 @@ def test_spawned_smoke_records_autostart_failure_without_full_matrix(
     def collect_process_output_stub(_proc: FakeProcess) -> str:
         return "gimp output tail"
 
-    def wait_for_bridge_stub(_config: ServerConfig, *, timeout: float) -> tuple[bool, str]:
-        assert timeout == 0.01
-        return False, "connection refused"
+    def run_smoke_stub(
+        smoke_config: ServerConfig,
+        plugin_path: Path | None = None,
+        env: dict[str, Any] | None = None,
+        stop_bridge_after: bool = False,
+        include_static_checks: bool = False,
+    ) -> dict[str, Any]:
+        assert smoke_config.gimp_port == 43210
+        assert plugin_path is not None
+        assert stop_bridge_after is True
+        assert include_static_checks is False
+        started = live.utc_now()
+        smoke_env = live.base_environment(plugin_path)
+        if env:
+            smoke_env.update(env)
+        return live.finish_result(
+            started,
+            smoke_env,
+            [
+                live.make_check(
+                    "C-020-transport",
+                    "fail",
+                    "connection refused",
+                )
+            ],
+        )
 
     monkeypatch.setattr(live, "discover_gimp", discover_gimp_stub)
     monkeypatch.setattr(live, "spawn_gimp", spawn_gimp_stub)
     monkeypatch.setattr(live, "stop_gimp", stop_gimp_stub)
     monkeypatch.setattr(live, "collect_process_output", collect_process_output_stub)
-    monkeypatch.setattr(live, "wait_for_bridge", wait_for_bridge_stub)
+    monkeypatch.setattr(live, "run_smoke", run_smoke_stub)
 
     result = live.run_spawned_smoke(args, config)
     ids = [check["id"] for check in result["checks"]]
     by_id = {check["id"]: check for check in result["checks"]}
 
-    assert ids == ["C-000-spawn-gimp", "C-005-autostart-server"]
+    assert ids == ["C-000-spawn-gimp", "C-005-autostart-server", "C-020-transport"]
     assert len(ids) == len(set(ids))
     assert by_id["C-000-spawn-gimp"]["status"] == "pass"
     assert by_id["C-005-autostart-server"]["status"] == "fail"

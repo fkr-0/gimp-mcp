@@ -15,13 +15,26 @@ Source: `src/gimp_mcp_pro/tools/target_tools.py:171`
 async def resolve_target(query: str, target_types: list[str] | None = None, require_unique: bool = False) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `query`
-- `target_types`
-- `require_unique`
+| Parameter | Description |
+|---|---|
+| `query` | Natural-language or structured target reference such as a name or ID. |
+| `target_types` | Optional target kinds to search: image, layer, channel, path. |
+| `require_unique` | Fail the tool call if the query does not resolve to one target. |
 
-**Docstring**
+## Returns
+
+Operation result with matches, selected target when unique, and ambiguity metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Resolve a user or agent target reference into concrete GIMP object IDs.
 
@@ -46,12 +59,25 @@ Source: `src/gimp_mcp_pro/tools/target_tools.py:219`
 async def validate_targets(targets: list[Any], required_capabilities: list[str] | None = None) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `targets`
-- `required_capabilities`
+| Parameter | Description |
+|---|---|
+| `targets` | Target references as IDs, names, or dictionaries with kind/id/name. |
+| `required_capabilities` | Capabilities such as visible, editable, raster, or alpha. |
 
-**Docstring**
+## Returns
+
+Operation result with validity, validated targets, failures, and warnings.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Validate that proposed targets still exist and support required actions.
 

@@ -1,9 +1,9 @@
 schema: gimp-mcp.compat.results.v1
 project: gimp-mcp
 contract: compat.yml
-run_id: live-smoke-1782175082
-run_started_at: '2026-06-23T00:37:14+00:00'
-run_finished_at: '2026-06-23T00:38:02+00:00'
+run_id: live-smoke-1782179348
+run_started_at: '2026-06-23T01:48:17+00:00'
+run_finished_at: '2026-06-23T01:49:08+00:00'
 tester: archlinux
 environment:
   os: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
@@ -16,42 +16,231 @@ environment:
   libgimp_api_version: '3.0'
   libgimp_library_version: 3.2.4
   gegl_version: unknown
-  plugin_install_path: /tmp/gimp-mcp-live-l726cx9i/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-  plugin_sha256: f545e5f1bb87aabdfeb95197f85eaadb969be6be2fb2dee31d82a862539ad0bc
-  mcp_server_revision: 312d04af2510d7bde24cc36299bdea0b20b2bf0a
+  plugin_install_path: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+  plugin_sha256: 676da5480cb01836246123cf0eeb980e52b0d56fb40c8ae9ddd87f15532fe330
+  mcp_server_revision: 4978d0125f0fca725f7ae939de6b3b43d88902e5
   mcp_server_command: uv run gimp-mcp-pro serve
   spawned_gimp: true
   xvfb: true
-  xdg_config_home: unknown
-  gimp3_directory: unknown
-  mcp_port: unknown
+  xdg_config_home: /tmp/gimp-mcp-live-wzx4xqdk/config
+  gimp3_directory: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0
+  mcp_port: 41173
+  gimp_process_output: 'Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Warning: Unknown input_id: -1 for input: surfacemap_x
+
+    Failed to parse tag cache: No such file or directory
+
+    [plug-in-gmic-qt] The catalog directory does not exist: /usr/lib/gimp/3.0/plug-ins/gmic_gimp_qt/locale
+
+    [plug-in-gmic-qt] Override method set_i18n() for the plug-in to customize or disable
+    localization.
+
+    [plug-in-gmic-qt] Localization disabled
+
+    Shutting down MCP Pro server...
+
+    Shutting down MCP Pro server...
+
+    gui_dbus_name_lost: the name "org.gimp.GIMP.UI" could not be acquired on the bus.
+
+    Server error: [Errno 98] Address already in use
+
+    Shutting down MCP Pro server...
+
+    Server error: [Errno 98] Address already in use
+
+    Shutting down MCP Pro server...
+
+    set device ''Virtual core XTEST pointer'' to mode: disabled
+
+    set device ''Xvfb mouse'' to mode: disabled
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: Gimp-Core-CRITICAL: gimp_object_get_memsize: assertion ''object == NULL
+    || GIMP_IS_OBJECT (object)'' failed
+
+    gimp-3.2: fatal error: Segmentation fault
+
+    /usr/lib/gimp/3.0/plug-ins/script-fu/script-fu: fatal error: GIMP crashed
+
+
+    (gimp_mcp_plugin.py:1743141): LibGimpBase-WARNING **: 03:48:37.063: gimp_mcp_plugin.py:
+    gimp_wire_read(): unexpected EOF
+
+
+    (python-eval.py:1744235): LibGimpBase-WARNING **: 03:48:37.063: python-eval.py:
+    gimp_wire_read(): unexpected EOF
+
+    '
 checks:
 - id: C-000-spawn-gimp
   status: pass
   evidence:
-    pid: 1337017
+    pid: 1741048
     gimp: gimp-3.2
     xvfb: true
-    plugin_path: /tmp/gimp-mcp-live-l726cx9i/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-    xdg_config_home: /tmp/gimp-mcp-live-l726cx9i/config
-    gimp3_directory: /tmp/gimp-mcp-live-l726cx9i/config/GIMP/3.0
-    mcp_port: 37371
+    plugin_path: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+    xdg_config_home: /tmp/gimp-mcp-live-wzx4xqdk/config
+    gimp3_directory: /tmp/gimp-mcp-live-wzx4xqdk/config/GIMP/3.0
+    mcp_port: 41173
 - id: C-005-autostart-server
-  status: pass
-  evidence:
-    detail: connected
-    startup_timeout: 45.0
-    socket_host: localhost
-    socket_port: 37371
-- id: C-000-spawn-gimp
   status: fail
   evidence:
-    error: 'Could not connect to GIMP at localhost:37371 after 6 attempts. Ensure
+    detail: 'Could not connect to GIMP at localhost:41173 after 6 attempts. Ensure
+      the GIMP MCP plugin is running. Last error: [Errno 111] Connection refused'
+    startup_timeout: 45.0
+    socket_host: localhost
+    socket_port: 41173
+    derived_from: C-020-transport
+- id: C-020-transport
+  status: fail
+  evidence:
+    error: 'Could not connect to GIMP at localhost:41173 after 6 attempts. Ensure
       the GIMP MCP plugin is running. Last error: [Errno 111] Connection refused'
 summary:
   status: failed
-  passed: 2
-  failed: 1
+  passed: 1
+  failed: 2
   skipped: 0
   waived: 0
   claim_allowed: false

@@ -7,6 +7,7 @@ color inversion, threshold, posterize, and color-to-alpha.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
 from gimp_mcp_pro.models.common import Color, OperationResult, py_literal
@@ -42,6 +43,184 @@ def _color_preamble(layer_name: str | None, layer_index: int | None) -> list[str
             "if not sel: raise RuntimeError('No active layer')",
             "drawable = sel[0]",
         ]
+    return code
+
+
+def _normalise_sample_points(
+    points: list[dict[str, Any]] | None,
+    grid: dict[str, Any] | None,
+) -> tuple[list[dict[str, float]], int]:
+    """Validate sample point and grid request shape for sample_pixels."""
+    normalised: list[dict[str, float]] = []
+    for point in points or []:
+        normalised.append({"x": float(point["x"]), "y": float(point["y"])})
+
+    grid_count = 0
+    if grid is not None:
+        columns = int(grid.get("columns", 1))
+        rows = int(grid.get("rows", 1))
+        width = float(grid.get("width", 0))
+        height = float(grid.get("height", 0))
+        if columns < 1 or rows < 1:
+            raise ValueError("grid columns and rows must be >= 1")
+        if width < 0 or height < 0:
+            raise ValueError("grid width and height must be >= 0")
+        grid_count = columns * rows
+    return normalised, len(normalised) + grid_count
+
+
+def _sample_pixels_code(
+    points: list[dict[str, float]],
+    grid: dict[str, Any] | None,
+    *,
+    sample_merged: bool,
+    sample_average: bool,
+    average_radius: float,
+    layer_name: str | None,
+    layer_index: int | None,
+) -> list[str]:
+    """Return generated GIMP Python code for point/grid color sampling."""
+    code = [
+        "import json",
+        "from gi.repository import Gimp, Gegl",
+        "images = Gimp.get_images()",
+        "if not images: raise RuntimeError('No images are open')",
+        "image = images[0]",
+    ]
+    if layer_name is not None:
+        layer_name_expr = py_literal(layer_name)
+        layer_error_expr = py_literal(f"Layer {layer_name!r} not found")
+        code += [
+            f"drawable = image.get_layer_by_name({layer_name_expr})",
+            f"if drawable is None: raise RuntimeError({layer_error_expr})",
+        ]
+    elif layer_index is not None:
+        code += [
+            "layers = image.get_layers()",
+            f"drawable = layers[{layer_index}]",
+        ]
+    else:
+        code += [
+            "sel = image.get_selected_layers()",
+            "if not sel: raise RuntimeError('No active layer')",
+            "drawable = sel[0]",
+        ]
+
+    code += [
+        "drawables = [drawable]",
+        f"sample_points = {py_literal(points)}",
+    ]
+    if grid is not None:
+        x = float(grid.get("x", 0))
+        y = float(grid.get("y", 0))
+        width = float(grid.get("width", 0))
+        height = float(grid.get("height", 0))
+        columns = int(grid.get("columns", 1))
+        rows = int(grid.get("rows", 1))
+        code += [
+            f"for row in range({rows}):",
+            f"    py = {y!r} if {rows} == 1 else {y!r} + ({height!r} * row / ({rows} - 1))",
+            f"    for col in range({columns}):",
+            f"        px = {x!r} if {columns} == 1 else {x!r} + ({width!r} * col / ({columns} - 1))",
+            "        sample_points.append({'x': px, 'y': py})",
+        ]
+
+    pick_expr = (
+        "image.pick_color(drawables, x, y, "
+        f"{sample_merged!r}, {sample_average!r}, {average_radius!r})"
+    )
+    code += [
+        "def color_to_dict(color):\n"
+        "    rgba = color.get_rgba()\n"
+        "    return {'r': round(rgba.red, 4), 'g': round(rgba.green, 4), 'b': round(rgba.blue, 4), 'a': round(rgba.alpha, 4)}",
+        "def color_to_hex(color):\n"
+        "    rgba = color.get_rgba()\n"
+        "    return '#%02x%02x%02x' % (int(max(0, min(1, rgba.red)) * 255), int(max(0, min(1, rgba.green)) * 255), int(max(0, min(1, rgba.blue)) * 255))",
+        "samples = []",
+        (
+            "for point in sample_points:\n"
+            "    x = float(point['x'])\n"
+            "    y = float(point['y'])\n"
+            "    try:\n"
+            + (
+                f"        picked = {pick_expr}\n"
+                "        if isinstance(picked, tuple):\n"
+                "            ok = bool(picked[0])\n"
+                "            color = picked[-1]\n"
+                "        else:\n"
+                "            ok = picked is not None\n"
+                "            color = picked\n"
+                "        if not ok or color is None: raise RuntimeError('no color returned')\n"
+                if sample_merged
+                else "        color = drawable.get_pixel(int(round(x)), int(round(y)))\n"
+            )
+            + "        samples.append({'x': x, 'y': y, 'rgba': color_to_dict(color), 'hex': color_to_hex(color)})\n"
+            + "    except Exception as exc:\n"
+            + "        samples.append({'x': x, 'y': y, 'error': str(exc)})"
+        ),
+        "print(json.dumps({'samples': samples, 'color_space': 'rgba', 'sample_merged': "
+        f"{sample_merged!r}, 'sample_average': {sample_average!r}, 'average_radius': {average_radius!r}}}))",
+    ]
+    return code
+
+
+
+def _palette_analysis_code(
+    max_colors: int,
+    ignore_transparent: bool,
+    region: dict[str, Any] | None,
+    layer_name: str | None,
+    layer_index: int | None,
+) -> list[str]:
+    """Return generated GIMP Python code for deterministic palette analysis."""
+    code = _color_preamble(layer_name, layer_index)
+    code = ["import json", "from collections import Counter"] + code
+    code += [
+        f"max_colors = {max_colors!r}",
+        f"ignore_transparent = {ignore_transparent!r}",
+        f"region = {py_literal(region)}",
+        "def color_to_tuple(color):\n"
+        "    rgba = color.get_rgba()\n"
+        "    return (int(max(0, min(1, rgba.red)) * 255), int(max(0, min(1, rgba.green)) * 255), int(max(0, min(1, rgba.blue)) * 255), int(max(0, min(1, rgba.alpha)) * 255))",
+        "def rel_luminance(rgb):\n"
+        "    r, g, b = [channel / 255.0 for channel in rgb[:3]]\n"
+        "    return 0.2126 * r + 0.7152 * g + 0.0722 * b",
+        "width = drawable.get_width()",
+        "height = drawable.get_height()",
+        "left = int(region.get('x', 0)) if region else 0",
+        "top = int(region.get('y', 0)) if region else 0",
+        "right = min(width, left + int(region.get('width', width))) if region else width",
+        "bottom = min(height, top + int(region.get('height', height))) if region else height",
+        "step_x = max(1, (right - left) // 32 or 1)",
+        "step_y = max(1, (bottom - top) // 32 or 1)",
+        "palette_counter = Counter()",
+        "sampled = 0",
+        "transparent_skipped = 0",
+        "for y in range(top, bottom, step_y):\n"
+        "    for x in range(left, right, step_x):\n"
+        "        try:\n"
+        "            rgba = color_to_tuple(drawable.get_pixel(x, y))\n"
+        "        except Exception:\n"
+        "            continue\n"
+        "        sampled += 1\n"
+        "        if ignore_transparent and rgba[3] == 0:\n"
+        "            transparent_skipped += 1\n"
+        "            continue\n"
+        "        bucket = (rgba[0] // 16 * 16, rgba[1] // 16 * 16, rgba[2] // 16 * 16, rgba[3])\n"
+        "        palette_counter[bucket] += 1",
+        "total = sum(palette_counter.values()) or 1",
+        "palette = []",
+        "for rgba, count in palette_counter.most_common(max_colors):\n"
+        "    hex_value = '#%02x%02x%02x' % rgba[:3]\n"
+        "    palette.append({'rgba': {'r': rgba[0], 'g': rgba[1], 'b': rgba[2], 'a': rgba[3]}, 'hex': hex_value, 'count': count, 'coverage': round(count / total, 6)})",
+        "contrast_notes = []",
+        "if len(palette) >= 2:\n"
+        "    first = palette[0]['rgba']\n"
+        "    last = palette[-1]['rgba']\n"
+        "    contrast_notes.append({'pair': [palette[0]['hex'], palette[-1]['hex']], 'luminance_delta': round(abs(rel_luminance((first['r'], first['g'], first['b'])) - rel_luminance((last['r'], last['g'], last['b']))), 6)})",
+        "result = {'palette': palette, 'coverage': [entry['coverage'] for entry in palette], 'contrast_notes': contrast_notes, 'sampled_pixels': sampled, 'transparent_skipped': transparent_skipped, 'region': region, 'deterministic': True}",
+        "print(json.dumps(result))",
+    ]
     return code
 
 
@@ -670,6 +849,147 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="swap_colors", error=str(e)).model_dump()
+
+
+    @mcp.tool()
+    async def analyze_color_palette(
+        max_colors: int = 8,
+        ignore_transparent: bool = True,
+        region: dict[str, Any] | None = None,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Extract a deterministic approximate color palette for a layer or region.
+
+        Args:
+            max_colors: Maximum number of dominant colors to return.
+            ignore_transparent: Skip fully transparent samples.
+            region: Optional ``x/y/width/height`` rectangle in layer coordinates.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index.
+
+        Returns:
+            Operation result with palette entries, coverage, contrast notes, and stats.
+
+        Contract:
+            The generated sampler is deterministic for the same pixels and region.
+        """
+        if max_colors < 1 or max_colors > 64:
+            return OperationResult.fail(
+                operation="analyze_color_palette",
+                error="max_colors must be between 1 and 64",
+            ).model_dump()
+        if region is not None:
+            try:
+                width = int(region["width"])
+                height = int(region["height"])
+            except (KeyError, TypeError, ValueError) as e:
+                return OperationResult.fail(operation="analyze_color_palette", error=str(e)).model_dump()
+            if width < 1 or height < 1:
+                return OperationResult.fail(
+                    operation="analyze_color_palette",
+                    error="region width and height must be >= 1",
+                ).model_dump()
+        try:
+            result = await bridge.async_execute_python(
+                _palette_analysis_code(max_colors, ignore_transparent, region, layer_name, layer_index),
+                timeout=LONG_TIMEOUT,
+            )
+            import json as _json
+
+            data: dict[str, Any] = {}
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        decoded = _json.loads(str(out).strip())
+                    except _json.JSONDecodeError:
+                        continue
+                    if isinstance(decoded, dict):
+                        data = decoded
+                        break
+            data.setdefault("palette", [])
+            data.setdefault("coverage", [])
+            data.setdefault("contrast_notes", [])
+            return OperationResult.ok(
+                operation="analyze_color_palette",
+                message=f"Analyzed up to {max_colors} palette color(s)",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="analyze_color_palette", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def sample_pixels(
+        points: list[dict[str, Any]] | None = None,
+        grid: dict[str, Any] | None = None,
+        sample_merged: bool = False,
+        sample_average: bool = False,
+        average_radius: float = 0.0,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Sample colors at multiple points or over a rectangular grid.
+
+        Args:
+            points: Explicit point dictionaries with x and y coordinates.
+            grid: Optional grid spec with x, y, width, height, columns, and rows.
+            sample_merged: If True, sample the visible composite image.
+            sample_average: If True, average a radius around each point via GIMP pick_color.
+            average_radius: Radius used when sample_average is enabled.
+            layer_name: Target layer by name when not sampling merged output.
+            layer_index: Target layer by index when not sampling merged output.
+
+        Returns:
+            Operation result with sampled RGBA/hex colors and request metadata.
+        """
+        if not points and grid is None:
+            return OperationResult.fail(
+                operation="sample_pixels",
+                error="sample_pixels requires points or grid",
+            ).model_dump()
+
+        try:
+            normalised_points, points_requested = _normalise_sample_points(points, grid)
+        except (KeyError, TypeError, ValueError) as e:
+            return OperationResult.fail(operation="sample_pixels", error=str(e)).model_dump()
+
+        average_radius = max(0.0, float(average_radius))
+        code = _sample_pixels_code(
+            normalised_points,
+            grid,
+            sample_merged=sample_merged,
+            sample_average=sample_average,
+            average_radius=average_radius,
+            layer_name=layer_name,
+            layer_index=layer_index,
+        )
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            sample_data: dict[str, Any] = {}
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        decoded = _json.loads(str(out).strip())
+                    except _json.JSONDecodeError:
+                        continue
+                    if isinstance(decoded, dict):
+                        sample_data = decoded
+                        break
+            sample_data.setdefault("samples", [])
+            sample_data.setdefault("color_space", "rgba")
+            sample_data["points_requested"] = points_requested
+            sample_data["sample_merged"] = sample_merged
+            sample_data["sample_average"] = sample_average
+            sample_data["average_radius"] = average_radius
+            return OperationResult.ok(
+                operation="sample_pixels",
+                message=f"Sampled {points_requested} pixel point(s)",
+                data=sample_data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="sample_pixels", error=str(e)).model_dump()
 
     @mcp.tool()
     async def sample_color(

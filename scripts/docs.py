@@ -28,6 +28,7 @@ MODULE_TITLES: dict[str, str] = {
     "image_tools": "Image Management",
     "layer_tools": "Layer Operations",
     "selection_tools": "Selections",
+    "path_tools": "Vector Paths",
     "target_tools": "Target Resolution",
     "drawing_tools": "Drawing and Text",
     "inspect_tools": "Inspection",
@@ -37,6 +38,7 @@ MODULE_TITLES: dict[str, str] = {
     "transform_tools": "Transforms",
     "filter_tools": "Filters and Effects",
     "color_tools": "Color Adjustments",
+    "flow_tools": "Repeatable Flows and Macros",
 }
 
 FORBIDDEN_DOCSTRING_MARKERS = ("TODO", "TBD", "FIXME", "lorem ipsum")
@@ -244,6 +246,38 @@ def render_tools_index(grouped: Mapping[str, Sequence[ToolDoc]]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _docstring_section_items(docstring: str, section: str) -> list[tuple[str, str]]:
+    """Return documented items from a Google-style docstring section."""
+    items: list[tuple[str, str]] = []
+    current_name: str | None = None
+    current_description: list[str] = []
+    for line in _docstring_section_lines(docstring, section):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if ":" in stripped and not stripped.startswith("-"):
+            prefix, description = stripped.split(":", 1)
+            candidate = prefix.replace("`", "").split(" ", 1)[0].strip()
+            if candidate.isidentifier() or "," in prefix:
+                if current_name is not None:
+                    items.append((current_name, " ".join(current_description).strip()))
+                current_name = prefix.strip().replace("`", "")
+                current_description = [description.strip()]
+                continue
+        if current_name is not None:
+            current_description.append(stripped)
+    if current_name is not None:
+        items.append((current_name, " ".join(current_description).strip()))
+    return items
+
+
+def _docstring_section_text(docstring: str, section: str) -> str:
+    """Return compact text from a Google-style docstring section."""
+    return " ".join(
+        line.strip() for line in _docstring_section_lines(docstring, section) if line.strip()
+    )
+
+
 def render_tool_module(module: str, tools: Sequence[ToolDoc]) -> str:
     """Render one docs/tools/<module>.md page."""
     title = tools[0].module_title if tools else MODULE_TITLES.get(module, module)
@@ -273,13 +307,43 @@ def render_tool_module(module: str, tools: Sequence[ToolDoc]) -> str:
                 "",
             ]
         )
+        arg_items = _docstring_section_items(tool.docstring, "Args")
+        documented_args = {name.split(",", 1)[0].split(" ", 1)[0] for name, _ in arg_items}
         if tool.parameters:
-            lines.append("**Parameters**")
+            lines.append("## Parameters")
             lines.append("")
+            lines.append("| Parameter | Description |")
+            lines.append("|---|---|")
+            item_map = {
+                name.split(",", 1)[0].split(" ", 1)[0]: (name, desc) for name, desc in arg_items
+            }
             for parameter in tool.parameters:
-                lines.append(f"- `{parameter}`")
+                display, description = item_map.get(parameter, (parameter, "_Undocumented._"))
+                lines.append(f"| `{display}` | {description} |")
+            for name, description in arg_items:
+                key = name.split(",", 1)[0].split(" ", 1)[0]
+                if key not in documented_args or key in tool.parameters:
+                    continue
+                lines.append(f"| `{name}` | {description} |")
             lines.append("")
-        lines.append("**Docstring**")
+        returns_text = _docstring_section_text(tool.docstring, "Returns")
+        if returns_text:
+            lines.append("## Returns")
+            lines.append("")
+            lines.append(returns_text)
+            lines.append("")
+        lines.append("## Contract")
+        lines.append("")
+        lines.extend(
+            [
+                "- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.",
+                "- Compatibility contract: `compat.yml` tracks this public MCP registry surface.",
+                "- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.",
+                "- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.",
+                "",
+            ]
+        )
+        lines.append("## Docstring")
         lines.append("")
         lines.append(tool.docstring or "_No docstring available._")
         lines.append("")
@@ -316,12 +380,16 @@ def render_mkdocstrings_page(title: str, module: str) -> str:
 """
 
 
+def _rewrite_readme_links_for_docs_site(text: str) -> str:
+    """Rewrite repository-root docs links for the generated MkDocs readme page."""
+    return text.replace("](docs/", "](")
+
+
 def copy_readme(output_dir: Path) -> None:
     """Copy README into docs for site consumers."""
     if README_PATH.exists():
-        (output_dir / "readme.md").write_text(
-            README_PATH.read_text(encoding="utf-8"), encoding="utf-8"
-        )
+        readme = _rewrite_readme_links_for_docs_site(README_PATH.read_text(encoding="utf-8"))
+        (output_dir / "readme.md").write_text(readme, encoding="utf-8")
 
 
 def write_generated_docs(output_dir: Path = DOCS_DIR) -> list[Path]:

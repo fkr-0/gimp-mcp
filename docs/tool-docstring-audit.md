@@ -2,7 +2,7 @@
 
 This audit is generated from the same AST extraction path as the tool reference.
 
-Total tools: **86**
+Total tools: **137**
 Audit failures: **0**
 
 ## Coverage by module
@@ -10,15 +10,17 @@ Audit failures: **0**
 | Module | Tools |
 |---|---:|
 | `agent_tools` | 3 |
-| `color_tools` | 13 |
-| `drawing_tools` | 10 |
-| `filter_tools` | 8 |
+| `color_tools` | 17 |
+| `drawing_tools` | 12 |
+| `filter_tools` | 10 |
+| `flow_tools` | 11 |
 | `gimp_dev_tools` | 2 |
-| `history_tools` | 4 |
-| `image_tools` | 6 |
-| `inspect_tools` | 8 |
-| `layer_tools` | 9 |
+| `history_tools` | 6 |
+| `image_tools` | 10 |
+| `inspect_tools` | 11 |
+| `layer_tools` | 19 |
+| `path_tools` | 5 |
 | `pdb_tools` | 2 |
-| `selection_tools` | 8 |
+| `selection_tools` | 14 |
 | `target_tools` | 2 |
-| `transform_tools` | 11 |
+| `transform_tools` | 13 |

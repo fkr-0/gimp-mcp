@@ -49,10 +49,12 @@ def test_plugin_menu_run_uses_gimp_persistent_lifecycle() -> None:
     assert "GLib.MainLoop()" in source
 
 
-def test_plugin_registers_development_menu_path() -> None:
+def test_server_procedure_does_not_register_invalid_image_menu_path() -> None:
     source = (PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py").read_text()
 
-    assert 'procedure.add_menu_path("<Image>/Filters/Development/GIMP MCP Pro")' in source
+    assert 'procedure.add_menu_path("<Image>/Filters/Development/GIMP MCP Pro")' not in source
+    assert "plug-in-mcp-pro-server" in source
+    assert "Gimp.Procedure.new(self, name, Gimp.PDBProcType.PERSISTENT, self.run, None)" in source
 
 
 def test_plugin_marshals_requests_to_gimp_thread() -> None:
@@ -97,6 +99,6 @@ def test_plugin_launches_flow_runner_without_shell() -> None:
 def test_compat_tool_extractor_counts_async_defs() -> None:
     names = compat.flatten_registry(compat.extract_source_tool_registry())
 
-    assert len(names) == 127
+    assert len(names) == 137
     assert "get_gimp_info" in names
     assert "get_image_bitmap" in names

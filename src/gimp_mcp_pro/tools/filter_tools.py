@@ -79,8 +79,107 @@ def _apply_drawable_filter(gegl_op: str, props: dict[str, str]) -> list[str]:
     )
 
 
+
+def _preview_filter_code(
+    gegl_op: str,
+    props: dict[str, str],
+    layer_name: str | None,
+    layer_index: int | None,
+) -> list[str]:
+    """Generate code that applies a filter to a temporary preview layer."""
+    code = _filter_preamble(layer_name, layer_index)
+    code += [
+        "preview_layer = drawable.copy()",
+        f"preview_layer.set_name({py_literal('Preview: ' + gegl_op)})",
+        "layers = image.get_layers()",
+        "position = list(layers).index(drawable) + 1 if drawable in layers else 0",
+        "image.insert_layer(preview_layer, None, position)",
+    ]
+    prop_lines = [f"cfg.set_property('{key}', {value})" for key, value in props.items()]
+    code += [
+        f"df = Gimp.DrawableFilter.new(preview_layer, '{gegl_op}', '')",
+        "cfg = df.get_config()",
+        *prop_lines,
+        "preview_layer.append_filter(df)",
+        "preview_layer.merge_filter(df)",
+        "Gimp.displays_flush()",
+    ]
+    return code
+
+def _preview_filter_spec(filter_name: str, parameters: dict[str, object]) -> tuple[str, dict[str, str], dict[str, object]]:
+    """Resolve a supported preview filter into GEGL op/properties."""
+    key = filter_name.strip().lower().replace('-', '_')
+    if key in {"gaussian_blur", "gaussian"}:
+        radius_x = float(parameters.get("radius_x", parameters.get("radius", 5.0)))
+        radius_y = float(parameters.get("radius_y", radius_x))
+        return "gegl:gaussian-blur", {"std-dev-x": str(radius_x), "std-dev-y": str(radius_y)}, {"filter": "gaussian_blur", "radius_x": radius_x, "radius_y": radius_y}
+    if key in {"unsharp_mask", "sharpen"}:
+        amount = float(parameters.get("amount", 0.5))
+        radius = float(parameters.get("radius", 3.0))
+        threshold = float(parameters.get("threshold", 0.0))
+        return "gegl:unsharp-mask", {"scale": str(amount), "std-dev": str(radius), "threshold": str(threshold)}, {"filter": "unsharp_mask", "amount": amount, "radius": radius, "threshold": threshold}
+    if key in {"motion_blur", "motion_blur_linear"}:
+        length = float(parameters.get("length", 10.0))
+        angle = float(parameters.get("angle", 0.0))
+        return "gegl:motion-blur-linear", {"length": str(length), "angle": str(angle)}, {"filter": "motion_blur_linear", "length": length, "angle": angle}
+    raise ValueError(f"Unsupported filter: {filter_name}")
+
+
 def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all filter/effect tools with the MCP server."""
+
+
+    @mcp.tool()
+    async def preview_filter(
+        filter: str,
+        parameters: dict[str, object] | None = None,
+        preview_mode: str = "temporary_layer",
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Apply a supported filter to a temporary preview layer.
+
+        Args:
+            filter: Supported filter name such as ``gaussian_blur``.
+            parameters: Filter-specific parameter dictionary.
+            preview_mode: Currently ``temporary_layer``.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index.
+
+        Returns:
+            Operation result with preview metadata and warnings.
+
+        Contract:
+            The original drawable is not filtered. A copied preview layer receives
+            the GEGL filter so the caller can inspect before committing.
+        """
+        if preview_mode != "temporary_layer":
+            return OperationResult.fail(
+                operation="preview_filter",
+                error="preview_mode must be temporary_layer",
+            ).model_dump()
+        params = parameters or {}
+        try:
+            gegl_op, props, applied = _preview_filter_spec(filter, params)
+        except (TypeError, ValueError) as e:
+            return OperationResult.fail(operation="preview_filter", error=str(e)).model_dump()
+        code = _preview_filter_code(gegl_op, props, layer_name, layer_index)
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="preview_filter",
+                message=f"Preview layer created for {applied['filter']}",
+                data={
+                    "preview_layer_id": None,
+                    "preview_png": None,
+                    "preview_mode": preview_mode,
+                    "gegl_operation": gegl_op,
+                    "parameters": applied,
+                    "warnings": ["preview layer must be committed or discarded by a follow-up workflow"],
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="preview_filter", error=str(e)).model_dump()
 
     @mcp.tool()
     async def apply_gaussian_blur(
@@ -475,34 +574,30 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
 
         Color(value=color)
 
-        code = _filter_preamble(layer_name, layer_index) + [
-            "pdb = Gimp.get_pdb()",
-            "proc = pdb.lookup_procedure('script-fu-drop-shadow')",
-            "if not proc: raise RuntimeError('Drop shadow procedure not found')",
-            "cfg = proc.create_config()",
-            "try: cfg.set_property('image', image)\nexcept: pass",
-            "try: cfg.set_property('drawable', drawable)\nexcept: pass",
-            f"try: cfg.set_property('offset-x', {offset_x})\nexcept: pass",
-            f"try: cfg.set_property('offset-y', {offset_y})\nexcept: pass",
-            f"try: cfg.set_property('blur-radius', {blur_radius})\nexcept: pass",
-            f"try: cfg.set_property('opacity', {opacity})\nexcept: pass",
-            "proc.run(cfg)",
-            "Gimp.displays_flush()",
-        ]
+        normalized_opacity = max(0.0, min(100.0, opacity)) / 100.0
+        code = _filter_preamble(layer_name, layer_index)
+        code += _apply_drawable_filter(
+            "gegl:dropshadow",
+            {
+                "x": str(offset_x),
+                "y": str(offset_y),
+                "radius": str(blur_radius),
+                "color": f"Gegl.Color.new({py_literal(color)})",
+                "opacity": str(normalized_opacity),
+            },
+        )
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
                 operation="apply_drop_shadow",
                 message=f"Drop shadow applied (offset {offset_x},{offset_y}, blur {blur_radius})",
+                data={
+                    "offset_x": offset_x,
+                    "offset_y": offset_y,
+                    "blur_radius": blur_radius,
+                    "color": color,
+                    "opacity": normalized_opacity,
+                },
             ).model_dump()
         except GimpCommandError as e:
-            error = str(e)
-            if "Drop shadow procedure not found" in error:
-                return OperationResult.optional_capability_unavailable(
-                    operation="apply_drop_shadow",
-                    capability="Script-Fu drop shadow",
-                    procedure="script-fu-drop-shadow",
-                    error=error,
-                    recommendation="Install/enable Script-Fu drop shadow support or compose the shadow with typed layer and blur tools.",
-                ).model_dump()
-            return OperationResult.fail(operation="apply_drop_shadow", error=error).model_dump()
+            return OperationResult.fail(operation="apply_drop_shadow", error=str(e)).model_dump()

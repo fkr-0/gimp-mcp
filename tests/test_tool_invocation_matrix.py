@@ -460,6 +460,16 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "add_text": (("hello",), {"x": 1, "y": 2, "color": "#ff0000"}),
     "adjust_brightness_contrast": ((), {"brightness": 12, "contrast": -6}),
     "adjust_color_balance": ((), {"range": "shadows", "cyan_red": 10.0, "magenta_green": -5.0}),
+    "analyze_color_palette": (
+        (),
+        {
+            "max_colors": 5,
+            "ignore_transparent": True,
+            "region": {"x": 1, "y": 2, "width": 8, "height": 6},
+            "layer_index": 0,
+        },
+    ),
+    "assert_image_state": ((), {"assertions": []}),
     "adjust_curves": (([0.0, 0.0, 1.0, 1.0],), {}),
     "adjust_hue_saturation": ((), {"hue": 10, "saturation": 5, "lightness": -3}),
     "adjust_levels": ((), {"input_low": 10, "input_high": 240, "gamma": 1.1}),
@@ -483,8 +493,14 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "bucket_fill": ((10, 12), {"color": "red", "threshold": 51.0, "sample_merged": True}),
     "color_to_alpha": ((), {"color": "white"}),
     "create_image": ((320, 200), {"color_mode": "rgb", "fill": "white"}),
+    "compare_snapshots": (
+        (),
+        {"before": {"dimensions": {"width": 1}}, "after": {"dimensions": {"width": 2}}},
+    ),
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
     "create_layer_group": ((), {"name": "Group A", "position": 0}),
+    "create_contact_sheet": ((), {"target": "visible_layers", "max_tile_size": 96, "label_tiles": True}),
+    "create_checkpoint": ((), {"label": "matrix checkpoint", "include_xcf_copy": False}),
     "crop_image": ((1, 2, 100, 80), {}),
     "crop_to_selection": ((), {}),
     "deactivate_flow": (("prepare-product-image",), {}),
@@ -492,6 +508,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "delete_guide": ((7,), {}),
     "desaturate": ((), {"method": "luminosity"}),
     "draw_brush_stroke": (([0, 0, 10, 10, 20, 5],), {"tool": "pencil"}),
+    "dry_run_macro": (
+        ([{"tool": "scale_image", "arguments": {"width": 320, "height": 200}}],),
+        {},
+    ),
     "draw_ellipse": ((2, 3, 40, 20), {"filled": False, "color": "blue"}),
     "draw_line": ((0, 0, 20, 10), {"color": "black", "brush_size": 3}),
     "draw_polygon": (([0, 0, 10, 0, 5, 8],), {"filled": True}),
@@ -518,6 +538,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "get_image_info": ((), {}),
     "get_image_metadata": ((), {}),
     "get_layer_mask_info": ((), {"layer_index": 0}),
+    "get_operation_log": ((), {"limit": 5}),
     "get_selection_info": ((), {}),
     "gradient_fill": (
         (0, 0, 64, 32),
@@ -541,6 +562,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
         {"interpolation": "cubic", "resize": "adjust", "layer_name": "Photo"},
     ),
     "propose_flow": ((flow_payload(),), {}),
+    "preview_filter": ((), {"filter": "gaussian_blur", "parameters": {"radius_x": 3.0, "radius_y": 4.0}, "layer_index": 0}),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
     "remove_layer_mask": ((), {"apply": False, "layer_index": 0}),
@@ -549,9 +571,14 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "resize_canvas": ((400, 250), {"offset_x": 2, "offset_y": 3}),
     "create_path": (([0, 0, 20, 0, 20, 20],), {"name": "Path 1", "closed": True}),
     "run_flow": (("prepare-product-image", {"width": 800, "image": 1, "sharpen": False}), {}),
+    "run_macro_transaction": (
+        ([{"tool": "scale_image", "arguments": {"width": 320, "height": 200}}],),
+        {"transaction_label": "matrix macro"},
+    ),
     "rotate_image": ((90,), {}),
     "rotate_layer": ((15.0,), {"layer_index": 0}),
     "sample_color": ((4, 5), {"sample_merged": False}),
+    "sample_pixels": (([{"x": 1, "y": 2}, {"x": 3, "y": 4}],), {"sample_merged": True}),
     "scale_image": ((640, 480), {"interpolation": "cubic"}),
     "scale_layer": ((128, 96), {"interpolation": "linear", "layer_index": 0}),
     "save_selection_to_channel": ((), {"name": "Saved alpha"}),
@@ -635,7 +662,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 127
+    assert len(TOOL_SUCCESS_CASES) == 137
 
 
 @pytest.mark.asyncio

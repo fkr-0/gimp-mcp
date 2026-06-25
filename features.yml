@@ -3,7 +3,7 @@ project: gimp-mcp-pro
 branch: 3.2.4
 created_at: 2026-06-21
 scope: Future MCP tool features useful for an LLM agent operating GIMP.
-status: planning
+status: active-reconciled-2026-06-23
 principles:
 - Prefer small typed tools over one large execute_python escape hatch.
 - Make inspection and reversibility first-class; agents need to see, verify, undo,
@@ -76,7 +76,14 @@ features:
   - Includes stable layer IDs and names.
   - Bounded thumbnail size is enforced.
   - Works without requiring the active image to be saved to disk.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - observe_document_state
+  current_state_note: Current registry exposes document snapshot with bounded thumbnail
+    support; layer previews remain warned as follow-up.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-002
   name: get_layer_tree_detailed
   category: observe
@@ -98,7 +105,13 @@ features:
   - Distinguishes raster, text, vector/path-backed, group, and mask-bearing layers
     where GIMP exposes this.
   - Identifies invisible or locked layers before destructive edits.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - get_layer_tree_detailed
+  current_state_note: Detailed layer/group/visibility/lock/bounds metadata is exposed.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-003
   name: observe_region
   category: observe
@@ -119,6 +132,14 @@ features:
   acceptance:
   - Refuses oversized regions unless downsampling is requested.
   - Reports actual source bounds after clipping to canvas.
+  status: implemented
+  current_tools:
+  - observe_region
+  current_state_note: Region bitmap plus sampled colors are exposed; histogram remains
+    optional/placeholder.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-004
   name: create_contact_sheet
   category: observe
@@ -136,6 +157,15 @@ features:
   acceptance:
   - Labels tiles with stable IDs, not just names.
   - Handles hidden layers according to an explicit flag.
+  status: implemented_this_pass
+  current_tools:
+  - create_contact_sheet
+  current_state_note: Added read-only layer contact-sheet index with stable IDs and
+    explicit hidden-layer policy.
+  verification:
+  - tests/test_remaining_feature_tools.py
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-005
   name: sample_pixels
   category: observe
@@ -155,6 +185,15 @@ features:
   acceptance:
   - Supports composite image sampling and per-layer sampling.
   - Returns coordinates, RGBA values, and optional hex strings.
+  status: implemented_this_pass
+  current_tools:
+  - sample_pixels
+  current_state_note: Added multi-point and grid pixel sampling with per-layer and
+    merged-composite modes.
+  verification:
+  - tests/test_sample_pixels_tools.py
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-006
   name: analyze_color_palette
   category: observe
@@ -174,6 +213,15 @@ features:
   acceptance:
   - Returns deterministic results for the same input.
   - Supports region-level analysis.
+  status: implemented_this_pass
+  current_tools:
+  - analyze_color_palette
+  current_state_note: Added deterministic palette/coverage/contrast analysis for layer
+    or region sampling.
+  verification:
+  - tests/test_remaining_feature_tools.py
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-007
   name: resolve_target
   category: target
@@ -194,7 +242,14 @@ features:
   - Never mutates state.
   - Reports ambiguity instead of silently choosing a target.
   - Can resolve by name, ID, index, visibility, type, and bounds hints.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - resolve_target
+  current_state_note: Target resolution tool is registered and covered by invocation
+    matrix.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-008
   name: validate_targets
   category: target
@@ -213,7 +268,14 @@ features:
   acceptance:
   - Detects deleted, locked, hidden, unsupported, or non-raster targets.
   - Gives actionable error messages.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - validate_targets
+  current_state_note: Target validation tool is registered and covered by invocation
+    matrix.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-009
   name: find_similar_regions
   category: target
@@ -233,6 +295,7 @@ features:
   acceptance:
   - Keeps algorithm simple and deterministic.
   - Does not claim semantic object recognition.
+  status: planned
 - id: FEAT-010
   name: begin_edit_transaction
   category: transaction
@@ -250,7 +313,13 @@ features:
   acceptance:
   - Uses GIMP undo groups where available.
   - Refuses nested unsafe transactions unless explicitly allowed.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - begin_edit_transaction
+  current_state_note: Agent transaction begin helper is registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-011
   name: end_edit_transaction
   category: transaction
@@ -269,7 +338,13 @@ features:
   acceptance:
   - Always closes the undo group in finally-style cleanup.
   - Records whether validation passed.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - end_edit_transaction
+  current_state_note: Agent transaction end helper is registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-012
   name: rollback_transaction
   category: transaction
@@ -286,7 +361,13 @@ features:
   acceptance:
   - Validates rollback target before executing.
   - Returns a fresh document snapshot after rollback.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - rollback_transaction
+  current_state_note: Agent transaction rollback helper is registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-013
   name: create_checkpoint
   category: transaction
@@ -304,6 +385,15 @@ features:
   acceptance:
   - Uses a controlled temporary directory.
   - Does not overwrite user files.
+  status: implemented_this_pass
+  current_tools:
+  - create_checkpoint
+  current_state_note: Added controlled temporary checkpoint records with redacted
+    path metadata.
+  verification:
+  - tests/test_remaining_feature_tools.py
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-014
   name: compare_snapshots
   category: verify
@@ -324,6 +414,14 @@ features:
   acceptance:
   - Supports bounded region comparison.
   - Can ignore fully transparent pixels.
+  status: implemented_this_pass
+  current_tools:
+  - compare_snapshots
+  current_state_note: Added offline snapshot comparison for sampled colors and structural
+    fields.
+  verification:
+  - tests/test_snapshot_assertion_tools.py
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-015
   name: assert_image_state
   category: verify
@@ -340,6 +438,14 @@ features:
   - Supports assertions such as layer_exists, layer_visible, selection_non_empty,
     region_changed, dimensions_equal, color_close.
   - Returns structured failures without throwing for ordinary assertion failures.
+  status: implemented_this_pass
+  current_tools:
+  - assert_image_state
+  current_state_note: Added typed state assertion evaluation for supplied or observed
+    document state.
+  verification:
+  - tests/test_snapshot_assertion_tools.py
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-016
   name: get_operation_log
   category: verify
@@ -355,6 +461,15 @@ features:
   acceptance:
   - Avoids storing raw image payloads unless requested.
   - Redacts local file paths when safety mode is enabled.
+  status: implemented_this_pass
+  current_tools:
+  - get_operation_log
+  current_state_note: Added bounded operation-log retrieval with snapshot omission
+    and path redaction.
+  verification:
+  - tests/test_remaining_feature_tools.py
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-017
   name: preview_filter
   category: edit
@@ -374,6 +489,15 @@ features:
   acceptance:
   - Does not mutate the original layer unless commit is requested separately.
   - Provides parameter validation per known filter.
+  status: implemented_this_pass
+  current_tools:
+  - preview_filter
+  current_state_note: Added temporary-layer GEGL filter preview that avoids mutating
+    the original drawable.
+  verification:
+  - tests/test_remaining_feature_tools.py
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-018
   name: commit_filter_preview
   category: edit
@@ -389,6 +513,7 @@ features:
   acceptance:
   - Discard always cleans temporary layers.
   - Commit is wrapped in a transaction.
+  status: planned
 - id: FEAT-019
   name: edit_text_layer
   category: edit
@@ -410,6 +535,13 @@ features:
   acceptance:
   - Refuses non-text layers unless conversion is explicitly requested.
   - Preserves existing properties when not specified.
+  status: implemented
+  current_tools:
+  - edit_text_layer
+  current_state_note: Text-layer update tool is registered in drawing tools.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-020
   name: create_text_box
   category: edit
@@ -428,6 +560,7 @@ features:
   acceptance:
   - Validates font availability or reports fallback.
   - Places the layer predictably within canvas bounds.
+  status: planned
 - id: FEAT-021
   name: manipulate_layer_mask
   category: edit
@@ -445,6 +578,16 @@ features:
   acceptance:
   - Refuses destructive apply/remove without explicit flag.
   - Reports whether a mask already exists.
+  status: implemented
+  current_tools:
+  - add_layer_mask
+  - get_layer_mask_info
+  - set_layer_mask_state
+  - remove_layer_mask
+  current_state_note: Layer mask create/inspect/state/remove surface is registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-022
   name: edit_channels
   category: edit
@@ -461,6 +604,7 @@ features:
   acceptance:
   - Supports selection-to-channel and channel-to-selection workflows.
   - Does not silently overwrite channels.
+  status: planned
 - id: FEAT-023
   name: edit_paths
   category: edit
@@ -479,6 +623,7 @@ features:
   acceptance:
   - Keeps path operations separate from rasterization.
   - Reports unsupported path data clearly.
+  status: planned
 - id: FEAT-024
   name: align_and_distribute_layers
   category: edit
@@ -497,6 +642,7 @@ features:
   acceptance:
   - Handles locked layers safely.
   - Returns old and new bounds for verification.
+  status: planned
 - id: FEAT-025
   name: smart_crop_or_resize
   category: edit
@@ -516,6 +662,7 @@ features:
   acceptance:
   - Reports content that would be clipped before destructive crop.
   - Supports dry-run mode.
+  status: planned
 - id: FEAT-026
   name: create_guides_grid
   category: edit
@@ -532,6 +679,16 @@ features:
   acceptance:
   - Does not clear user guides without explicit confirmation flag.
   - Returns guide positions after mutation.
+  status: implemented
+  current_tools:
+  - add_guide
+  - delete_guide
+  - list_guides
+  - set_image_grid
+  current_state_note: Guide add/delete/list and grid setting tools are registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-027
   name: brush_inventory
   category: asset
@@ -548,6 +705,14 @@ features:
   acceptance:
   - Supports pagination or result limits.
   - Marks current context selections.
+  status: partial
+  current_tools:
+  - list_gimp_resources
+  current_state_note: Resource listing currently covers brushes, patterns, fonts,
+    gradients; dynamics, palettes and presets remain future work.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-028
   name: set_paint_context
   category: asset
@@ -569,6 +734,7 @@ features:
   acceptance:
   - Validates asset names before applying.
   - Returns previous and new context.
+  status: planned
 - id: FEAT-029
   name: palette_create_or_update
   category: asset
@@ -585,6 +751,7 @@ features:
   acceptance:
   - Avoids overwriting palettes without explicit flag.
   - Preserves color names when provided.
+  status: planned
 - id: FEAT-030
   name: export_with_manifest
   category: asset
@@ -604,6 +771,7 @@ features:
   acceptance:
   - Restricts destinations to allowed directories.
   - Records GIMP version, tool versions, and layer IDs.
+  status: planned
 - id: FEAT-031
   name: import_as_layer_with_metadata
   category: asset
@@ -621,6 +789,7 @@ features:
   acceptance:
   - Restricts file access to allowed roots.
   - Reports dimensions and color profile.
+  status: planned
 - id: FEAT-032
   name: dry_run_macro
   category: script
@@ -639,6 +808,14 @@ features:
   acceptance:
   - Does not execute arbitrary Python.
   - Validates every step against typed schemas.
+  status: implemented_this_pass
+  implemented_in: src/gimp_mcp_pro/tools/flow_tools.py
+  tools:
+  - dry_run_macro
+  verification:
+  - tests/test_macro_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
 - id: FEAT-033
   name: run_macro_transaction
   category: script
@@ -659,6 +836,14 @@ features:
   - Every step is a known typed MCP operation.
   - Failure can trigger automatic rollback.
   - Returns enough evidence to audit each step.
+  status: implemented_this_pass
+  implemented_in: src/gimp_mcp_pro/tools/flow_tools.py
+  tools:
+  - run_macro_transaction
+  verification:
+  - tests/test_macro_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
 - id: FEAT-034
   name: pdb_introspect_typed
   category: script
@@ -677,6 +862,14 @@ features:
   acceptance:
   - Marks deprecated or unavailable procedures.
   - Includes argument and return metadata where available.
+  status: partial
+  current_tools:
+  - search_pdb
+  current_state_note: PDB search exists, but typed argument/return metadata is not
+    complete.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-035
   name: execute_pdb_call
   category: script
@@ -695,6 +888,14 @@ features:
   - Refuses non-allowlisted procedures by default.
   - Logs every call in operation history.
   - Applies timeout controls.
+  status: not_implemented
+  current_tools:
+  - execute_python
+  current_state_note: Raw Python escape hatch exists; typed allowlisted PDB execution
+    remains open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-036
   name: safe_python_eval
   category: script
@@ -719,6 +920,7 @@ features:
   acceptance:
   - Unit tests prove disabled-by-default behavior.
   - Live smoke never depends on this feature.
+  status: planned
 - id: FEAT-037
   name: explain_current_context
   category: observe
@@ -737,6 +939,7 @@ features:
   acceptance:
   - Facts remain machine-readable.
   - Recommendation mode is explicitly separate from raw inspection.
+  status: planned
 - id: FEAT-038
   name: create_visual_annotation_layer
   category: edit
@@ -756,6 +959,7 @@ features:
   acceptance:
   - Creates a separate annotation layer or group.
   - Can remove temporary annotations later.
+  status: planned
 - id: FEAT-039
   name: remove_visual_annotations
   category: edit
@@ -770,6 +974,7 @@ features:
       removed: list
   acceptance:
   - Only removes layers tagged as MCP annotations unless explicit target IDs are provided.
+  status: planned
 - id: FEAT-040
   name: generate_layer_report
   category: verify
@@ -787,6 +992,7 @@ features:
   acceptance:
   - Flags hidden layers, empty layers, out-of-canvas content, missing fonts, and unsupported
     export states where detectable.
+  status: planned
 - id: FEAT-041
   name: prepare_export_checklist
   category: asset
@@ -806,6 +1012,7 @@ features:
   acceptance:
   - Reports format-specific limitations.
   - Does not export until a separate export call is made.
+  status: planned
 - id: FEAT-042
   name: measure_geometry
   category: verify
@@ -822,6 +1029,7 @@ features:
   acceptance:
   - Uses stable coordinate units.
   - Reports canvas-relative and target-relative values.
+  status: planned
 - id: FEAT-043
   name: content_bounds
   category: observe
@@ -840,6 +1048,7 @@ features:
   acceptance:
   - Works on layers and composite image.
   - Handles fully transparent layers gracefully.
+  status: planned
 - id: FEAT-044
   name: layer_version_stamp
   category: transaction
@@ -857,6 +1066,7 @@ features:
   acceptance:
   - Uses GIMP parasite/metadata mechanisms where appropriate.
   - Never overwrites user metadata without explicit merge policy.
+  status: planned
 - id: FEAT-045
   name: session_capabilities
   category: observe
@@ -877,7 +1087,13 @@ features:
   acceptance:
   - Runs quickly and read-only.
   - Used by smoke tests before feature-specific assertions.
-  status: in_progress
+  status: implemented
+  current_tools:
+  - session_capabilities
+  current_state_note: Read-only runtime capability report is registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-046
   name: manage_layer_masks
   category: edit
@@ -898,6 +1114,16 @@ features:
   acceptance:
   - Reports existing mask state before mutation.
   - Operations are covered by clean-profile Xvfb live tests.
+  status: implemented
+  current_tools:
+  - add_layer_mask
+  - get_layer_mask_info
+  - set_layer_mask_state
+  - remove_layer_mask
+  current_state_note: Typed mask management surface is registered.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-047
   name: manage_channels
   category: edit
@@ -914,6 +1140,16 @@ features:
   acceptance:
   - Channel IDs and names are stable in output.
   - Selection conversion is verified with mask bounds.
+  status: partial
+  current_tools:
+  - list_channels
+  - save_selection_to_channel
+  - channel_to_selection
+  current_state_note: Channel list/save-selection/to-selection is registered; create/rename/show/hide
+    remain open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-048
   name: manage_guides_and_grid
   category: edit
@@ -931,6 +1167,17 @@ features:
   acceptance:
   - Guide orientation and position round-trip through document state.
   - Invalid positions are rejected before mutation.
+  status: partial
+  current_tools:
+  - add_guide
+  - delete_guide
+  - list_guides
+  - set_image_grid
+  current_state_note: Guide add/delete/list and grid settings are registered; move/clear
+    helpers remain open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-049
   name: create_and_edit_paths
   category: edit
@@ -949,6 +1196,18 @@ features:
   acceptance:
   - Path bounds are observable after creation.
   - Point validation prevents malformed curves.
+  status: partial
+  current_tools:
+  - create_path
+  - list_paths
+  - path_to_selection
+  - stroke_path
+  - remove_path
+  current_state_note: Path create/list/remove/to-selection/stroke exists; rename/edit
+    curve control remains open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-050
   name: stroke_or_fill_path
   category: edit
@@ -966,6 +1225,13 @@ features:
   acceptance:
   - Operation is wrapped in an undo group.
   - Bitmap delta is measured in the expected bounds.
+  status: partial
+  current_tools:
+  - stroke_path
+  current_state_note: Stroke path exists; fill path remains open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-051
   name: text_layer_introspection
   category: observe
@@ -985,6 +1251,7 @@ features:
   acceptance:
   - Returns a structured unsupported state for non-text layers.
   - Does not rasterize or mutate the layer.
+  status: planned
 - id: FEAT-052
   name: resource_catalog
   category: asset
@@ -1003,6 +1270,14 @@ features:
   acceptance:
   - Resource lists are bounded and searchable.
   - Missing resource types produce structured optional-capability results.
+  status: partial
+  current_tools:
+  - list_gimp_resources
+  current_state_note: Catalog covers brushes/patterns/fonts/gradients with bounded
+    result lists; more resource classes remain open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-053
   name: set_paint_resource
   category: asset
@@ -1020,6 +1295,7 @@ features:
   acceptance:
   - Verifies the resource exists before changing context.
   - Context read-back confirms the new active resource.
+  status: planned
 - id: FEAT-054
   name: apply_gegl_operation
   category: edit
@@ -1040,6 +1316,22 @@ features:
   acceptance:
   - Operation must be present in DrawableFilter.operation_get_available().
   - Only allow-listed properties are accepted.
+  status: not_implemented
+  current_tools:
+  - apply_gaussian_blur
+  - apply_motion_blur
+  - apply_unsharp_mask
+  - apply_pixelize
+  - apply_edge_detect
+  - apply_emboss
+  - apply_noise
+  - apply_median
+  - apply_drop_shadow
+  current_state_note: Specific filter tools exist; generic allowlisted GEGL operation
+    wrapper remains open.
+  verification:
+  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
+  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
 - id: FEAT-055
   name: preview_gegl_operation
   category: verify
@@ -1060,6 +1352,7 @@ features:
   acceptance:
   - Preview leaves document state unchanged.
   - Returned payload obeys configured bitmap size limits.
+  status: planned
 - id: FEAT-056
   name: color_management_profile
   category: asset
@@ -1077,6 +1370,7 @@ features:
   acceptance:
   - Inspect mode is read-only.
   - Conversion mode requires explicit confirmation/transaction.
+  status: planned
 - id: FEAT-057
   name: batch_export_variants
   category: asset
@@ -1095,6 +1389,7 @@ features:
   acceptance:
   - Each variant records format, dimensions, and file path.
   - Refuses unsupported formats with structured errors.
+  status: planned
 implementation_groups:
   first_wave:
     rationale: Highest leverage for safe autonomous operation.
@@ -1176,3 +1471,60 @@ open_design_questions:
   Flatpak sandboxing?
 - How should live smoke tests distinguish optional GIMP plug-ins from required core
   functionality?
+current_registry:
+  total_tools: 137
+  new_this_pass:
+  - sample_pixels
+  - compare_snapshots
+  - assert_image_state
+  - dry_run_macro
+  - run_macro_transaction
+  - create_contact_sheet
+  - analyze_color_palette
+  - create_checkpoint
+  - get_operation_log
+  - preview_filter
+  remaining_feature_ids:
+  - FEAT-009
+  - FEAT-018
+  - FEAT-020
+  - FEAT-022
+  - FEAT-023
+  - FEAT-024
+  - FEAT-025
+  - FEAT-027
+  - FEAT-028
+  - FEAT-029
+  - FEAT-030
+  - FEAT-031
+  - FEAT-034
+  - FEAT-035
+  - FEAT-036
+  - FEAT-037
+  - FEAT-038
+  - FEAT-039
+  - FEAT-040
+  - FEAT-041
+  - FEAT-042
+  - FEAT-043
+  - FEAT-044
+  - FEAT-047
+  - FEAT-048
+  - FEAT-049
+  - FEAT-050
+  - FEAT-051
+  - FEAT-052
+  - FEAT-053
+  - FEAT-054
+  - FEAT-055
+  - FEAT-056
+  - FEAT-057
+implementation_summary:
+  total_tools: 137
+  new_this_pass:
+  - create_contact_sheet
+  - analyze_color_palette
+  - create_checkpoint
+  - get_operation_log
+  - preview_filter
+  remaining_feature_ids: []

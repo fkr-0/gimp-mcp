@@ -91,7 +91,7 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 127
+    current_total: 137
     by_module:
       agent_tools: 3
       image_tools: 10
@@ -99,22 +99,23 @@ known_repo_observations:
       selection_tools: 14
       path_tools: 5
       drawing_tools: 12
-      inspect_tools: 8
-      history_tools: 4
+      inspect_tools: 11
+      history_tools: 6
       pdb_tools: 2
       target_tools: 2
       transform_tools: 13
-      filter_tools: 9
-      color_tools: 15
+      filter_tools: 10
+      color_tools: 17
       gimp_dev_tools: 2
-      flow_tools: 9
+      flow_tools: 11
     reconciliation_required: README count is reconciled with current code registering
-      126 unique MCP tool decorators. The compatibility gate MUST reconcile the public
-      count with the runtime registry before publishing a 3.2.4 support claim.
+      137 unique MCP tool decorators. The compatibility gate MUST keep the public
+      count synchronized with the runtime registry before publishing a 3.2.4 support
+      claim.
   plugin_entrypoint:
     source: gimp_plugin/gimp_mcp_plugin.py
     procedure_name: plug-in-mcp-pro-server
-    menu_path: <Image>/Tools/
+    menu_path: PDB-only batch procedure
     menu_label: Start MCP Pro Server
     default_host: localhost
     default_port: 9877
@@ -263,13 +264,15 @@ python_plugin_lifecycle_contract:
   required_interfaces:
   - class MUST subclass Gimp.PlugIn.
   - do_query_procedures MUST return ['plug-in-mcp-pro-server'].
-  - do_create_procedure MUST return a Gimp.ImageProcedure for plug-in-mcp-pro-server.
+  - do_create_procedure MUST return a non-image Gimp.Procedure for plug-in-mcp-pro-server
+    so batch startup can run without image/drawable arguments.
   - Gimp.ImageProcedure.new MUST be called with Gimp.PDBProcType.PERSISTENT for the
     long-lived bridge server procedure.
   - procedure.set_menu_label MUST set Start MCP Pro Server.
   - procedure.set_documentation MUST be populated.
   - procedure.set_attribution MUST be populated.
-  - procedure.add_menu_path MUST include '<Image>/Tools/'.
+  - procedure.add_menu_path MUST NOT install plug-in-mcp-pro-server under '<Image>'
+    because GIMP rejects non-image procedures on image menus.
   - run callback MUST accept procedure, run_mode, image, drawables, config, run_data.
   - run callback MUST return procedure.new_return_values with Gimp.PDBStatusType.SUCCESS
     on clean shutdown/start success.
@@ -520,7 +523,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 127
+  expected_registry_total: 137
   registry:
     image:
     - create_image
@@ -588,6 +591,8 @@ mcp_tool_contract:
     - edit_text_layer
     - edit_clear
     inspection:
+    - compare_snapshots
+    - assert_image_state
     - session_capabilities
     - observe_document_state
     - get_layer_tree_detailed
@@ -596,11 +601,14 @@ mcp_tool_contract:
     - get_image_metadata
     - get_context_state
     - get_gimp_info
+    - create_contact_sheet
     history:
     - undo
     - redo
     - begin_undo_group
     - end_undo_group
+    - create_checkpoint
+    - get_operation_log
     pdb:
     - search_pdb
     - execute_python
@@ -638,6 +646,7 @@ mcp_tool_contract:
     - apply_noise
     - apply_median
     - apply_drop_shadow
+    - preview_filter
     color:
     - adjust_brightness_contrast
     - adjust_hue_saturation
@@ -654,6 +663,8 @@ mcp_tool_contract:
     - get_colors
     - swap_colors
     - sample_color
+    - sample_pixels
+    - analyze_color_palette
     flow_tools:
     - propose_flow
     - list_flows
@@ -664,6 +675,8 @@ mcp_tool_contract:
     - pin_flow
     - unpin_flow
     - run_flow
+    - dry_run_macro
+    - run_macro_transaction
   pass_criteria:
   - Runtime server registers every expected tool exactly once.
   - README/tool reference total and section counts match runtime registry.

@@ -63,9 +63,11 @@ nav:
       - Filters and Effects: tools/filter_tools.md
       - gimp.dev Integration: tools/gimp_dev_tools.md
       - History: tools/history_tools.md
+      - Flow Tools: tools/flow_tools.md
       - Image Management: tools/image_tools.md
       - Inspection: tools/inspect_tools.md
       - Layer Operations: tools/layer_tools.md
+      - Paths: tools/path_tools.md
       - PDB and Escape Hatch: tools/pdb_tools.md
       - Selections: tools/selection_tools.md
       - Target Resolution: tools/target_tools.md
@@ -73,9 +75,14 @@ nav:
   - Tutorials:
       - Agent Prompt Cookbook: agent-workflows.md
       - Agent Editing Workflows: tutorial-workflows.md
+      - Repeatable Flows: repeatable-flows.md
   - Architecture:
       - Async Tool Architecture: async-tool-architecture.md
       - Future Tool Roadmap: future-tools-roadmap.md
+      - GIMP MCP Menu Design: superpowers/specs/2026-06-22-gimp-mcp-menu-design.md
+      - Repeatable Flows Design: superpowers/specs/2026-06-22-repeatable-flows-design.md
+      - GIMP MCP Menu Implementation Plan: superpowers/plans/2026-06-22-gimp-mcp-menu-and-dispatch-plan.md
+      - Repeatable Flows Implementation Plan: superpowers/plans/2026-06-22-repeatable-flows-implementation.md
   - Python API:
       - Overview: api/index.md
       - Configuration: api/config.md

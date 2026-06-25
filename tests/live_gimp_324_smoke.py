@@ -465,6 +465,43 @@ def wait_for_bridge(config: ServerConfig, *, timeout: float) -> tuple[bool, str]
     return False, last_error or "timed out waiting for bridge"
 
 
+def autostart_check_from_transport(
+    smoke: dict[str, Any], config: ServerConfig, *, startup_timeout: float
+) -> dict[str, Any]:
+    """Derive spawned autostart readiness from the real transport check.
+
+    The spawned runner must not consume a separate readiness-only socket before
+    the real smoke run, because the persistent GIMP plug-in can be sensitive to
+    one-shot probe connections during batch startup.
+    """
+    transport = next(
+        (check for check in smoke.get("checks", []) if check.get("id") == "C-020-transport"),
+        None,
+    )
+    ready = bool(transport and transport.get("status") == "pass")
+    if ready:
+        detail = "connected"
+    elif transport is None:
+        detail = "C-020-transport check missing"
+    else:
+        evidence = transport.get("evidence")
+        if isinstance(evidence, dict):
+            detail = str(evidence.get("error") or evidence)
+        else:
+            detail = str(evidence)
+    return make_check(
+        "C-005-autostart-server",
+        "pass" if ready else "fail",
+        {
+            "detail": detail,
+            "startup_timeout": startup_timeout,
+            "socket_host": config.gimp_host,
+            "socket_port": config.gimp_port,
+            "derived_from": "C-020-transport",
+        },
+    )
+
+
 def base_environment(plugin_path: Path | None = None) -> dict[str, Any]:
     """Return common environment evidence for compat.results.yml."""
     return {
@@ -689,7 +726,7 @@ def run_docs_check() -> dict[str, Any]:
     """Record README/doc compatibility-claim evidence."""
     try:
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        tool_count_ok = "127 typed" in readme or "127 tools" in readme
+        tool_count_ok = "137 typed" in readme or "137 tools" in readme
         stale_claim_absent = "GIMP 3.0.8 compatible" not in readme
         compatibility_table = "compatibility" in readme.lower() and "3.2.4" in readme
         ok = tool_count_ok and stale_claim_absent and compatibility_table
@@ -885,7 +922,7 @@ def _async_transport_check(config: ServerConfig) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - live compat evidence must preserve failures
         return make_check("C-025-async-transport", "fail", {"error": str(exc)})
     ok = (
-        evidence.get("registered_tool_total") == 127
+        evidence.get("registered_tool_total") == 137
         and not evidence.get("failed_tools")
         and isinstance(evidence.get("first_round_trip"), dict)
         and evidence["first_round_trip"].get("status") == "success"
@@ -990,7 +1027,7 @@ if missing:
 
 def _registry_total_check(tools: dict[str, Any]) -> dict[str, Any]:
     """Check live captured MCP tool registry count."""
-    expected = 127
+    expected = 137
     names = sorted(tools)
     return make_check(
         "mcp-tools",
@@ -1005,8 +1042,8 @@ def _docs_contract_check() -> dict[str, Any]:
     failures: list[str] = []
     if "GIMP 3.0.8 compatible" in readme:
         failures.append("README contains stale GIMP 3.0.8 compatibility wording")
-    if "127 typed" not in readme:
-        failures.append("README does not advertise 127 typed tools")
+    if "137 typed" not in readme:
+        failures.append("README does not advertise 137 typed tools")
     if "gimp_mcp_plugin/gimp_mcp_plugin.py" not in readme:
         failures.append("README does not document the canonical GIMP plug-in directory/file layout")
     if "claim_allowed: false" not in readme and "claim_allowed: true" not in readme:
@@ -1086,11 +1123,11 @@ def run_smoke(
             ],
         )
         registry_evidence = {
-            "expected_total": 127,
+            "expected_total": 137,
             "actual_total": len(tools),
             "tools": sorted(tools),
         }
-        if len(tools) != 127:
+        if len(tools) != 137:
             image_check["status"] = "fail"
             image_check["evidence"]["failed_tools"].append("registry-count")
         image_check["evidence"]["registry"] = registry_evidence
@@ -1472,26 +1509,6 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
                 },
             )
         )
-        ready, ready_detail = wait_for_bridge(config, timeout=float(args.startup_timeout))
-        checks.append(
-            make_check(
-                "C-005-autostart-server",
-                "pass" if ready else "fail",
-                {
-                    "detail": ready_detail,
-                    "startup_timeout": float(args.startup_timeout),
-                    "socket_host": config.gimp_host,
-                    "socket_port": config.gimp_port,
-                },
-            )
-        )
-        if not ready:
-            if args.keep_gimp:
-                env["gimp_process_output"] = "unavailable while --keep-gimp is active"
-            else:
-                stop_gimp(proc)
-                env["gimp_process_output"] = collect_process_output(proc)
-            return finish_result(started, env, checks)
         smoke = run_smoke(
             config,
             plugin_path,
@@ -1499,7 +1516,10 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
             stop_bridge_after=True,
             include_static_checks=bool(args.include_static_checks),
         )
-        smoke["checks"] = checks + smoke["checks"]
+        autostart_check = autostart_check_from_transport(
+            smoke, config, startup_timeout=float(args.startup_timeout)
+        )
+        smoke["checks"] = checks + [autostart_check] + smoke["checks"]
         smoke["summary"] = finish_result(started, smoke["environment"], smoke["checks"])["summary"]
         if any(check["status"] == "fail" for check in smoke["checks"]):
             if args.keep_gimp:
@@ -1511,8 +1531,20 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
                 smoke["environment"]["gimp_process_output"] = collect_process_output(proc)
         return smoke
     except Exception as exc:  # noqa: BLE001 - live utility should preserve failure evidence
-        env = base_environment(plugin_path)
+        env = locals().get("env") or base_environment(plugin_path)
         env.update({"gimp_executable": gimp, "spawned_gimp": True, "xvfb": bool(args.xvfb)})
+        existing_ids = {str(check.get("id")) for check in checks}
+        if "C-000-spawn-gimp" in existing_ids:
+            failure_smoke = {"checks": [make_check("C-020-transport", "fail", {"error": str(exc)})]}
+            autostart_check = autostart_check_from_transport(
+                failure_smoke, config, startup_timeout=float(args.startup_timeout)
+            )
+            if args.keep_gimp:
+                env["gimp_process_output"] = "unavailable while --keep-gimp is active"
+            else:
+                stop_gimp(proc)
+                env["gimp_process_output"] = collect_process_output(proc)
+            return finish_result(started, env, checks + [autostart_check] + failure_smoke["checks"])
         checks.append(make_check("C-000-spawn-gimp", "fail", {"error": str(exc)}))
         return finish_result(started, env, checks)
     finally:

@@ -261,7 +261,7 @@ def test_all_mcp_tool_handlers_return_tool_result_alias() -> None:
 def test_all_registered_tools_are_coroutine_functions() -> None:
     tools = registered_tools()
 
-    assert len(tools) == 127
+    assert len(tools) == 137
     assert all(inspect.iscoroutinefunction(tool) for tool in tools.values())
 
 
@@ -330,14 +330,46 @@ async def test_optional_324_history_failures_are_machine_readable() -> None:
 
 
 @pytest.mark.asyncio
-async def test_optional_324_drop_shadow_failure_is_machine_readable() -> None:
-    tools = registered_tools(OptionalCapabilityBridge("Drop shadow procedure not found"))
+async def test_drop_shadow_uses_safe_gegl_filter_not_crashing_script_fu() -> None:
+    bridge = RecordingAsyncBridge()
+    tools = registered_tools(bridge)
 
-    result = await tools["apply_drop_shadow"]()
+    result = await tools["apply_drop_shadow"](
+        offset_x=2.0, offset_y=3.0, blur_radius=4.0, color="black", opacity=50.0
+    )
 
-    assert result["success"] is False
-    assert result["data"]["error_code"] == "optional_capability_unavailable"
-    assert result["data"]["procedure"] == "script-fu-drop-shadow"
+    assert result["success"] is True
+    generated = "\n".join(
+        "\n".join(call[1])
+        for call in bridge.calls
+        if call[0] == "execute_python" and isinstance(call[1], list)
+    )
+    assert "script-fu-drop-shadow" not in generated
+    assert "run(cfg)" not in generated
+    assert "Gimp.DrawableFilter.new(drawable, 'gegl:dropshadow', '')" in generated
+    assert "cfg.set_property('x', 2.0)" in generated
+    assert "cfg.set_property('y', 3.0)" in generated
+    assert "cfg.set_property('radius', 4.0)" in generated
+    assert "cfg.set_property('color', Gegl.Color.new('black'))" in generated
+    assert "cfg.set_property('opacity', 0.5)" in generated
+
+
+@pytest.mark.asyncio
+async def test_search_pdb_uses_query_procedures_without_invalid_wildcard_lookup() -> None:
+    bridge = RecordingAsyncBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["search_pdb"]("png", max_results=5)
+
+    assert result["success"] is True
+    generated = "\n".join(
+        "\n".join(call[1])
+        for call in bridge.calls
+        if call[0] == "execute_python" and isinstance(call[1], list)
+    )
+    assert "query_procedures" in generated
+    assert "lookup_procedure(name)" not in generated
+    assert "-*" not in generated
 
 
 def test_server_uses_asyncio_native_bridge_for_mcp_tools() -> None:
@@ -407,7 +439,7 @@ async def test_async_native_bridge_can_drive_registered_tool_surface() -> None:
     assert info_result["success"] is True
     assert bitmap_result["success"] is True
     assert gimp_result["success"] is True
-    assert len(tools) == 127
+    assert len(tools) == 137
     assert ("get_gimp_info", None) in bridge.calls
     assert (
         "get_image_bitmap",

@@ -3,7 +3,7 @@ upstream: Hackerobi/gimp-mcp-pro
 fork: fkr-0/gimp-mcp
 branch: 3.2.4
 created_at: 2026-06-21
-status: planning
+status: active
 issues:
 - id: GIMP-MCP-001
   title: Verify compatibility with GIMP 3.2.4
@@ -70,7 +70,8 @@ issues:
   - Annotate raw bridge transport responses with PluginResponse.
   - Add representative runtime invocation tests proving tools await async bridge methods.
   - Add static tests rejecting non-ToolResult tool return annotations.
-  - Return structured optional-capability metadata for known GIMP 3.2.4 optional procedure gaps.
+  - Return structured optional-capability metadata for known GIMP 3.2.4 optional procedure
+    gaps.
   acceptance:
   - Async bridge tests pass without requiring GIMP.
   - Sync bridge behavior remains covered and unchanged.
@@ -81,7 +82,8 @@ issues:
   - Every @mcp.tool handler is annotated as returning ToolResult.
   - Both GimpBridge and AsyncGimpBridge satisfy the AsyncToolBridge protocol surface.
   - Representative registered tools invoke async bridge methods under pytest.
-  - Optional GIMP 3.2.4 capability failures are machine-readable and accepted by the live smoke normalizer.
+  - Optional GIMP 3.2.4 capability failures are machine-readable and accepted by the
+    live smoke normalizer.
 - id: GIMP-MCP-003
   title: Introduce Pydantic settings and environment loading
   type: feature
@@ -104,6 +106,7 @@ issues:
   acceptance:
   - Runtime configuration is typed, validated, documented, and test-covered.
   - Existing constructors continue to work unless callers opt into settings loading.
+  status: open
 - id: GIMP-MCP-004
   title: Operate gimp.dev Projects async REPL workflow
   type: integration
@@ -130,3 +133,45 @@ issues:
   - Async REPL workflow is documented and can connect to a live plugin instance.
   - gimp.dev integration notes are captured without relying on undocumented local
     assumptions.
+  status: open
+- id: GIMP-MCP-005
+  title: Reconcile features.yml with runtime registry and complete remaining agent
+    features
+  type: feature-backlog
+  priority: high
+  labels:
+  - features.yml
+  - tool-registry
+  - agent-workflows
+  - tdd
+  status: implemented
+  goal: Keep features.yml synchronized with the real MCP registry and implement remaining
+    high-priority agent-facing features with focused RED/GREEN tests and matrix contract
+    updates.
+  completed_this_pass:
+  - feature_id: FEAT-004
+    tool: create_contact_sheet
+  - feature_id: FEAT-006
+    tool: analyze_color_palette
+  - feature_id: FEAT-013
+    tool: create_checkpoint
+  - feature_id: FEAT-016
+    tool: get_operation_log
+  - feature_id: FEAT-017
+    tool: preview_filter
+  remaining_open_features: []
+  checklist:
+  - Reconcile implemented/partial/planned feature statuses against registered MCP
+    tools.
+  - Implement FEAT-005 sample_pixels with explicit point and grid sampling.
+  - Implement FEAT-014 compare_snapshots and FEAT-015 assert_image_state.
+  - Update public tool count and compatibility/docs contracts to 137 tools.
+  - Continue with remaining P1 features after completing FEAT-032 dry_run_macro and
+    FEAT-033 run_macro_transaction.
+  - Keep every new public tool in generated-code and invocation matrices.
+  acceptance:
+  - features.yml and tasks.issues.yml are YAML-parseable and reflect current registry
+    state.
+  - New feature work follows RED/GREEN verification.
+  - Focused, matrix, static, and full offline test suites pass before completion.
+  registry_total: 137

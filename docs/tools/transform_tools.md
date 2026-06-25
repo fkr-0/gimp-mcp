@@ -8,6 +8,8 @@ Source module: `src/gimp_mcp_pro/tools/transform_tools.py`
 | [`scale_layer`](#scale-layer) | Scale a single layer to new dimensions. | 5 |
 | [`rotate_image`](#rotate-image) | Rotate the entire image by 90, 180, or 270 degrees. | 1 |
 | [`rotate_layer`](#rotate-layer) | Rotate a layer by an arbitrary angle. | 4 |
+| [`perspective_layer`](#perspective-layer) | Perspective-transform a layer by remapping its four bounding-box corners. | 12 |
+| [`shear_layer`](#shear-layer) | Shear a layer horizontally or vertically by a pixel magnitude. | 6 |
 | [`flip_image`](#flip-image) | Flip the entire image. | 1 |
 | [`flip_layer`](#flip-layer) | Flip a single layer. | 3 |
 | [`crop_to_selection`](#crop-to-selection) | Crop the image to the current selection bounds. | 0 |
@@ -18,19 +20,32 @@ Source module: `src/gimp_mcp_pro/tools/transform_tools.py`
 
 ## `scale_image` {#scale-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:56`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:83`
 
 ```python
 async def scale_image(new_width: int, new_height: int, interpolation: str = 'cubic') -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `new_width`
-- `new_height`
-- `interpolation`
+| Parameter | Description |
+|---|---|
+| `new_width` | Target width in pixels (1-32768) |
+| `new_height` | Target height in pixels (1-32768) |
+| `interpolation` | Quality — "none", "linear", "cubic" (recommended), "nohalo", "lohalo" |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Scale the entire image (all layers) to new dimensions.
 
@@ -49,21 +64,34 @@ Returns:
 
 ## `scale_layer` {#scale-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:107`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:134`
 
 ```python
 async def scale_layer(new_width: int, new_height: int, interpolation: str = 'cubic', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `new_width`
-- `new_height`
-- `interpolation`
-- `layer_name`
-- `layer_index`
+| Parameter | Description |
+|---|---|
+| `new_width` | Target width in pixels |
+| `new_height` | Target height in pixels |
+| `interpolation` | "none", "linear", "cubic", "nohalo", "lohalo" |
+| `layer_name` | Target layer by name. Uses active layer if neither specified. |
+| `layer_index` | Target layer by index. |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Scale a single layer to new dimensions.
 
@@ -83,17 +111,30 @@ Returns:
 
 ## `rotate_image` {#rotate-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:159`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:186`
 
 ```python
 async def rotate_image(angle: int) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `angle`
+| Parameter | Description |
+|---|---|
+| `angle` | Rotation angle — must be 90, 180, or 270. |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Rotate the entire image by 90, 180, or 270 degrees.
 
@@ -105,20 +146,33 @@ Returns:
 
 ## `rotate_layer` {#rotate-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:194`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:221`
 
 ```python
 async def rotate_layer(angle_degrees: float, auto_resize: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `angle_degrees`
-- `auto_resize`
-- `layer_name`
-- `layer_index`
+| Parameter | Description |
+|---|---|
+| `angle_degrees` | Rotation angle in degrees (positive = counter-clockwise) |
+| `auto_resize` | If True, resize layer to fit rotated content |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Rotate a layer by an arbitrary angle.
 
@@ -131,19 +185,130 @@ Args:
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
+## `perspective_layer` {#perspective-layer}
+
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:266`
+
+```python
+async def perspective_layer(x0: float, y0: float, x1: float, y1: float, x2: float, y2: float, x3: float, y3: float, interpolation: str = 'cubic', resize: str = 'adjust', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `x0, y0` | New upper-left corner. |
+| `y0` | _Undocumented._ |
+| `x1, y1` | New upper-right corner. |
+| `y1` | _Undocumented._ |
+| `x2, y2` | New lower-left corner. |
+| `y2` | _Undocumented._ |
+| `x3, y3` | New lower-right corner. |
+| `y3` | _Undocumented._ |
+| `interpolation` | "none", "linear", "cubic", "nohalo", or "lohalo". |
+| `resize` | Transform resize policy: "adjust", "clip", "crop", or "crop_with_aspect". |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
+
+## Returns
+
+Operation result dictionary with status, message, and applied corner coordinates.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Perspective-transform a layer by remapping its four bounding-box corners.
+
+Args:
+    x0, y0: New upper-left corner.
+    x1, y1: New upper-right corner.
+    x2, y2: New lower-left corner.
+    x3, y3: New lower-right corner.
+    interpolation: "none", "linear", "cubic", "nohalo", or "lohalo".
+    resize: Transform resize policy: "adjust", "clip", "crop", or "crop_with_aspect".
+    layer_name: Target layer by name.
+    layer_index: Target layer by index. Uses active layer if neither specified.
+
+Returns:
+    Operation result dictionary with status, message, and applied corner coordinates.
+
+## `shear_layer` {#shear-layer}
+
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:326`
+
+```python
+async def shear_layer(direction: str = 'horizontal', magnitude: float = 0.0, interpolation: str = 'cubic', resize: str = 'adjust', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `direction` | "horizontal"/"h" or "vertical"/"v". |
+| `magnitude` | Shear magnitude in pixels; may be negative. |
+| `interpolation` | "none", "linear", "cubic", "nohalo", or "lohalo". |
+| `resize` | Transform resize policy: "adjust", "clip", "crop", or "crop_with_aspect". |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
+
+## Returns
+
+Operation result dictionary with status, message, and applied shear settings.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Shear a layer horizontally or vertically by a pixel magnitude.
+
+Args:
+    direction: "horizontal"/"h" or "vertical"/"v".
+    magnitude: Shear magnitude in pixels; may be negative.
+    interpolation: "none", "linear", "cubic", "nohalo", or "lohalo".
+    resize: Transform resize policy: "adjust", "clip", "crop", or "crop_with_aspect".
+    layer_name: Target layer by name.
+    layer_index: Target layer by index. Uses active layer if neither specified.
+
+Returns:
+    Operation result dictionary with status, message, and applied shear settings.
+
 ## `flip_image` {#flip-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:239`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:384`
 
 ```python
 async def flip_image(direction: str = 'horizontal') -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `direction`
+| Parameter | Description |
+|---|---|
+| `direction` | "horizontal" (mirror left/right) or "vertical" (mirror top/bottom) |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Flip the entire image.
 
@@ -155,19 +320,32 @@ Returns:
 
 ## `flip_layer` {#flip-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:275`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:420`
 
 ```python
 async def flip_layer(direction: str = 'horizontal', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `direction`
-- `layer_name`
-- `layer_index`
+| Parameter | Description |
+|---|---|
+| `direction` | "horizontal" or "vertical" |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Flip a single layer.
 
@@ -181,13 +359,24 @@ Returns:
 
 ## `crop_to_selection` {#crop-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:320`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:465`
 
 ```python
 async def crop_to_selection() -> ToolResult
 ```
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Crop the image to the current selection bounds.
 
@@ -200,20 +389,33 @@ Returns:
 
 ## `crop_image` {#crop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:345`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:490`
 
 ```python
 async def crop_image(x: int, y: int, width: int, height: int) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `x`
-- `y`
-- `width`
-- `height`
+| Parameter | Description |
+|---|---|
+| `x` | Left edge X coordinate |
+| `y` | Top edge Y coordinate |
+| `width` | Crop width in pixels |
+| `height` | Crop height in pixels |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Crop the image to a specific rectangle.
 
@@ -228,13 +430,24 @@ Returns:
 
 ## `autocrop_image` {#autocrop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:382`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:527`
 
 ```python
 async def autocrop_image() -> ToolResult
 ```
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Automatically crop the image to remove border whitespace/transparency.
 
@@ -246,20 +459,33 @@ Returns:
 
 ## `resize_canvas` {#resize-canvas}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:410`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:555`
 
 ```python
 async def resize_canvas(new_width: int, new_height: int, offset_x: int = 0, offset_y: int = 0) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `new_width`
-- `new_height`
-- `offset_x`
-- `offset_y`
+| Parameter | Description |
+|---|---|
+| `new_width` | New canvas width |
+| `new_height` | New canvas height |
+| `offset_x` | Horizontal offset for existing content (can be negative) |
+| `offset_y` | Vertical offset for existing content (can be negative) |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Resize the image canvas without scaling content.
 
@@ -277,20 +503,33 @@ Returns:
 
 ## `offset_layer` {#offset-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:452`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:597`
 
 ```python
 async def offset_layer(offset_x: int, offset_y: int, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `offset_x`
-- `offset_y`
-- `layer_name`
-- `layer_index`
+| Parameter | Description |
+|---|---|
+| `offset_x` | Horizontal offset in pixels (positive = right) |
+| `offset_y` | Vertical offset in pixels (positive = down) |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
 
-**Docstring**
+## Returns
+
+Operation result dictionary with status, message, and tool-specific data or error details.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Move a layer by an offset (reposition within the canvas).
 

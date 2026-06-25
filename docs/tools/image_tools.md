@@ -5,6 +5,10 @@ Source module: `src/gimp_mcp_pro/tools/image_tools.py`
 | Tool | Summary | Parameters |
 |---|---|---:|
 | [`create_image`](#create-image) | Create a new blank image in GIMP. | 4 |
+| [`add_guide`](#add-guide) | Add a horizontal or vertical guide to the active image. | 2 |
+| [`delete_guide`](#delete-guide) | Delete a guide from the active image by guide ID. | 1 |
+| [`list_guides`](#list-guides) | List guides on the active image with ID, orientation, and position. | 0 |
+| [`set_image_grid`](#set-image-grid) | Configure grid spacing, offset, and visual style on the active image. | 5 |
 | [`list_images`](#list-images) | List all currently open images in GIMP. | 0 |
 | [`get_image_info`](#get-image-info) | Get detailed metadata about the active image (no bitmap data). | 0 |
 | [`export_image`](#export-image) | Export the active image to a file. | 3 |
@@ -19,14 +23,27 @@ Source: `src/gimp_mcp_pro/tools/image_tools.py:33`
 async def create_image(width: int, height: int, color_mode: str = 'rgb', fill: str = 'white') -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `width`
-- `height`
-- `color_mode`
-- `fill`
+| Parameter | Description |
+|---|---|
+| `width` | Image width in pixels (1-32768) |
+| `height` | Image height in pixels (1-32768) |
+| `color_mode` | Color mode — "rgb", "grayscale", or "indexed" |
+| `fill` | Initial fill — "white", "transparent", "foreground", or "background" |
 
-**Docstring**
+## Returns
+
+Operation result with image info in data field.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Create a new blank image in GIMP.
 
@@ -42,15 +59,167 @@ Args:
 Returns:
     Operation result with image info in data field.
 
-## `list_images` {#list-images}
+## `add_guide` {#add-guide}
 
 Source: `src/gimp_mcp_pro/tools/image_tools.py:106`
+
+```python
+async def add_guide(orientation: str = 'horizontal', position: int = 0) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `orientation` | "horizontal"/"h" or "vertical"/"v". |
+| `position` | Pixel position from the top for horizontal guides or from the left for vertical guides. |
+
+## Returns
+
+Operation result dictionary with guide orientation and position.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Add a horizontal or vertical guide to the active image.
+
+Args:
+    orientation: "horizontal"/"h" or "vertical"/"v".
+    position: Pixel position from the top for horizontal guides or from the left for vertical guides.
+
+Returns:
+    Operation result dictionary with guide orientation and position.
+
+## `delete_guide` {#delete-guide}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:142`
+
+```python
+async def delete_guide(guide_id: int) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `guide_id` | GIMP guide ID returned by add_guide or list_guides. |
+
+## Returns
+
+Operation result dictionary with the deleted guide ID.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Delete a guide from the active image by guide ID.
+
+Args:
+    guide_id: GIMP guide ID returned by add_guide or list_guides.
+
+Returns:
+    Operation result dictionary with the deleted guide ID.
+
+## `list_guides` {#list-guides}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:169`
+
+```python
+async def list_guides() -> ToolResult
+```
+
+## Returns
+
+Operation result dictionary containing a guides list and count.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+List guides on the active image with ID, orientation, and position.
+
+Returns:
+    Operation result dictionary containing a guides list and count.
+
+## `set_image_grid` {#set-image-grid}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:210`
+
+```python
+async def set_image_grid(xspacing: float = 10.0, yspacing: float = 10.0, xoffset: float = 0.0, yoffset: float = 0.0, style: str = 'intersections') -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `xspacing` | Horizontal grid spacing in pixels. |
+| `yspacing` | Vertical grid spacing in pixels. |
+| `xoffset` | Horizontal grid offset in pixels. |
+| `yoffset` | Vertical grid offset in pixels. |
+| `style` | Grid style such as dots, intersections, on_off_dash, double_dash, or solid. |
+
+## Returns
+
+Operation result dictionary with applied grid settings.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Configure grid spacing, offset, and visual style on the active image.
+
+Args:
+    xspacing: Horizontal grid spacing in pixels.
+    yspacing: Vertical grid spacing in pixels.
+    xoffset: Horizontal grid offset in pixels.
+    yoffset: Vertical grid offset in pixels.
+    style: Grid style such as dots, intersections, on_off_dash, double_dash, or solid.
+
+Returns:
+    Operation result dictionary with applied grid settings.
+
+## `list_images` {#list-images}
+
+Source: `src/gimp_mcp_pro/tools/image_tools.py:270`
 
 ```python
 async def list_images() -> ToolResult
 ```
 
-**Docstring**
+## Returns
+
+Operation result with list of image info dicts.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 List all currently open images in GIMP.
 
@@ -63,13 +232,24 @@ Returns:
 
 ## `get_image_info` {#get-image-info}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:162`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:326`
 
 ```python
 async def get_image_info() -> ToolResult
 ```
 
-**Docstring**
+## Returns
+
+Comprehensive image metadata including layers, channels, file info.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Get detailed metadata about the active image (no bitmap data).
 
@@ -88,19 +268,32 @@ Returns:
 
 ## `export_image` {#export-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:195`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:359`
 
 ```python
 async def export_image(file_path: str, format: str | None = None, quality: int = 85) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `file_path`
-- `format`
-- `quality`
+| Parameter | Description |
+|---|---|
+| `file_path` | Output path (e.g., "/home/user/output.png") |
+| `format` | Export format — "png", "jpeg", "tiff", "bmp", "webp". Auto-detected from file extension if not specified. |
+| `quality` | Quality for lossy formats like JPEG (1-100). Default 85. |
 
-**Docstring**
+## Returns
+
+Operation result confirming export.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Export the active image to a file.
 
@@ -118,13 +311,24 @@ Returns:
 
 ## `flatten_image` {#flatten-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:271`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:435`
 
 ```python
 async def flatten_image() -> ToolResult
 ```
 
-**Docstring**
+## Returns
+
+Operation result.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Flatten all layers into a single layer.
 
@@ -141,13 +345,24 @@ Returns:
 
 ## `duplicate_image` {#duplicate-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:300`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:464`
 
 ```python
 async def duplicate_image() -> ToolResult
 ```
 
-**Docstring**
+## Returns
+
+Operation result with info about the new image.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Duplicate the entire active image (all layers, channels, paths).
 

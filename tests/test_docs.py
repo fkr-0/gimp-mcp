@@ -16,8 +16,8 @@ def test_extract_tool_docs_matches_runtime_contract() -> None:
     tool_docs = docs.extract_tool_docs()
     names = {tool.name for tool in tool_docs}
 
-    assert len(tool_docs) == 127
-    assert len(names) == 127
+    assert len(tool_docs) == 137
+    assert len(names) == 137
     assert "get_image_bitmap" in names
     assert "execute_python" in names
     assert "apply_drop_shadow" in names
@@ -114,11 +114,30 @@ def test_generated_tool_reference_contains_signatures_and_docstrings(tmp_path: P
     assert api_index in written
     assert protocol_page in written
     assert tool_types_page in written
-    assert "Total tools: **127**" in tool_index.read_text()
+    assert "Total tools: **137**" in tool_index.read_text()
     inspect_text = inspect_page.read_text()
     assert "async def get_image_bitmap" in inspect_text
     assert "Get the current image as a viewable bitmap" in inspect_text
     assert "-> ToolResult" in inspect_text
+    assert "## Contract" in inspect_text
+    assert "OperationResult" in inspect_text
+    assert "tests/test_tool_invocation_matrix.py" in inspect_text
+    assert "| Parameter | Description |" in inspect_text
+    assert "| `max_width` | Optional maximum width" in inspect_text
+    assert "## Returns" in inspect_text
+
+
+def test_generated_macro_docs_include_full_parameter_and_coverage_contract(tmp_path: Path) -> None:
+    docs.write_generated_docs(tmp_path)
+
+    flow_text = (tmp_path / "tools" / "flow_tools.md").read_text()
+
+    assert "## `dry_run_macro`" in flow_text
+    assert "## `run_macro_transaction`" in flow_text
+    assert "| `steps` | Ordered MCP tool steps" in flow_text
+    assert "| `rollback_on_failure` | Must remain true" in flow_text
+    assert "Compatibility contract" in flow_text
+    assert "Generated-code smoke" in flow_text
 
 
 def test_docs_cli_generate_reports_written_files(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
@@ -128,6 +147,9 @@ def test_docs_cli_generate_reports_written_files(tmp_path: Path, capsys) -> None
     assert status == 0
     assert "tools/index.md" in captured.out
     assert (tmp_path / "tool-docstring-audit.md").exists()
+    generated_readme = (tmp_path / "readme.md").read_text()
+    assert "(repeatable-flows.md)" in generated_readme
+    assert "(docs/repeatable-flows.md)" not in generated_readme
 
 
 def test_mkdocs_material_configuration_references_generated_pages() -> None:

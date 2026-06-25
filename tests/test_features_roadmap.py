@@ -27,7 +27,7 @@ def test_features_roadmap_has_valid_top_level_shape() -> None:
 
     assert data["schema_version"] == 1
     assert data["branch"] == "3.2.4"
-    assert data["status"] == "planning"
+    assert data["status"] == "active-reconciled-2026-06-23"
     assert data["principles"]
     assert data["priority_legend"]
     assert data["open_design_questions"]
@@ -109,8 +109,8 @@ def test_roadmap_records_safe_live_testing_policy() -> None:
     assert "localhost-only bridge" in joined_principles
 
 
-def test_selected_first_wave_features_are_marked_in_progress() -> None:
-    """The features selected for this implementation pass are tagged in progress."""
+def test_selected_first_wave_features_are_marked_implemented() -> None:
+    """The reconciled first-wave features are tagged implemented."""
     data = load_roadmap()
     selected = {
         "FEAT-001",
@@ -124,4 +124,4 @@ def test_selected_first_wave_features_are_marked_in_progress() -> None:
     }
     statuses = {feature["id"]: feature.get("status") for feature in data["features"]}
 
-    assert {statuses[feature_id] for feature_id in selected} == {"in_progress"}
+    assert {statuses[feature_id] for feature_id in selected} == {"implemented"}

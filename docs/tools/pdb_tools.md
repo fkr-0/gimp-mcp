@@ -15,12 +15,25 @@ Source: `src/gimp_mcp_pro/tools/pdb_tools.py:24`
 async def search_pdb(query: str, max_results: int = 20) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `query`
-- `max_results`
+| Parameter | Description |
+|---|---|
+| `query` | Search term (e.g., "blur", "sharpen", "file-png", "color") |
+| `max_results` | Maximum results to return (default 20) |
 
-**Docstring**
+## Returns
+
+List of matching procedure names.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Search GIMP's Procedure Database for available operations.
 
@@ -36,18 +49,32 @@ Returns:
 
 ## `execute_python` {#execute-python}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:75`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:80`
 
 ```python
 async def execute_python(code: list[str], timeout_seconds: float = 30.0) -> ToolResult
 ```
 
-**Parameters**
+## Parameters
 
-- `code`
-- `timeout_seconds`
+| Parameter | Description |
+|---|---|
+| `code` | List of Python code strings to execute sequentially. |
+| `timeout_seconds` | Timeout for execution (default 30, use longer for heavy operations like filters) |
+| `Example` | ["x = 5", "print(x + 1)"] |
 
-**Docstring**
+## Returns
+
+Result with stdout output from each line.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
 
 Execute raw Python code in GIMP's PyGObject console.
 

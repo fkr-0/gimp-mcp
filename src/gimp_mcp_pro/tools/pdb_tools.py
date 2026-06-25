@@ -38,14 +38,19 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
             "import json",
             "pdb = Gimp.get_pdb()",
             "if not pdb: raise RuntimeError('PDB not available')",
-            f"query = '{query}'.lower()",
+            f"query = {query!r}.lower()",
             f"max_r = {max_results}",
+            "names = []",
+            "for probe in (query, '',):\n"
+            "    try:\n"
+            "        names = list(pdb.query_procedures(probe, '', '', '', '', '', '', ''))\n"
+            "    except Exception:\n"
+            "        names = []\n"
+            "    if names:\n"
+            "        break",
             "results = []",
-            "prefixes = ['gimp-', 'file-', 'plug-in-', 'script-fu-', 'python-fu-']",
-            "test_names = [f'{p}{query}' for p in prefixes] + [f'{p}{query}-*' for p in prefixes] + [query]",
-            "for name in test_names:\n"
-            "    proc = pdb.lookup_procedure(name)\n"
-            "    if proc:\n"
+            "for name in names:\n"
+            "    if query in name.lower() and name not in results:\n"
             "        results.append(name)\n"
             "        if len(results) >= max_r: break",
             "print(json.dumps(results))",

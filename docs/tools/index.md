@@ -5,23 +5,25 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **86**
+Total tools: **137**
 
 | Category | Tools | Page |
 |---|---:|---|
 | Agent Tools | 3 | [agent_tools](agent_tools.md) |
-| Color Adjustments | 13 | [color_tools](color_tools.md) |
-| Drawing and Text | 10 | [drawing_tools](drawing_tools.md) |
-| Filters and Effects | 8 | [filter_tools](filter_tools.md) |
+| Color Adjustments | 17 | [color_tools](color_tools.md) |
+| Drawing and Text | 12 | [drawing_tools](drawing_tools.md) |
+| Filters and Effects | 10 | [filter_tools](filter_tools.md) |
+| Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
 | gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
-| History | 4 | [history_tools](history_tools.md) |
-| Image Management | 6 | [image_tools](image_tools.md) |
-| Inspection | 8 | [inspect_tools](inspect_tools.md) |
-| Layer Operations | 9 | [layer_tools](layer_tools.md) |
+| History | 6 | [history_tools](history_tools.md) |
+| Image Management | 10 | [image_tools](image_tools.md) |
+| Inspection | 11 | [inspect_tools](inspect_tools.md) |
+| Layer Operations | 19 | [layer_tools](layer_tools.md) |
+| Vector Paths | 5 | [path_tools](path_tools.md) |
 | PDB and Escape Hatch | 2 | [pdb_tools](pdb_tools.md) |
-| Selections | 8 | [selection_tools](selection_tools.md) |
+| Selections | 14 | [selection_tools](selection_tools.md) |
 | Target Resolution | 2 | [target_tools](target_tools.md) |
-| Transforms | 11 | [transform_tools](transform_tools.md) |
+| Transforms | 13 | [transform_tools](transform_tools.md) |
 
 ## Tool inventory
 
@@ -35,6 +37,7 @@ Total tools: **86**
 
 - [`adjust_brightness_contrast`](color_tools.md#adjust-brightness-contrast) — Adjust brightness and contrast of a layer.
 - [`adjust_hue_saturation`](color_tools.md#adjust-hue-saturation) — Adjust hue, saturation, and lightness of a layer.
+- [`adjust_color_balance`](color_tools.md#adjust-color-balance) — Adjust shadows, midtones, or highlights color balance for a layer.
 - [`adjust_levels`](color_tools.md#adjust-levels) — Adjust levels for a layer.
 - [`adjust_curves`](color_tools.md#adjust-curves) — Adjust curves for a layer.
 - [`desaturate`](color_tools.md#desaturate) — Convert a layer to grayscale while keeping it in RGB mode.
@@ -43,8 +46,11 @@ Total tools: **86**
 - [`posterize`](color_tools.md#posterize) — Reduce the number of color levels (posterization effect).
 - [`color_to_alpha`](color_tools.md#color-to-alpha) — Make a specific color transparent (color to alpha).
 - [`auto_white_balance`](color_tools.md#auto-white-balance) — Automatically adjust white balance (stretch colors).
+- [`list_gimp_resources`](color_tools.md#list-gimp-resources) — List available GIMP brushes, patterns, fonts, and gradients.
 - [`get_colors`](color_tools.md#get-colors) — Get the current foreground and background colors.
 - [`swap_colors`](color_tools.md#swap-colors) — Swap foreground and background colors.
+- [`analyze_color_palette`](color_tools.md#analyze-color-palette) — Extract a deterministic approximate color palette for a layer or region.
+- [`sample_pixels`](color_tools.md#sample-pixels) — Sample colors at multiple points or over a rectangular grid.
 - [`sample_color`](color_tools.md#sample-color) — Pick/sample a color from a pixel in the image.
 
 ### Drawing and Text
@@ -58,11 +64,15 @@ Total tools: **86**
 - [`draw_ellipse`](drawing_tools.md#draw-ellipse) — Draw an ellipse/circle (filled or outline only).
 - [`draw_polygon`](drawing_tools.md#draw-polygon) — Draw a polygon (filled or outline).
 - [`add_text`](drawing_tools.md#add-text) — Add a text layer to the image.
+- [`gradient_fill`](drawing_tools.md#gradient-fill) — Fill the current drawable/selection with a gradient between two points.
+- [`edit_text_layer`](drawing_tools.md#edit-text-layer) — Edit an existing text layer's content and core text properties.
 - [`edit_clear`](drawing_tools.md#edit-clear) — Clear the current selection area (make it transparent).
 
 ### Filters and Effects
 
+- [`preview_filter`](filter_tools.md#preview-filter) — Apply a supported filter to a temporary preview layer.
 - [`apply_gaussian_blur`](filter_tools.md#apply-gaussian-blur) — Apply Gaussian blur to a layer.
+- [`apply_motion_blur`](filter_tools.md#apply-motion-blur) — Apply linear, circular, or zoom motion blur to a layer.
 - [`apply_unsharp_mask`](filter_tools.md#apply-unsharp-mask) — Sharpen a layer using unsharp mask.
 - [`apply_pixelize`](filter_tools.md#apply-pixelize) — Apply pixelization (mosaic) effect to a layer.
 - [`apply_edge_detect`](filter_tools.md#apply-edge-detect) — Apply edge detection to a layer.
@@ -71,6 +81,20 @@ Total tools: **86**
 - [`apply_median`](filter_tools.md#apply-median) — Apply median filter (denoise) to a layer.
 - [`apply_drop_shadow`](filter_tools.md#apply-drop-shadow) — Apply a drop shadow effect to a layer.
 
+### Repeatable Flows and Macros
+
+- [`propose_flow`](flow_tools.md#propose-flow) — Save an agent-authored flow proposal as an inactive draft.
+- [`list_flows`](flow_tools.md#list-flows) — List user-local flows, optionally filtered by lifecycle state.
+- [`get_flow`](flow_tools.md#get-flow) — Return one complete flow definition.
+- [`validate_flow`](flow_tools.md#validate-flow) — Statically validate operation names and arguments, then mark valid drafts.
+- [`activate_flow`](flow_tools.md#activate-flow) — Explicitly activate a validated flow.
+- [`deactivate_flow`](flow_tools.md#deactivate-flow) — Return an active flow to validated state and unpin it.
+- [`pin_flow`](flow_tools.md#pin-flow) — Pin an active flow into GIMP's Repeatable Flows menu.
+- [`unpin_flow`](flow_tools.md#unpin-flow) — Remove a flow's direct GIMP menu entry.
+- [`run_flow`](flow_tools.md#run-flow) — Execute a validated or active flow through the shared operation registry.
+- [`dry_run_macro`](flow_tools.md#dry-run-macro) — Validate a typed multi-step macro without mutating GIMP state.
+- [`run_macro_transaction`](flow_tools.md#run-macro-transaction) — Execute a typed multi-step macro as one fail-safe transaction.
+
 ### gimp.dev Integration
 
 - [`gimp_dev_status`](gimp_dev_tools.md#gimp-dev-status) — Return local ``gimp.dev`` integration availability.
@@ -78,6 +102,8 @@ Total tools: **86**
 
 ### History
 
+- [`create_checkpoint`](history_tools.md#create-checkpoint) — Create a controlled checkpoint record for the active image.
+- [`get_operation_log`](history_tools.md#get-operation-log) — Return recent MCP operation-log entries.
 - [`undo`](history_tools.md#undo) — Undo the last operation(s).
 - [`redo`](history_tools.md#redo) — Redo previously undone operation(s).
 - [`begin_undo_group`](history_tools.md#begin-undo-group) — Start an undo group — all subsequent operations will be grouped
@@ -86,6 +112,10 @@ Total tools: **86**
 ### Image Management
 
 - [`create_image`](image_tools.md#create-image) — Create a new blank image in GIMP.
+- [`add_guide`](image_tools.md#add-guide) — Add a horizontal or vertical guide to the active image.
+- [`delete_guide`](image_tools.md#delete-guide) — Delete a guide from the active image by guide ID.
+- [`list_guides`](image_tools.md#list-guides) — List guides on the active image with ID, orientation, and position.
+- [`set_image_grid`](image_tools.md#set-image-grid) — Configure grid spacing, offset, and visual style on the active image.
 - [`list_images`](image_tools.md#list-images) — List all currently open images in GIMP.
 - [`get_image_info`](image_tools.md#get-image-info) — Get detailed metadata about the active image (no bitmap data).
 - [`export_image`](image_tools.md#export-image) — Export the active image to a file.
@@ -94,6 +124,9 @@ Total tools: **86**
 
 ### Inspection
 
+- [`create_contact_sheet`](inspect_tools.md#create-contact-sheet) — Render contact-sheet metadata for visible or selected layers.
+- [`compare_snapshots`](inspect_tools.md#compare-snapshots) — Compare two supplied snapshot, thumbnail, or region payloads.
+- [`assert_image_state`](inspect_tools.md#assert-image-state) — Evaluate typed postconditions against supplied or active document state.
 - [`session_capabilities`](inspect_tools.md#session-capabilities) — Report GIMP runtime capabilities and safety-relevant environment state.
 - [`observe_document_state`](inspect_tools.md#observe-document-state) — Return a compact snapshot of the active GIMP document state.
 - [`get_layer_tree_detailed`](inspect_tools.md#get-layer-tree-detailed) — Return detailed layer, group, visibility, lock, and bounds metadata.
@@ -111,9 +144,27 @@ Total tools: **86**
 - [`delete_layer`](layer_tools.md#delete-layer) — Delete a layer from the active image.
 - [`set_layer_opacity`](layer_tools.md#set-layer-opacity) — Set a layer's opacity.
 - [`set_layer_visibility`](layer_tools.md#set-layer-visibility) — Show or hide a layer.
+- [`set_layer_mode`](layer_tools.md#set-layer-mode) — Set a layer's blend mode (normal, multiply, screen, overlay, etc.).
 - [`duplicate_layer`](layer_tools.md#duplicate-layer) — Duplicate a layer.
 - [`merge_visible_layers`](layer_tools.md#merge-visible-layers) — Merge all visible layers into one.
+- [`add_layer_mask`](layer_tools.md#add-layer-mask) — Add a layer mask to a layer.
+- [`get_layer_mask_info`](layer_tools.md#get-layer-mask-info) — Get layer mask status for a layer.
+- [`set_layer_mask_state`](layer_tools.md#set-layer-mask-state) — Set layer mask editing/display/apply flags.
+- [`remove_layer_mask`](layer_tools.md#remove-layer-mask) — Remove a layer mask, optionally applying it first.
+- [`create_layer_group`](layer_tools.md#create-layer-group) — Create a group layer in the active image.
+- [`move_layer_to_group`](layer_tools.md#move-layer-to-group) — Move a layer or group under a target layer group.
+- [`list_channels`](layer_tools.md#list-channels) — List custom channels in the active image.
+- [`save_selection_to_channel`](layer_tools.md#save-selection-to-channel) — Save the current selection mask as a named custom channel.
+- [`channel_to_selection`](layer_tools.md#channel-to-selection) — Convert a custom channel into the current selection.
 - [`add_alpha_channel`](layer_tools.md#add-alpha-channel) — Add an alpha (transparency) channel to a layer.
+
+### Vector Paths
+
+- [`create_path`](path_tools.md#create-path) — Create a vector path from a flat point list.
+- [`list_paths`](path_tools.md#list-paths) — List vector paths in the active image.
+- [`path_to_selection`](path_tools.md#path-to-selection) — Convert a vector path to the current selection.
+- [`stroke_path`](path_tools.md#stroke-path) — Stroke a vector path onto a layer using the current or supplied context.
+- [`remove_path`](path_tools.md#remove-path) — Remove a vector path from the active image.
 
 ### PDB and Escape Hatch
 
@@ -128,6 +179,12 @@ Total tools: **86**
 - [`select_all`](selection_tools.md#select-all) — Select the entire image.
 - [`select_none`](selection_tools.md#select-none) — Clear all selections.
 - [`select_invert`](selection_tools.md#select-invert) — Invert the current selection (select everything NOT currently selected).
+- [`select_by_color`](selection_tools.md#select-by-color) — Select all pixels similar in color to the sampled point.
+- [`feather_selection`](selection_tools.md#feather-selection) — Feather the current selection by a radius in pixels.
+- [`border_selection`](selection_tools.md#border-selection) — Replace the current selection with its border.
+- [`stroke_selection`](selection_tools.md#stroke-selection) — Stroke the current selection onto a layer.
+- [`bucket_fill`](selection_tools.md#bucket-fill) — Bucket-fill a contiguous region from a seed point.
+- [`get_selection_info`](selection_tools.md#get-selection-info) — Get information about the current selection (bounds, whether it exists).
 - [`select_grow`](selection_tools.md#select-grow) — Grow the current selection by a number of pixels.
 - [`select_shrink`](selection_tools.md#select-shrink) — Shrink the current selection by a number of pixels.
 
@@ -142,6 +199,8 @@ Total tools: **86**
 - [`scale_layer`](transform_tools.md#scale-layer) — Scale a single layer to new dimensions.
 - [`rotate_image`](transform_tools.md#rotate-image) — Rotate the entire image by 90, 180, or 270 degrees.
 - [`rotate_layer`](transform_tools.md#rotate-layer) — Rotate a layer by an arbitrary angle.
+- [`perspective_layer`](transform_tools.md#perspective-layer) — Perspective-transform a layer by remapping its four bounding-box corners.
+- [`shear_layer`](transform_tools.md#shear-layer) — Shear a layer horizontally or vertically by a pixel magnitude.
 - [`flip_image`](transform_tools.md#flip-image) — Flip the entire image.
 - [`flip_layer`](transform_tools.md#flip-layer) — Flip a single layer.
 - [`crop_to_selection`](transform_tools.md#crop-to-selection) — Crop the image to the current selection bounds.

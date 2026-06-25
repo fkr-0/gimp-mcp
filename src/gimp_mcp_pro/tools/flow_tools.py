@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from typing import Any
 
@@ -13,6 +14,148 @@ from gimp_mcp_pro.flows.runner import UNSAFE_CAPABILITIES, FlowRunner
 from gimp_mcp_pro.flows.store import FlowStore
 from gimp_mcp_pro.models.common import OperationResult
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
+
+MACRO_BLOCKED_TOOLS = {
+    "execute_python",
+    "dry_run_macro",
+    "run_macro_transaction",
+    "run_flow",
+}
+
+
+def _macro_flow(steps: list[dict[str, Any]], title: str) -> FlowDefinition:
+    return FlowDefinition.model_validate(
+        {
+            "id": "macro-transaction",
+            "title": title.strip() or "MCP Macro Transaction",
+            "review_policy": "none",
+            "phases": [{"id": "main", "steps": steps}],
+        }
+    )
+
+
+def _macro_policy_failures(flow: FlowDefinition) -> list[str]:
+    failures: list[str] = []
+    for phase in flow.phases:
+        for _index, step in enumerate(phase.steps):
+            if step.tool in MACRO_BLOCKED_TOOLS:
+                failures.append(f"unsafe tool {step.tool} requires confirm_unsafe=true")
+    return failures
+
+
+def _validate_required_arguments(flow: FlowDefinition, operations: OperationRegistry) -> list[str]:
+    failures: list[str] = []
+    for phase in flow.phases:
+        for index, step in enumerate(phase.steps):
+            try:
+                operation = operations.get(step.tool)
+            except KeyError:
+                continue
+            signature = inspect.signature(operation)
+            for name, parameter in signature.parameters.items():
+                if parameter.kind in {
+                    inspect.Parameter.VAR_POSITIONAL,
+                    inspect.Parameter.VAR_KEYWORD,
+                }:
+                    continue
+                if parameter.default is not inspect.Parameter.empty:
+                    continue
+                if name not in step.arguments:
+                    failures.append(
+                        f"step {index} tool {step.tool} missing required argument {name}"
+                    )
+    return failures
+
+
+def _macro_failures(flow: FlowDefinition, operations: OperationRegistry) -> list[str]:
+    policy = _macro_policy_failures(flow)
+    return (
+        FlowRunner(operations).validate(flow)
+        + policy
+        + _validate_required_arguments(flow, operations)
+    )
+
+
+def _macro_failure_objects(failures: list[str]) -> list[dict[str, Any]]:
+    return [{"error": failure} for failure in failures]
+
+
+def _macro_predicted_changes(flow: FlowDefinition) -> list[dict[str, Any]]:
+    changes: list[dict[str, Any]] = []
+    for phase in flow.phases:
+        for index, step in enumerate(phase.steps):
+            changes.append({"step": index, "tool": step.tool, "arguments": step.arguments})
+    return changes
+
+
+def _macro_resolved_targets(flow: FlowDefinition) -> list[dict[str, Any]]:
+    targets: list[dict[str, Any]] = []
+    for phase in flow.phases:
+        for index, step in enumerate(phase.steps):
+            for key, target_type in (
+                ("layer_index", "layer"),
+                ("layer_id", "layer"),
+                ("path_name", "path"),
+                ("channel_name", "channel"),
+            ):
+                if key in step.arguments:
+                    targets.append(
+                        {
+                            "step": index,
+                            "tool": step.tool,
+                            "target_type": target_type,
+                            "selector": {key: step.arguments[key]},
+                        }
+                    )
+    return targets
+
+
+def _macro_transaction_id(run: dict[str, Any]) -> str | None:
+    phases = run.get("phases")
+    if isinstance(phases, list) and phases:
+        first = phases[0]
+        if isinstance(first, dict):
+            value = first.get("transaction_id")
+            return str(value) if value is not None else None
+    return None
+
+
+def _macro_step_results(run: dict[str, Any]) -> list[dict[str, Any]]:
+    steps = run.get("steps")
+    if not isinstance(steps, list):
+        return []
+    normalized: list[dict[str, Any]] = []
+    for item in steps:
+        if not isinstance(item, dict) or item.get("status") == "skipped":
+            continue
+        normalized.append(
+            {
+                "step": item.get("index", item.get("step")),
+                "tool": item.get("tool"),
+                "arguments": item.get("arguments", {}),
+                "status": item.get("status"),
+                "result": item.get("result"),
+            }
+        )
+    return normalized
+
+
+def _macro_rolled_back(run: dict[str, Any]) -> bool:
+    phases = run.get("phases")
+    if isinstance(phases, list):
+        return any(
+            isinstance(phase, dict) and phase.get("status") == "rolled-back" for phase in phases
+        )
+    return run.get("status") == "rolled-back"
+
+
+async def _capture_macro_state(operations: OperationRegistry) -> dict[str, Any] | None:
+    if "observe_document_state" not in operations.names():
+        return None
+    result = await operations.get("observe_document_state")(
+        include_thumbnail=True, include_layer_previews=False, max_preview_size=256
+    )
+    return result if isinstance(result, dict) else {"result": result}
 
 
 def register_flow_tools(
@@ -246,3 +389,115 @@ def register_flow_tools(
             ).model_dump()
         except (KeyError, ValueError, PermissionError) as exc:
             return OperationResult.fail(operation="run_flow", error=str(exc)).model_dump()
+
+    @mcp.tool()
+    async def dry_run_macro(steps: list[dict[str, Any]]) -> ToolResult:
+        """Validate a typed multi-step macro without mutating GIMP state.
+
+        Args:
+            steps: Ordered MCP tool steps with tool names and argument dictionaries.
+
+        Returns:
+            Operation result dictionary with validity, predicted changes, resolved targets, and failures.
+        """
+        try:
+            flow = _macro_flow(steps, "Dry Run Macro")
+            operations = registry_factory(bridge)
+            failures = _macro_failures(flow, operations)
+            data = {
+                "valid": not failures,
+                "resolved_targets": _macro_resolved_targets(flow) if not failures else [],
+                "predicted_changes": _macro_predicted_changes(flow) if not failures else [],
+                "failures": _macro_failure_objects(failures),
+            }
+            return OperationResult.ok(
+                operation="dry_run_macro",
+                message="Macro is valid" if not failures else "Macro validation failed",
+                data=data,
+            ).model_dump()
+        except (ValidationError, ValueError) as exc:
+            return OperationResult.fail(
+                operation="dry_run_macro",
+                error=str(exc),
+                data={
+                    "valid": False,
+                    "resolved_targets": [],
+                    "predicted_changes": [],
+                    "failures": [{"error": str(exc)}],
+                },
+            ).model_dump()
+
+    @mcp.tool()
+    async def run_macro_transaction(
+        steps: list[dict[str, Any]],
+        transaction_label: str = "MCP Macro Transaction",
+        rollback_on_failure: bool = True,
+        capture_before_after: bool = False,
+    ) -> ToolResult:
+        """Execute a typed multi-step macro as one fail-safe transaction.
+
+        Args:
+            steps: Ordered MCP tool steps with tool names and argument dictionaries.
+            transaction_label: Human-readable label for the undo/transaction phase.
+            rollback_on_failure: Must remain true so macro execution is atomic.
+            capture_before_after: Capture document observations before and after execution when available.
+
+        Returns:
+            Operation result dictionary with transaction id, step results, rollback status, and evidence.
+        """
+        if not rollback_on_failure:
+            return OperationResult.fail(
+                operation="run_macro_transaction",
+                error="rollback_on_failure=false is not supported; macro transactions are fail-safe",
+                data={"rolled_back": False, "step_results": []},
+            ).model_dump()
+        try:
+            flow = _macro_flow(steps, transaction_label)
+            operations = registry_factory(bridge)
+            failures = _macro_failures(flow, operations)
+            if failures:
+                return OperationResult.fail(
+                    operation="run_macro_transaction",
+                    error="macro validation failed",
+                    data={
+                        "valid": False,
+                        "failures": _macro_failure_objects(failures),
+                        "transaction_id": None,
+                        "step_results": [],
+                        "rolled_back": False,
+                    },
+                ).model_dump()
+
+            before = await _capture_macro_state(operations) if capture_before_after else None
+            run = await FlowRunner(operations).run(flow, {}, confirm_unsafe=False)
+            after = await _capture_macro_state(operations) if capture_before_after else None
+            rolled_back = _macro_rolled_back(run)
+            data = {
+                "transaction_id": _macro_transaction_id(run),
+                "step_results": _macro_step_results(run),
+                "rolled_back": rolled_back,
+                "run": run,
+            }
+            if capture_before_after:
+                data["evidence"] = {
+                    "captured": before is not None or after is not None,
+                    "before": before,
+                    "after": after,
+                }
+            if run.get("status") == "error":
+                return OperationResult.fail(
+                    operation="run_macro_transaction",
+                    error=run.get("error", "macro transaction failed"),
+                    data=data,
+                ).model_dump()
+            return OperationResult.ok(
+                operation="run_macro_transaction",
+                message="Macro transaction completed",
+                data=data,
+            ).model_dump()
+        except (ValidationError, ValueError, PermissionError) as exc:
+            return OperationResult.fail(
+                operation="run_macro_transaction",
+                error=str(exc),
+                data={"transaction_id": None, "step_results": [], "rolled_back": False},
+            ).model_dump()

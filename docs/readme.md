@@ -2,13 +2,13 @@
 
 **Production-grade Model Context Protocol server for GIMP 3.0+**
 
-> 127 typed tools • reliable communication • AI-friendly workflows
+> 137 typed tools • reliable communication • AI-friendly workflows
 
 GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structured, typed MCP tools — creating images, managing layers, drawing shapes, applying filters, adjusting colors, and more.
 
 ## Features
 
-- **127 typed MCP tools** across 15 tool modules — image management, layers, selections, vector paths, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, repeatable flows, gimp.dev discovery, and agent workflow helpers
+- **137 typed MCP tools** across 15 tool modules — image management, layers, selections, vector paths, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, repeatable flows, gimp.dev discovery, and agent workflow helpers
 - **Reliable communication** — length-prefixed socket framing (no more JSON boundary guessing)
 - **Persistent connections** — one TCP connection, kept alive, with automatic reconnection
 - **Fresh GIMP 3.2.4 clean-profile smoke recorded** — `compat.results.yml` currently records 18 passing live checks and 0 failures for the 86-tool registry, while the public compatibility claim remains gated until the full matrix sets `claim_allowed: true`
@@ -23,21 +23,17 @@ GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structu
 
 ```yaml
 gimp_3_2_4:
-  status: partial-live-smoke-pass
+  status: static-contract-pass-live-claim-blocked
   contract: compat.yml
   latest_live_results: compat.results.yml
-  run_id: live-smoke-1782081764
-  run_started_at: '2026-06-21T22:42:41+00:00'
-  run_finished_at: '2026-06-21T22:42:44+00:00'
-  checks_passed: 18
-  checks_failed: 0
-  registered_tools: 86
-  clean_profile: true
-  xvfb: true
+  static_registered_tools: 137
+  live_results_status: partial-failed-smoke
+  clean_profile_required: true
+  xvfb_supported: true
   claim_allowed: false
 ```
 
-This branch keeps the public compatibility claim deliberately conservative. Static contract validation and the fresh clean-profile/Xvfb smoke record pass, including the 86-tool runtime registry check. The release claim is still not enabled because `compat.results.yml` is a partial live-smoke record with `claim_allowed: false`; run the full matrix before publishing verified support. See `docs/gimp-3.2.4-compat.md` for the runbook.
+This branch keeps the public compatibility claim deliberately conservative. Static contract validation, generated documentation, and offline tool registry tests now track 137 public MCP tools. The release claim is still not enabled because `compat.results.yml` remains partial/non-claiming with `claim_allowed: false`; run the full clean-profile GIMP 3.2.4 live matrix before publishing verified support. See `docs/gimp-3.2.4-compat.md` for the runbook.
 
 For practical agent prompts and step-by-step editing patterns, see `docs/agent-workflows.md`.
 
@@ -52,7 +48,7 @@ AI Assistant  ←→  MCP Server (gimp-mcp-pro)  ←→  GIMP Plugin
 
 Two processes: the MCP server runs outside GIMP and communicates with a plugin running inside GIMP's Python process via TCP with length-prefixed framing.
 
-The MCP server registers all 127 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
+The MCP server registers all 137 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
 
 ## Project tooling
 
@@ -86,7 +82,10 @@ gimp-mcp-pro serve            # run the MCP server
 gimp-mcp-pro config --json    # inspect resolved settings
 gimp-mcp-pro doctor --connect # verify socket connectivity to the GIMP plugin
 gimp-mcp-pro repl             # interactive bridge REPL for a live plugin
+gimp-mcp-pro flow list        # list declarative repeatable flows
 ```
+
+Repeatable Flows can be proposed and validated through MCP, run through the CLI, and pinned under **Filters → Repeatable Flows**. See [docs/repeatable-flows.md](repeatable-flows.md).
 
 ## Quick Start
 

@@ -235,6 +235,8 @@ class FakeGimpDevAdapter:
         return GimpDevAdapter().summarize_catalog(catalog)
 
 
+LOCAL_TOOL_NAMES = {"compare_snapshots", "get_operation_log"}
+
 FLOW_TOOL_NAMES = {
     "propose_flow",
     "list_flows",
@@ -245,6 +247,8 @@ FLOW_TOOL_NAMES = {
     "pin_flow",
     "unpin_flow",
     "run_flow",
+    "dry_run_macro",
+    "run_macro_transaction",
 }
 
 
@@ -308,21 +312,36 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "add_guide": {"orientation": "vertical", "position": 42},
     "border_selection": {"radius": 2},
     "adjust_color_balance": {"range": "midtones", "cyan_red": 8.0},
+    "analyze_color_palette": {"max_colors": 5, "ignore_transparent": True, "region": {"x": 1, "y": 2, "width": 8, "height": 6}, "layer_index": 0},
+    "assert_image_state": {"assertions": []},
     "adjust_curves": {"control_points": [0.0, 0.0, 1.0, 1.0]},
     "begin_edit_transaction": {"label": "generated", "capture_before_state": True},
     "bucket_fill": {"x": 10, "y": 12, "color": "red", "threshold": 51.0, "sample_merged": True},
     "create_image": {"width": 64, "height": 48},
+    "compare_snapshots": {
+        "before": {"dimensions": {"width": 1}},
+        "after": {"dimensions": {"width": 2}},
+    },
     "create_layer_group": {"name": "Group A", "position": 0},
+    "create_contact_sheet": {"target": "visible_layers", "max_tile_size": 96, "label_tiles": True},
+    "content_bounds": {"target": "active_layer", "threshold": 0.05, "include_sample_points": True},
+    "create_checkpoint": {"label": "matrix checkpoint", "include_xcf_copy": False},
     "crop_image": {"x": 1, "y": 2, "width": 32, "height": 24},
     "delete_layer": {"layer_index": 0},
     "delete_guide": {"guide_id": 7},
     "deactivate_flow": {"flow_id": "prepare-product-image"},
     "draw_brush_stroke": {"points": [0, 0, 10, 10, 20, 0, 30, 10]},
+    "dry_run_macro": {
+        "steps": [
+            {"tool": "scale_image", "arguments": {"width": 320, "height": 200}},
+        ]
+    },
     "draw_ellipse": {"x": 2, "y": 3, "width": 12, "height": 8},
     "draw_line": {"x1": 0, "y1": 0, "x2": 16, "y2": 16},
     "draw_polygon": {"points": [0, 0, 20, 0, 20, 20]},
     "draw_rectangle": {"x": 1, "y": 1, "width": 12, "height": 8},
     "edit_text_layer": {"text": "updated", "layer_index": 0},
+    "text_layer_introspection": {"layer_name": "Headline", "include_font_details": True},
     "end_edit_transaction": {},
     "execute_python": {"code": ["x = 1", "print(x)"]},
     "export_image": {"file_path": "/tmp/gimp-mcp-test.png"},
@@ -365,6 +384,7 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     },
     "pin_flow": {"flow_id": "prepare-product-image"},
     "propose_flow": {"definition": flow_payload()},
+    "preview_filter": {"filter": "gaussian_blur", "parameters": {"radius_x": 3.0, "radius_y": 4.0}, "layer_index": 0},
     "remove_layer_mask": {"apply": False, "layer_index": 0},
     "remove_path": {"path_name": "Path 1"},
     "rollback_transaction": {},
@@ -372,9 +392,16 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
         "flow_id": "prepare-product-image",
         "parameters": {"width": 640, "image": 1, "sharpen": False},
     },
+    "run_macro_transaction": {
+        "steps": [
+            {"tool": "scale_image", "arguments": {"width": 320, "height": 200}},
+        ],
+        "transaction_label": "generated macro",
+    },
     "rotate_image": {"angle": 90},
     "rotate_layer": {"angle_degrees": 15.0},
     "sample_color": {"x": 2, "y": 3},
+    "sample_pixels": {"points": [{"x": 1, "y": 2}, {"x": 3, "y": 4}], "sample_merged": True},
     "create_path": {"points": [0, 0, 20, 0, 20, 20], "name": "Path 1", "closed": True},
     "scale_image": {"new_width": 128, "new_height": 96},
     "scale_layer": {"new_width": 32, "new_height": 24},
@@ -442,7 +469,11 @@ async def test_all_tools_have_fast_success_path(tool_name: str) -> None:
 
     assert result["success"] is True, f"{tool_name} returned {result!r}"
     assert inspect.iscoroutinefunction(tool)
-    if not tool_name.startswith("gimp_dev_") and tool_name not in FLOW_TOOL_NAMES:
+    if (
+        not tool_name.startswith("gimp_dev_")
+        and tool_name not in FLOW_TOOL_NAMES
+        and tool_name not in LOCAL_TOOL_NAMES
+    ):
         assert bridge.calls, f"{tool_name} did not touch the async bridge"
 
 

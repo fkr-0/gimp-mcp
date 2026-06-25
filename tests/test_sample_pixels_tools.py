@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from gimp_mcp_pro.tools.color_tools import register_color_tools
@@ -29,7 +27,10 @@ async def test_sample_pixels_samples_explicit_points_with_composite_pick_color()
     generated = "\n".join(bridge.calls[-1][1])
     assert "sample_points = [{'x': 1.0, 'y': 2.0}, {'x': 3.0, 'y': 4.0}]" in generated
     assert "image.pick_color(drawables, x, y, True, True, 2.5)" in generated
-    assert "samples.append({'x': x, 'y': y, 'rgba': color_to_dict(color), 'hex': color_to_hex(color)})" in generated
+    assert (
+        "samples.append({'x': x, 'y': y, 'rgba': color_to_dict(color), 'hex': color_to_hex(color)})"
+        in generated
+    )
 
 
 @pytest.mark.asyncio

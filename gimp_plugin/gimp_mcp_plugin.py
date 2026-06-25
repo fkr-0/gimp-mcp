@@ -134,7 +134,6 @@ class MCPProPlugin(Gimp.PlugIn):
             name,
         )
         procedure.set_attribution("GIMP MCP Pro", "GIMP MCP Pro Contributors", "2026")
-        procedure.add_menu_path("<Image>/Filters/Development/GIMP MCP Pro")
         return procedure
 
     def _create_flow_browser_procedure(self, name):
