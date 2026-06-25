@@ -500,6 +500,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
     "create_layer_group": ((), {"name": "Group A", "position": 0}),
     "create_contact_sheet": ((), {"target": "visible_layers", "max_tile_size": 96, "label_tiles": True}),
+    "content_bounds": ((), {"target": "active_layer", "threshold": 0.05}),
     "create_checkpoint": ((), {"label": "matrix checkpoint", "include_xcf_copy": False}),
     "crop_image": ((1, 2, 100, 80), {}),
     "crop_to_selection": ((), {}),
@@ -520,6 +521,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "duplicate_layer": ((), {"layer_index": 0, "new_name": "Copy"}),
     "edit_clear": ((), {}),
     "edit_text_layer": ((), {"text": "updated", "layer_name": "Text", "font_size": 18.0}),
+    "text_layer_introspection": ((), {"layer_name": "Headline"}),
     "end_edit_transaction": ((), {}),
     "end_undo_group": ((), {}),
     "execute_python": ((["print('ok')"],), {"timeout_seconds": 1.0}),
@@ -662,7 +664,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 137
+    assert len(TOOL_SUCCESS_CASES) == 139
 
 
 @pytest.mark.asyncio
