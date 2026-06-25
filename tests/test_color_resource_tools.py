@@ -119,8 +119,8 @@ async def test_color_to_alpha_releases_drawable_filter_refs() -> None:
     result = await mcp.tools["color_to_alpha"]("white")
 
     assert result["success"] is True
-    generated_items = bridge.calls[-1][1]
-    generated = "\n".join(generated_items)
+    generated_items = bridge.calls[-1]
+    generated = generated_source(bridge)
     assert "# __gimp_mcp_color_to_alpha_lifecycle__" in generated
     assert "df = None" in generated
     assert "cfg = None" in generated
