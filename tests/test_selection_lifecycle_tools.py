@@ -95,3 +95,52 @@ async def test_select_by_color_restores_sample_context_after_contiguous_color_se
     assert "Gimp.context_set_sample_threshold(previous_sample_threshold)" in generated
     assert "Gimp.context_set_sample_merged(previous_sample_merged)" in generated
     assert "gc.collect()" in generated
+
+
+@pytest.mark.asyncio
+async def test_select_by_color_defaults_to_global_select_color() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_selection_tools(mcp, bridge)
+
+    result = await mcp.tools["select_by_color"](x=12, y=13, threshold=8.0)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "if False:" in generated
+    assert "image.pick_color([drawable], 12, 13, False, False, 0.0)" in generated
+    assert (
+        "Gimp.Image.select_color(image, Gimp.ChannelOps.REPLACE, drawable, sampled_color)"
+        in generated
+    )
+
+
+@pytest.mark.asyncio
+async def test_select_by_color_can_still_use_contiguous_blob_mode() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_selection_tools(mcp, bridge)
+
+    result = await mcp.tools["select_by_color"](x=12, y=13, threshold=8.0, contiguous=True)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "if True:" in generated
+    assert (
+        "Gimp.Image.select_contiguous_color(image, Gimp.ChannelOps.REPLACE, drawable, 12, 13)"
+        in generated
+    )
+
+
+@pytest.mark.asyncio
+async def test_select_layer_alpha_uses_image_select_item() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_selection_tools(mcp, bridge)
+
+    result = await mcp.tools["select_layer_alpha"](layer_index=2, operation="add")
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "target = layers[2]" in generated
+    assert "image.select_item(Gimp.ChannelOps.ADD, target)" in generated

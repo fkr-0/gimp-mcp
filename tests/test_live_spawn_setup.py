@@ -453,3 +453,15 @@ def test_plugin_blocking_run_dispatches_requests_directly() -> None:
     assert "self.dispatch_direct = blocking" in source
     assert "if self.dispatch_direct:" in source
     assert "return self._dispatch(request)" in source
+
+
+def test_plugin_execute_python_context_exposes_imports_and_pdb_helper() -> None:
+    source = live.PLUGIN_SOURCE.read_text(encoding="utf-8")
+
+    assert "from gi.repository import Gegl" in source
+    assert "from gi.repository import GObject" in source
+    assert 'sys.modules.setdefault("Gimp", Gimp)' in source
+    assert 'sys.modules.setdefault("Gegl", Gegl)' in source
+    assert 'sys.modules.setdefault("GObject", GObject)' in source
+    assert "def run_proc(self, name, args=None, kwargs=None):" in source
+    assert '"pdb": _PDBExecutionHelper(Gimp.get_pdb())' in source

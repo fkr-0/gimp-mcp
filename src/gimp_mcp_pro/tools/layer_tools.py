@@ -660,7 +660,9 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 data={"name": layer_name, "position": position, "active": activate},
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(operation="new_layer_from_visible", error=str(e)).model_dump()
+            return OperationResult.fail(
+                operation="new_layer_from_visible", error=str(e)
+            ).model_dump()
 
     @mcp.tool()
     async def merge_down(
@@ -769,7 +771,9 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 data={"mapping": mapping or None, "replace_existing": replace_existing},
             ).model_dump()
         except GimpCommandError as e:
-            return OperationResult.fail(operation="copy_layer_alpha_to_mask", error=str(e)).model_dump()
+            return OperationResult.fail(
+                operation="copy_layer_alpha_to_mask", error=str(e)
+            ).model_dump()
 
     @mcp.tool()
     async def add_layer_mask(

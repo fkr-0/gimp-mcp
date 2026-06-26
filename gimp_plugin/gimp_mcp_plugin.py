@@ -104,7 +104,7 @@ class _PDBExecutionHelper:
                 property_names = [prop.name for prop in config.list_properties()]
             except Exception:
                 property_names = []
-            for key, value in zip(property_names, args):
+            for key, value in zip(property_names, args, strict=False):
                 config.set_property(key, value)
         return proc.run(config)
 

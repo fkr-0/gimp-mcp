@@ -261,7 +261,7 @@ def test_all_mcp_tool_handlers_return_tool_result_alias() -> None:
 def test_all_registered_tools_are_coroutine_functions() -> None:
     tools = registered_tools()
 
-    assert len(tools) == 171
+    assert len(tools) == 176
     assert all(inspect.iscoroutinefunction(tool) for tool in tools.values())
 
 
@@ -439,7 +439,7 @@ async def test_async_native_bridge_can_drive_registered_tool_surface() -> None:
     assert info_result["success"] is True
     assert bitmap_result["success"] is True
     assert gimp_result["success"] is True
-    assert len(tools) == 171
+    assert len(tools) == 176
     assert ("get_gimp_info", None) in bridge.calls
     assert (
         "get_image_bitmap",

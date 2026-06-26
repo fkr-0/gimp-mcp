@@ -17,7 +17,9 @@ def _op_expr(op: str) -> str:
     return SELECTION_OP_MAP.get(SelectionOp(op), "Gimp.ChannelOps.REPLACE")
 
 
-def _layer_lookup_code(layer_name: str | None, layer_index: int | None, variable: str = "target") -> list[str]:
+def _layer_lookup_code(
+    layer_name: str | None, layer_index: int | None, variable: str = "target"
+) -> list[str]:
     """Generate Python code to look up a layer by name/index or use active layer."""
     if layer_name is not None:
         return [
@@ -360,7 +362,11 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.ok(
                 operation="select_layer_alpha",
                 message=f"Selected alpha for layer '{selected_name or 'active'}'",
-                data={"layer_name": selected_name or None, "layer_index": layer_index, "operation": operation},
+                data={
+                    "layer_name": selected_name or None,
+                    "layer_index": layer_index,
+                    "operation": operation,
+                },
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_layer_alpha", error=str(e)).model_dump()

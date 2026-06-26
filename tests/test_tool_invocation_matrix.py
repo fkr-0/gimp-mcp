@@ -572,6 +572,12 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "list_channels": ((), {}),
     "list_paths": ((), {}),
     "merge_visible_layers": ((), {}),
+    "new_layer_from_visible": ((), {"name": "Visible Snapshot", "position": 0}),
+    "merge_down": ((), {"layer_index": 0, "merge_type": "clip_to_image"}),
+    "copy_layer_alpha_to_mask": (
+        (),
+        {"source_layer_index": 0, "target_layer_index": 1, "replace_existing": True},
+    ),
     "move_layer_to_group": ((), {"layer_index": 0, "group_name": "Group A", "position": 0}),
     "measure_geometry": (
         (),
@@ -634,6 +640,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "save_selection_to_channel": ((), {"name": "Saved alpha"}),
     "search_pdb": (("blur",), {"max_results": 5}),
     "select_by_color": ((4, 5), {"threshold": 20.0}),
+    "select_layer_alpha": ((), {"layer_index": 0, "operation": "replace"}),
     "select_all": ((), {}),
     "select_ellipse": ((1, 2, 30, 40), {"operation": "replace"}),
     "feather_selection": ((2.5,), {}),
@@ -689,6 +696,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
         {"edit_mask": True, "show_mask": False, "apply_mask": True, "layer_index": 0},
     ),
     "set_layer_mode": (("multiply",), {"layer_index": 0}),
+    "set_layer_blend_mode": (("multiply",), {"layer_index": 0}),
     "set_layer_opacity": ((75.0,), {"layer_index": 0}),
     "set_layer_visibility": ((False,), {"layer_index": 0}),
     "stroke_path": ((), {"path_name": "Path 1", "color": "black", "brush_size": 2.0}),
@@ -785,7 +793,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 171
+    assert len(TOOL_SUCCESS_CASES) == 176
 
 
 @pytest.mark.asyncio
@@ -906,3 +914,19 @@ async def test_mask_path_selection_tools_generate_valid_gimp_324_api_calls() -> 
     assert "image.select_item(Gimp.ChannelOps.REPLACE, target)" in generated
     assert "drawable.edit_stroke_item(target)" in generated
     assert "image.remove_path(target)" in generated
+
+
+@pytest.mark.asyncio
+async def test_execute_python_joins_lines_into_single_script_for_blocks() -> None:
+    bridge = ScriptedToolBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["execute_python"](
+        ["for i in range(2):", "    print(i)"],
+        require_debug_enabled=True,
+        allow_dangerous_code=True,
+    )
+
+    assert result["success"] is True
+    assert bridge.execute_calls[-1] == ["for i in range(2):\n    print(i)"]
+    assert result["data"]["script_executed"] is True

@@ -186,3 +186,64 @@ async def test_remaining_core_layer_lifecycle_contracts() -> None:
     assert "if not already_had_alpha:" in generated
     assert "target.add_alpha()" in generated
     assert "gc.collect()" in generated
+
+
+@pytest.mark.asyncio
+async def test_create_layer_activates_new_layer_by_default() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["create_layer"](name="Fresh Paint")
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "if True: image.set_selected_layers([layer])" in generated
+    assert result["data"]["active"] is True
+
+
+@pytest.mark.asyncio
+async def test_new_layer_from_visible_generates_non_destructive_composite_layer() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["new_layer_from_visible"](name="Composite", activate=True)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "Gimp.Layer.new_from_visible(image, image, 'Composite')" in generated
+    assert "image.insert_layer(layer, None, 0)" in generated
+    assert "if True: image.set_selected_layers([layer])" in generated
+
+
+@pytest.mark.asyncio
+async def test_merge_down_uses_gimp_image_merge_down_api() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["merge_down"](layer_index=0)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "merged = image.merge_down(target, Gimp.MergeType.CLIP_TO_IMAGE)" in generated
+    assert "image.set_selected_layers([merged])" in generated
+
+
+@pytest.mark.asyncio
+async def test_copy_layer_alpha_to_mask_uses_select_item_and_selection_mask() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["copy_layer_alpha_to_mask"](
+        source_layer_index=0,
+        target_layer_index=1,
+    )
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "image.select_item(Gimp.ChannelOps.REPLACE, source)" in generated
+    assert "target.create_mask(Gimp.AddMaskType.SELECTION)" in generated
+    assert "target.add_mask(mask)" in generated
