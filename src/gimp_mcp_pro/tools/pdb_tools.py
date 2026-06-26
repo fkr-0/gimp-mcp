@@ -177,31 +177,31 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
                 operation="execute_pdb_call",
                 error=f"unsupported PDB argument(s): {', '.join(unknown)}",
             ).model_dump()
-        try:
-            response = await bridge.async_execute_python(
-                _execute_pdb_call_code(
-                    procedure_name, supplied_arguments, allow_deprecated, dry_run
-                ),
-                timeout=min(float(timeout), LONG_TIMEOUT),
-            )
-            data = _json_payload(response) or {
-                "procedure": procedure_name,
-                "arguments": list(supplied_arguments),
-                "dry_run": dry_run,
-                "executed": not dry_run,
-            }
-            return OperationResult.ok(
-                operation="execute_pdb_call",
-                message="PDB call validated" if dry_run else "PDB call executed",
-                data=data,
-            ).model_dump()
-        except GimpCommandError as e:
-            return OperationResult.fail(operation="execute_pdb_call", error=str(e)).model_dump()
+        payload = {
+            "procedure": procedure_name,
+            "arguments": list(supplied_arguments),
+            "arguments_map": supplied_arguments,
+            "allow_deprecated": allow_deprecated,
+            "dry_run": dry_run,
+            "argument_schema_errors": [],
+            "allowed_procedures": sorted(PDB_CALL_ALLOWLIST),
+            "executed": False,
+            "return_values": None,
+        }
+        return await execute_json_tool(
+            bridge,
+            operation="execute_pdb_call",
+            marker="__gimp_mcp_execute_pdb_call__",
+            payload=payload,
+            message="PDB call validated" if dry_run else "PDB call executed",
+        )
 
     @mcp.tool()
     async def execute_python(
         code: list[str],
         timeout_seconds: float = 30.0,
+        require_debug_enabled: bool = False,
+        allow_dangerous_code: bool = False,
     ) -> ToolResult:
         """Execute raw Python code in GIMP's PyGObject console.
 
@@ -223,10 +223,22 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
                   Example: ["x = 5", "print(x + 1)"]
             timeout_seconds: Timeout for execution (default 30, use longer for
                             heavy operations like filters)
+            require_debug_enabled: Must be true to enable this diagnostic escape hatch.
+            allow_dangerous_code: Must be true to confirm explicit operator intent.
 
         Returns:
             Result with stdout output from each line.
         """
+        if not require_debug_enabled:
+            return OperationResult.fail(
+                operation="execute_python",
+                error="execute_python is disabled by default; set require_debug_enabled=true",
+            ).model_dump()
+        if not allow_dangerous_code:
+            return OperationResult.fail(
+                operation="execute_python",
+                error="execute_python requires allow_dangerous_code=true for explicit operator intent",
+            ).model_dump()
         if not code:
             return OperationResult.fail(
                 operation="execute_python", error="No code provided"

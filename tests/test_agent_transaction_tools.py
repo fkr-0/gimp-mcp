@@ -211,3 +211,27 @@ async def test_transaction_bridge_failures_return_structured_results() -> None:
     assert result["success"] is False
     assert result["operation"] == "begin_edit_transaction"
     assert "transaction failed" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_rollback_transaction_can_recover_all_tracked_open_transactions() -> None:
+    bridge = TransactionBridge()
+    tools = registered_tools(bridge)
+
+    first = await tools["begin_edit_transaction"]("first")
+    second = await tools["begin_edit_transaction"]("second")
+
+    first_id = first["data"]["transaction_id"]
+    second_id = second["data"]["transaction_id"]
+    recovered = await tools["rollback_transaction"](recover_all=True)
+
+    assert recovered["success"] is True
+    assert recovered["data"]["recovered_transaction_ids"] == [second_id, first_id]
+    assert recovered["data"]["tracked"] is True
+    source = "\n".join(bridge.execute_calls[-1])
+    assert "image.undo_group_end()" in source
+    assert "gimp-image-undo" in source
+
+    missing = await tools["end_edit_transaction"](first_id, require_known=True)
+    assert missing["success"] is False
+    assert "unknown" in missing["error"]

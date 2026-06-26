@@ -126,16 +126,43 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 "Gimp.ImageType.INDEXEDA_IMAGE" if has_alpha else "Gimp.ImageType.INDEXED_IMAGE"
             )
 
+        lifecycle_lines = [
+            "# __gimp_mcp_create_image_lifecycle__",
+            "image = None",
+            "layer = None",
+            "created_image = False",
+            "try:",
+            f"    image = Gimp.Image.new({params.width}, {params.height}, {base_type})",
+            "    created_image = True",
+            f"    layer = Gimp.Layer.new(image, 'Background', {params.width}, {params.height}, "
+            f"{img_type}, 100, Gimp.LayerMode.NORMAL)",
+            "    image.insert_layer(layer, None, 0)",
+            f"    Gimp.Drawable.edit_fill(layer, {fill_type})",
+            "    try:",
+            "        Gimp.Display.new(image)",
+            "    except Exception:",
+            "        pass",
+            "    image_id = image.get_id() if hasattr(image, 'get_id') else 0",
+            "except Exception:",
+            "    try:",
+            "        if created_image and image is not None:",
+            "            image.delete()",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    try:",
+            "        del layer",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = [
             "from gi.repository import Gimp, Gegl",
-            f"image = Gimp.Image.new({params.width}, {params.height}, {base_type})",
-            f"layer = Gimp.Layer.new(image, 'Background', {params.width}, {params.height}, "
-            f"{img_type}, 100, Gimp.LayerMode.NORMAL)",
-            "image.insert_layer(layer, None, 0)",
-            f"Gimp.Drawable.edit_fill(layer, {fill_type})",
-            "try:\n    Gimp.Display.new(image)\nexcept Exception:\n    pass",
+            "import gc",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
-            "print(image.get_id() if hasattr(image, 'get_id') else 0)",
+            "print(image_id)",
         ]
 
         try:
@@ -296,12 +323,20 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         resolved_style = style_key if style_key in style_map else "intersections"
         style_expr = style_map[resolved_style]
 
+        lifecycle_lines = [
+            "# __gimp_mcp_image_grid_lifecycle__",
+            "image.undo_group_start()",
+            "try:",
+            f"    image.grid_set_spacing({xspacing}, {yspacing})",
+            f"    image.grid_set_offset({xoffset}, {yoffset})",
+            f"    image.grid_set_style({style_expr})",
+            "finally:",
+            "    image.undo_group_end()",
+        ]
         code = [
             "from gi.repository import Gimp",
             *_get_active_image_code(),
-            f"image.grid_set_spacing({xspacing}, {yspacing})",
-            f"image.grid_set_offset({xoffset}, {yoffset})",
-            f"image.grid_set_style({style_expr})",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:
@@ -690,8 +725,16 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result.
         """
+        lifecycle_lines = [
+            "# __gimp_mcp_image_flatten_lifecycle__",
+            "image.undo_group_start()",
+            "try:",
+            "    image.flatten()",
+            "finally:",
+            "    image.undo_group_end()",
+        ]
         code = _get_active_image_code() + [
-            "image.flatten()",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
             "print('Image flattened')",
         ]

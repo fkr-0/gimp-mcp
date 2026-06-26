@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 
 import pytest
 
@@ -136,3 +137,129 @@ async def test_get_image_bitmap_rejects_unbounded_region_before_bridge_call() ->
     assert result["success"] is False
     assert "region_width" in result["error"]
     assert bridge.bitmap_calls == []
+
+
+class InspectContractBridge(RecordingBitmapBridge):
+    def __init__(self) -> None:
+        super().__init__()
+        self.execute_calls: list[list[str]] = []
+
+    async def async_execute_python(self, code_lines, timeout=None):
+        del timeout
+        self.execute_calls.append(code_lines)
+        source = "\n".join(code_lines)
+        if "__gimp_mcp_contact_sheet__" in source:
+            return {
+                "status": "success",
+                "results": [
+                    json.dumps(
+                        {
+                            "contact_sheet_png": None,
+                            "tile_index": [
+                                {
+                                    "id": 1,
+                                    "name": "Layer 1",
+                                    "visible": True,
+                                    "width": 64,
+                                    "height": 32,
+                                    "label": "1: Layer 1",
+                                }
+                            ],
+                            "tile_count": 1,
+                            "columns": 1,
+                            "rows": 1,
+                            "max_tile_size": 128,
+                            "label_tiles": True,
+                            "include_hidden_layers": False,
+                            "warnings": ["metadata only"],
+                        }
+                    )
+                ],
+            }
+        return {
+            "status": "success",
+            "results": [
+                json.dumps(
+                    {
+                        "region_bounds": {"x": 1, "y": 2, "width": 3, "height": 4},
+                        "sampled_colors": [
+                            {"x": 1, "y": 2, "color": {"r": 0.1, "g": 0.2, "b": 0.3, "a": 1.0}}
+                        ],
+                        "histogram": None,
+                    }
+                )
+            ],
+        }
+
+
+@pytest.mark.asyncio
+async def test_create_contact_sheet_contract_is_bounded_and_schema_stable() -> None:
+    bridge = InspectContractBridge()
+    tool = _registered_tools_with_bridge(bridge)["create_contact_sheet"]
+
+    result = await tool(max_tile_size=128, label_tiles=True)
+
+    assert result["success"] is True
+    data = result["data"]
+    assert set(data) >= {
+        "contact_sheet_png",
+        "tile_index",
+        "tile_count",
+        "columns",
+        "rows",
+        "max_tile_size",
+        "label_tiles",
+        "include_hidden_layers",
+        "warnings",
+    }
+    assert data["contact_sheet_png"] is None
+    assert data["tile_count"] == len(data["tile_index"])
+    assert data["max_tile_size"] <= 1024
+    assert data["columns"] * data["rows"] >= data["tile_count"]
+    tile = data["tile_index"][0]
+    assert set(tile) >= {"id", "name", "visible", "width", "height", "label"}
+    assert "__gimp_mcp_contact_sheet__" in "\n".join(bridge.execute_calls[-1])
+
+
+@pytest.mark.asyncio
+async def test_create_contact_sheet_rejects_unbounded_tile_size_before_bridge_call() -> None:
+    bridge = InspectContractBridge()
+    tool = _registered_tools_with_bridge(bridge)["create_contact_sheet"]
+
+    result = await tool(max_tile_size=4096)
+
+    assert result["success"] is False
+    assert "between 16 and 1024" in result["error"]
+    assert bridge.execute_calls == []
+
+
+@pytest.mark.asyncio
+async def test_observe_region_contract_contains_bounded_bitmap_and_sample_schema() -> None:
+    bridge = InspectContractBridge()
+    tool = _registered_tools_with_bridge(bridge)["observe_region"]
+
+    result = await tool(x=1, y=2, width=3, height=4, max_size=256, include_histogram=True)
+
+    assert result["success"] is True
+    data = result["data"]
+    assert set(data) >= {
+        "crop_png",
+        "format",
+        "encoding",
+        "width",
+        "height",
+        "original_width",
+        "original_height",
+        "region_bounds",
+        "sampled_colors",
+        "histogram",
+    }
+    assert data["format"] == "png"
+    assert data["encoding"] == "base64"
+    assert data["width"] <= 256
+    assert data["height"] <= 256
+    assert data["region_bounds"] == {"x": 1, "y": 2, "width": 3, "height": 4}
+    sample = data["sampled_colors"][0]
+    assert set(sample) >= {"x", "y", "color"}
+    assert bridge.bitmap_calls[-1]["max_width"] == 256
+    assert bridge.bitmap_calls[-1]["max_height"] == 256

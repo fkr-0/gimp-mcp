@@ -23,6 +23,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TOOLS_DIR = PROJECT_ROOT / "src" / "gimp_mcp_pro" / "tools"
 DOCS_DIR = PROJECT_ROOT / "docs"
 README_PATH = PROJECT_ROOT / "README.md"
+LOGICAL_TOOL_MODULES = {
+    "inspect_context_backend": "inspect_tools",
+    "inspect_geometry_backend": "inspect_tools",
+    "inspect_snapshot_backend": "inspect_tools",
+    "inspect_bitmap_backend": "inspect_tools",
+}
 
 MODULE_TITLES: dict[str, str] = {
     "image_tools": "Image Management",
@@ -151,7 +157,7 @@ def extract_tool_docs(tools_dir: Path = TOOLS_DIR) -> list[ToolDoc]:
         if path.name in {"__init__.py", "types.py"}:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        module = path.stem
+        module = LOGICAL_TOOL_MODULES.get(path.stem, path.stem)
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 continue

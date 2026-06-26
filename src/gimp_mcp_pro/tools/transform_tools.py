@@ -64,7 +64,10 @@ def _transform_context_lifecycle_code(
         "# __gimp_mcp_transform_context_lifecycle__",
         "previous_interpolation = Gimp.context_get_interpolation()",
         "previous_transform_resize = Gimp.context_get_transform_resize()",
+        "undo_started = False",
         "try:",
+        "    image.undo_group_start()",
+        "    undo_started = True",
         f"    Gimp.context_set_interpolation({interp_expr})",
         f"    Gimp.context_set_transform_resize({resize_expr})",
         f"    {transform_line}",
@@ -75,6 +78,52 @@ def _transform_context_lifecycle_code(
         "        pass",
         "    try:",
         "        Gimp.context_set_transform_resize(previous_transform_resize)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        if undo_started:",
+        "            image.undo_group_end()",
+        "    except Exception:",
+        "        pass",
+        "    gc.collect()",
+    ]
+    return ["import gc", "\n".join(lines), "Gimp.displays_flush()"]
+
+
+def _transform_geometry_lifecycle_code(
+    marker: str,
+    mutation_lines: list[str],
+    interpolation_expr: str | None = None,
+) -> list[str]:
+    """Return generated code that balances an undo group and restores interpolation."""
+    lines = [
+        f"# {marker}",
+        "undo_started = False",
+    ]
+    if interpolation_expr is not None:
+        lines.append("previous_interpolation = Gimp.context_get_interpolation()")
+    lines += [
+        "try:",
+        "    image.undo_group_start()",
+        "    undo_started = True",
+    ]
+    if interpolation_expr is not None:
+        lines.append(f"    Gimp.context_set_interpolation({interpolation_expr})")
+    for mutation_line in mutation_lines:
+        for physical_line in mutation_line.splitlines():
+            lines.append(f"    {physical_line}")
+    lines.append("finally:")
+    if interpolation_expr is not None:
+        lines += [
+            "    try:",
+            "        Gimp.context_set_interpolation(previous_interpolation)",
+            "    except Exception:",
+            "        pass",
+        ]
+    lines += [
+        "    try:",
+        "        if undo_started:",
+        "            image.undo_group_end()",
         "    except Exception:",
         "        pass",
         "    gc.collect()",
@@ -354,11 +403,11 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         }
         interp_expr = interp_map.get(interpolation.lower(), "Gimp.InterpolationType.CUBIC")
 
-        code = _img_preamble() + [
-            f"Gimp.context_set_interpolation({interp_expr})",
-            f"image.scale({new_width}, {new_height})",
-            "Gimp.displays_flush()",
-        ]
+        code = _img_preamble() + _transform_geometry_lifecycle_code(
+            "__gimp_mcp_transform_image_lifecycle__",
+            [f"image.scale({new_width}, {new_height})"],
+            interp_expr,
+        )
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
             return OperationResult.ok(
@@ -405,11 +454,11 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         code = (
             _img_preamble()
             + _layer_target(layer_name, layer_index)
-            + [
-                f"Gimp.context_set_interpolation({interp_expr})",
-                f"target.scale({new_width}, {new_height}, True)",
-                "Gimp.displays_flush()",
-            ]
+            + _transform_geometry_lifecycle_code(
+                "__gimp_mcp_transform_layer_lifecycle__",
+                [f"target.scale({new_width}, {new_height}, True)"],
+                interp_expr,
+            )
         )
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
@@ -442,10 +491,10 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
                 error=f"angle must be 90, 180, or 270 (got {angle})",
             ).model_dump()
 
-        code = _img_preamble() + [
-            f"image.rotate({rotation_map[angle]})",
-            "Gimp.displays_flush()",
-        ]
+        code = _img_preamble() + _transform_geometry_lifecycle_code(
+            "__gimp_mcp_transform_image_lifecycle__",
+            [f"image.rotate({rotation_map[angle]})"],
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -478,18 +527,21 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
 
         angle_rad = math.radians(angle_degrees)
 
+        mutation_lines = [
+            "import math",
+            f"angle_rad = {angle_rad}",
+            "off = target.get_offsets()",
+            "cx = off.offset_x + target.get_width() / 2.0",
+            "cy = off.offset_y + target.get_height() / 2.0",
+            f"Gimp.Item.transform_rotate(target, angle_rad, {'True' if auto_resize else 'False'}, cx, cy)",
+        ]
         code = (
             _img_preamble()
             + _layer_target(layer_name, layer_index)
-            + [
-                "import math",
-                f"angle_rad = {angle_rad}",
-                "off = target.get_offsets()",
-                "cx = off.offset_x + target.get_width() / 2.0",
-                "cy = off.offset_y + target.get_height() / 2.0",
-                f"Gimp.Item.transform_rotate(target, angle_rad, {'True' if auto_resize else 'False'}, cx, cy)",
-                "Gimp.displays_flush()",
-            ]
+            + _transform_geometry_lifecycle_code(
+                "__gimp_mcp_transform_layer_lifecycle__",
+                mutation_lines,
+            )
         )
         try:
             await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
@@ -635,10 +687,10 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             if direction == "horizontal"
             else "Gimp.OrientationType.VERTICAL"
         )
-        code = _img_preamble() + [
-            f"image.flip({flip_type})",
-            "Gimp.displays_flush()",
-        ]
+        code = _img_preamble() + _transform_geometry_lifecycle_code(
+            "__gimp_mcp_transform_image_lifecycle__",
+            [f"image.flip({flip_type})"],
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -679,10 +731,10 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         code = (
             _img_preamble()
             + _layer_target(layer_name, layer_index)
-            + [
-                f"Gimp.Item.transform_flip_simple(target, {flip_type}, True, 0)",
-                "Gimp.displays_flush()",
-            ]
+            + _transform_geometry_lifecycle_code(
+                "__gimp_mcp_transform_layer_lifecycle__",
+                [f"Gimp.Item.transform_flip_simple(target, {flip_type}, True, 0)"],
+            )
         )
         try:
             await bridge.async_execute_python(code)
@@ -705,12 +757,14 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = _img_preamble() + [
-            "bounds = Gimp.Selection.bounds(image)",
-            "if not bounds.non_empty: raise RuntimeError('No selection — select an area first')",
-            "image.crop(bounds.x2 - bounds.x1, bounds.y2 - bounds.y1, bounds.x1, bounds.y1)",
-            "Gimp.displays_flush()",
-        ]
+        code = _img_preamble() + _transform_geometry_lifecycle_code(
+            "__gimp_mcp_transform_image_lifecycle__",
+            [
+                "bounds = Gimp.Selection.bounds(image)",
+                "if not bounds.non_empty: raise RuntimeError('No selection — select an area first')",
+                "image.crop(bounds.x2 - bounds.x1, bounds.y2 - bounds.y1, bounds.x1, bounds.y1)",
+            ],
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -821,10 +875,10 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
                 operation="crop_image", error="width and height must be >= 1"
             ).model_dump()
 
-        code = _img_preamble() + [
-            f"image.crop({width}, {height}, {x}, {y})",
-            "Gimp.displays_flush()",
-        ]
+        code = _img_preamble() + _transform_geometry_lifecycle_code(
+            "__gimp_mcp_transform_image_lifecycle__",
+            [f"image.crop({width}, {height}, {x}, {y})"],
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -912,12 +966,14 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = _img_preamble() + [
-            f"image.resize({new_width}, {new_height}, {offset_x}, {offset_y})",
-            "# Resize all layers to canvas",
-            "for layer in image.get_layers():\n    layer.resize_to_image_size()",
-            "Gimp.displays_flush()",
-        ]
+        code = _img_preamble() + _transform_geometry_lifecycle_code(
+            "__gimp_mcp_transform_image_lifecycle__",
+            [
+                f"image.resize({new_width}, {new_height}, {offset_x}, {offset_y})",
+                "# Resize all layers to canvas",
+                "for layer in image.get_layers():\n    layer.resize_to_image_size()",
+            ],
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -954,11 +1010,13 @@ def register_transform_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         code = (
             _img_preamble()
             + _layer_target(layer_name, layer_index)
-            + [
-                f"target.set_offsets(target.get_offsets().offset_x + {offset_x}, "
-                f"target.get_offsets().offset_y + {offset_y})",
-                "Gimp.displays_flush()",
-            ]
+            + _transform_geometry_lifecycle_code(
+                "__gimp_mcp_transform_layer_lifecycle__",
+                [
+                    f"target.set_offsets(target.get_offsets().offset_x + {offset_x}, "
+                    f"target.get_offsets().offset_y + {offset_y})"
+                ],
+            )
         )
         try:
             await bridge.async_execute_python(code)

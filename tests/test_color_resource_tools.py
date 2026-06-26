@@ -129,3 +129,24 @@ async def test_color_to_alpha_releases_drawable_filter_refs() -> None:
     assert "del df" in generated
     assert "gc.collect()" in generated
     assert "try:" not in generated_items
+
+
+@pytest.mark.asyncio
+async def test_context_color_tools_have_direct_generated_code_coverage() -> None:
+    bridge = ScriptedBridge()
+    tools = registered_tools(bridge)
+
+    colors = await tools["get_colors"]()
+    assert colors["success"] is True
+    assert colors["operation"] == "get_colors"
+    generated = generated_source(bridge)
+    assert "fg = Gimp.context_get_foreground()" in generated
+    assert "bg = Gimp.context_get_background()" in generated
+    assert "result['foreground'] = color_to_dict(fg)" in generated
+    assert "result['background'] = color_to_dict(bg)" in generated
+
+    swapped = await tools["swap_colors"]()
+    assert swapped["success"] is True
+    assert swapped["operation"] == "swap_colors"
+    generated = generated_source(bridge)
+    assert "Gimp.context_swap_colors()" in generated

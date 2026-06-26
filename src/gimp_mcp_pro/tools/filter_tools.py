@@ -262,8 +262,12 @@ def _commit_filter_preview_code(
     ]
     if action == "discard":
         code += [
-            "image.remove_layer(preview_layer)",
-            "result = {'status': 'discarded', 'preview_id': preview_id, 'temporary_layer_removed': True}",
+            "image.undo_group_start()",
+            "try:",
+            "    image.remove_layer(preview_layer)",
+            "    result = {'status': 'discarded', 'preview_id': preview_id, 'temporary_layer_removed': True, 'transaction_wrapped': True}",
+            "finally:",
+            "    image.undo_group_end()",
         ]
     else:
         code += [
@@ -879,21 +883,19 @@ def register_filter_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> Non
                 operation="apply_gegl_operation",
                 error=f"unsupported GEGL property/properties: {', '.join(unknown)}",
             ).model_dump()
-        try:
-            await bridge.async_execute_python(
-                _apply_gegl_operation_code(target, operation_name, property_values, dry_run),
-                timeout=LONG_TIMEOUT,
-            )
-            return OperationResult.ok(
-                operation="apply_gegl_operation",
-                message="GEGL operation validated" if dry_run else "GEGL operation applied",
-                data={
-                    "target": target,
-                    "operation": operation_name,
-                    "properties_applied": property_values,
-                    "dry_run": dry_run,
-                    "changed_bounds": None if dry_run else {"source": "drawable"},
-                },
-            ).model_dump()
-        except GimpCommandError as e:
-            return OperationResult.fail(operation="apply_gegl_operation", error=str(e)).model_dump()
+        payload = {
+            "target": target,
+            "operation_name": operation_name,
+            "properties_applied": property_values,
+            "allowed_properties": sorted(allowed_properties),
+            "allowed_operations": sorted(GEGL_OPERATION_SCHEMAS),
+            "dry_run": dry_run,
+            "changed_bounds": None if dry_run else {"source": "drawable"},
+        }
+        return await execute_json_tool(
+            bridge,
+            operation="apply_gegl_operation",
+            marker="__gimp_mcp_apply_gegl_operation__",
+            payload=payload,
+            message="GEGL operation validated" if dry_run else "GEGL operation applied",
+        )

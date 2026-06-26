@@ -66,6 +66,68 @@ def _get_drawable_code() -> list[str]:
     ]
 
 
+def _shape_selection_lifecycle_code(
+    selection_call: str,
+    mutation_call: str,
+    color_expr: str,
+    line_width: float | None,
+) -> list[str]:
+    """Generate shape code that restores selection and paint context."""
+    line_width_expr = repr(line_width) if line_width is not None else "None"
+    lifecycle_lines = [
+        "# __gimp_mcp_shape_selection_lifecycle__",
+        "previous_selection = None",
+        "previous_foreground = Gimp.context_get_foreground()",
+        "previous_line_width = Gimp.context_get_line_width()",
+        "shape_color = None",
+        "try:",
+        "    previous_selection = Gimp.Selection.save(image)",
+        f"    shape_color = {color_expr}",
+        "    if shape_color is not None:",
+        "        Gimp.context_set_foreground(shape_color)",
+        f"    {selection_call}",
+        f"    if {line_width_expr} is not None:",
+        f"        Gimp.context_set_line_width({line_width_expr})",
+        f"    {mutation_call}",
+        "finally:",
+        "    try:",
+        "        if previous_selection is not None:",
+        "            image.select_item(Gimp.ChannelOps.REPLACE, previous_selection)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        if previous_selection is not None:",
+        "            image.remove_channel(previous_selection)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        Gimp.context_set_foreground(previous_foreground)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        Gimp.context_set_line_width(previous_line_width)",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del shape_color",
+        "    except Exception:",
+        "        pass",
+        "    try:",
+        "        del previous_selection",
+        "    except Exception:",
+        "        pass",
+        "    gc.collect()",
+    ]
+    return (
+        ["from gi.repository import Gimp, Gegl", "import gc"]
+        + _get_drawable_code()
+        + [
+            "\n".join(lifecycle_lines),
+            "Gimp.displays_flush()",
+        ]
+    )
+
+
 def _create_text_box_code(
     text: str,
     rectangle: dict[str, int],
@@ -227,19 +289,35 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
         fill_expr = FILL_TYPE_MAP.get(FillType(fill_type), "Gimp.FillType.FOREGROUND")
-        code = ["from gi.repository import Gimp, Gegl"]
-
-        if color:
-            c = Color(value=color)
-            code += [
-                f"_color = {c.to_gegl_code()}",
-                "Gimp.context_set_foreground(_color)",
-            ]
-
-        code += _get_drawable_code() + [
-            f"Gimp.Drawable.edit_fill(drawable, {fill_expr})",
-            "Gimp.displays_flush()",
+        fill_color_expr = Color(value=color).to_gegl_code() if color else "None"
+        lifecycle_lines = [
+            "# __gimp_mcp_drawing_fill_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "fill_color = None",
+            "try:",
+            f"    fill_color = {fill_color_expr}",
+            "    if fill_color is not None:",
+            "        Gimp.context_set_foreground(fill_color)",
+            f"    Gimp.Drawable.edit_fill(drawable, {fill_expr})",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del fill_color",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
         ]
+        code = (
+            ["from gi.repository import Gimp, Gegl", "import gc"]
+            + _get_drawable_code()
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -343,22 +421,47 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 error="points must have at least 4 values and an even count",
             ).model_dump()
 
-        code = ["from gi.repository import Gimp, Gegl"]
-        if color:
-            c = Color(value=color)
-            code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
-
-        code += _get_drawable_code() + [
-            f"Gimp.context_set_brush_size({brush_size})",
-        ]
-
+        stroke_color_expr = Color(value=color).to_gegl_code() if color else "None"
         points_str = str(points)
-        if tool == "paintbrush":
-            code.append(f"Gimp.paintbrush_default(drawable, {points_str})")
-        else:
-            code.append(f"Gimp.pencil(drawable, {points_str})")
-
-        code.append("Gimp.displays_flush()")
+        stroke_call = (
+            f"Gimp.paintbrush_default(drawable, {points_str})"
+            if tool == "paintbrush"
+            else f"Gimp.pencil(drawable, {points_str})"
+        )
+        lifecycle_lines = [
+            "# __gimp_mcp_brush_stroke_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_brush_size = Gimp.context_get_brush_size()",
+            "stroke_color = None",
+            "try:",
+            f"    stroke_color = {stroke_color_expr}",
+            "    if stroke_color is not None:",
+            "        Gimp.context_set_foreground(stroke_color)",
+            f"    Gimp.context_set_brush_size({brush_size})",
+            f"    {stroke_call}",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_brush_size(previous_brush_size)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del stroke_color",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
+        code = (
+            ["from gi.repository import Gimp, Gegl", "import gc"]
+            + _get_drawable_code()
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
 
         try:
             await bridge.async_execute_python(code)
@@ -395,29 +498,18 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = ["from gi.repository import Gimp, Gegl"]
-        if color:
-            c = Color(value=color)
-            code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
-
-        code += _get_drawable_code() + [
+        color_expr = Color(value=color).to_gegl_code() if color else "None"
+        mutation_call = (
+            "Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)"
+            if filled
+            else "Gimp.Drawable.edit_stroke_selection(drawable)"
+        )
+        code = _shape_selection_lifecycle_code(
             f"Gimp.Image.select_rectangle(image, Gimp.ChannelOps.REPLACE, {x}, {y}, {width}, {height})",
-        ]
-
-        if filled:
-            code += [
-                "Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)",
-            ]
-        else:
-            code += [
-                f"Gimp.context_set_line_width({line_width})",
-                "Gimp.Drawable.edit_stroke_selection(drawable)",
-            ]
-
-        code += [
-            "Gimp.Selection.none(image)",
-            "Gimp.displays_flush()",
-        ]
+            mutation_call,
+            color_expr,
+            None if filled else line_width,
+        )
         try:
             await bridge.async_execute_python(code)
             mode = "filled" if filled else "outline"
@@ -452,27 +544,18 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = ["from gi.repository import Gimp, Gegl"]
-        if color:
-            c = Color(value=color)
-            code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
-
-        code += _get_drawable_code() + [
+        color_expr = Color(value=color).to_gegl_code() if color else "None"
+        mutation_call = (
+            "Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)"
+            if filled
+            else "Gimp.Drawable.edit_stroke_selection(drawable)"
+        )
+        code = _shape_selection_lifecycle_code(
             f"Gimp.Image.select_ellipse(image, Gimp.ChannelOps.REPLACE, {x}, {y}, {width}, {height})",
-        ]
-
-        if filled:
-            code += ["Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)"]
-        else:
-            code += [
-                f"Gimp.context_set_line_width({line_width})",
-                "Gimp.Drawable.edit_stroke_selection(drawable)",
-            ]
-
-        code += [
-            "Gimp.Selection.none(image)",
-            "Gimp.displays_flush()",
-        ]
+            mutation_call,
+            color_expr,
+            None if filled else line_width,
+        )
         try:
             await bridge.async_execute_python(code)
             mode = "filled" if filled else "outline"
@@ -512,27 +595,18 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 error="Need at least 3 points (6 values) with even count",
             ).model_dump()
 
-        code = ["from gi.repository import Gimp, Gegl"]
-        if color:
-            c = Color(value=color)
-            code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
-
-        code += _get_drawable_code() + [
+        color_expr = Color(value=color).to_gegl_code() if color else "None"
+        mutation_call = (
+            "Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)"
+            if filled
+            else "Gimp.Drawable.edit_stroke_selection(drawable)"
+        )
+        code = _shape_selection_lifecycle_code(
             f"Gimp.Image.select_polygon(image, Gimp.ChannelOps.REPLACE, {points})",
-        ]
-
-        if filled:
-            code += ["Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)"]
-        else:
-            code += [
-                f"Gimp.context_set_line_width({line_width})",
-                "Gimp.Drawable.edit_stroke_selection(drawable)",
-            ]
-
-        code += [
-            "Gimp.Selection.none(image)",
-            "Gimp.displays_flush()",
-        ]
+            mutation_call,
+            color_expr,
+            None if filled else line_width,
+        )
         try:
             await bridge.async_execute_python(code)
             n_verts = len(points) // 2
@@ -618,14 +692,10 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = ["from gi.repository import Gimp, Gegl"]
-        if color:
-            c = Color(value=color)
-            code += [f"Gimp.context_set_foreground({c.to_gegl_code()})"]
-
         # Use Python literals for all user-controlled strings inside generated code.
         text_expr = py_literal(text)
         layer_name_expr = py_literal(layer_name)
+        text_color_expr = Color(value=color).to_gegl_code() if color else "None"
 
         # Map common font names to GIMP 3.0 font names
         font_map = {
@@ -636,18 +706,54 @@ def register_drawing_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             "monospace": "Monospace",
         }
         resolved_font = font_map.get(font_name.lower(), font_name)
-
-        code += [
+        lifecycle_lines = [
+            "# __gimp_mcp_add_text_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "text_layer = None",
+            "text_color = None",
+            "inserted_layer = False",
+            "try:",
+            f"    text_color = {text_color_expr}",
+            "    if text_color is not None:",
+            "        Gimp.context_set_foreground(text_color)",
+            f"    font = Gimp.Font.get_by_name({py_literal(resolved_font)})",
+            "    if font is None: font = Gimp.context_get_font()",
+            "    unit = Gimp.Unit.pixel()",
+            f"    text_layer = Gimp.TextLayer.new(image, {text_expr}, font, {font_size}, unit)",
+            "    if text_layer is None: raise RuntimeError('Could not create text layer')",
+            "    image.insert_layer(text_layer, None, 0)",
+            "    inserted_layer = True",
+            f"    text_layer.set_offsets({int(x)}, {int(y)})",
+            f"    text_layer.set_name({layer_name_expr})",
+            "except Exception:",
+            "    try:",
+            "        if inserted_layer and text_layer is not None:",
+            "            image.remove_layer(text_layer)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del text_color",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del text_layer",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
+        code = [
+            "from gi.repository import Gimp, Gegl",
+            "import gc",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            f"font = Gimp.Font.get_by_name({py_literal(resolved_font)})",
-            "if font is None: font = Gimp.context_get_font()",
-            "unit = Gimp.Unit.pixel()",
-            f"text_layer = Gimp.TextLayer.new(image, {text_expr}, font, {font_size}, unit)",
-            "image.insert_layer(text_layer, None, 0)",
-            f"text_layer.set_offsets({int(x)}, {int(y)})",
-            f"text_layer.set_name({layer_name_expr})",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:

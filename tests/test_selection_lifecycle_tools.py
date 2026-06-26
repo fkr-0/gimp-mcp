@@ -63,3 +63,35 @@ async def test_bucket_fill_restores_foreground_sample_threshold_and_merged_conte
     assert "Gimp.context_set_sample_merged(previous_sample_merged)" in generated
     assert "del fill_color" in generated
     assert "gc.collect()" in generated
+
+
+@pytest.mark.asyncio
+async def test_select_by_color_restores_sample_context_after_contiguous_color_selection() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_selection_tools(mcp, bridge)
+
+    result = await mcp.tools["select_by_color"](
+        x=30,
+        y=30,
+        threshold=40.0,
+        operation="add",
+        sample_merged=True,
+    )
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "# __gimp_mcp_selection_sample_lifecycle__" in generated
+    assert "previous_sample_threshold = Gimp.context_get_sample_threshold()" in generated
+    assert "previous_sample_merged = Gimp.context_get_sample_merged()" in generated
+    assert "try:" in generated
+    assert "finally:" in generated
+    assert "Gimp.context_set_sample_threshold(0.1568627450980392)" in generated
+    assert "Gimp.context_set_sample_merged(True)" in generated
+    assert (
+        "Gimp.Image.select_contiguous_color(image, Gimp.ChannelOps.ADD, drawable, 30, 30)"
+        in generated
+    )
+    assert "Gimp.context_set_sample_threshold(previous_sample_threshold)" in generated
+    assert "Gimp.context_set_sample_merged(previous_sample_merged)" in generated
+    assert "gc.collect()" in generated

@@ -240,17 +240,34 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
+        lifecycle_lines = [
+            "# __gimp_mcp_selection_sample_lifecycle__",
+            "previous_sample_threshold = Gimp.context_get_sample_threshold()",
+            "previous_sample_merged = Gimp.context_get_sample_merged()",
+            "try:",
+            f"    Gimp.context_set_sample_threshold({threshold / 255.0})",
+            f"    Gimp.context_set_sample_merged({sample_merged})",
+            f"    Gimp.Image.select_contiguous_color(image, {_op_expr(operation)}, drawable, {x}, {y})",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_sample_threshold(previous_sample_threshold)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_sample_merged(previous_sample_merged)",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = [
-            "import json",
+            "import gc, json",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
             "sel = image.get_selected_layers()",
             "if not sel: raise RuntimeError('No active layer')",
             "drawable = sel[0]",
-            f"Gimp.context_set_sample_threshold({threshold / 255.0})",
-            f"Gimp.context_set_sample_merged({sample_merged})",
-            f"Gimp.Image.select_contiguous_color(image, {_op_expr(operation)}, drawable, {x}, {y})",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
             "bounds = Gimp.Selection.bounds(image)",
             "if len(bounds) == 6:\n"

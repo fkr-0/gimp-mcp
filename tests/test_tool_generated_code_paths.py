@@ -359,7 +359,11 @@ SUCCESS_TOOL_ARGS: dict[str, dict[str, Any]] = {
     "edit_text_layer": {"text": "updated", "layer_index": 0},
     "text_layer_introspection": {"layer_name": "Headline", "include_font_details": True},
     "end_edit_transaction": {},
-    "execute_python": {"code": ["x = 1", "print(x)"]},
+    "execute_python": {
+        "code": ["x = 1", "print(x)"],
+        "require_debug_enabled": True,
+        "allow_dangerous_code": True,
+    },
     "explain_current_context": {"detail_level": "high", "include_recommendations": True},
     "export_image": {"file_path": "/tmp/gimp-mcp-test.png"},
     "gimp_dev_status": {},

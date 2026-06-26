@@ -140,6 +140,7 @@ def register_agent_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 "status": "active",
                 "image_id": data.get("image_id"),
                 "before_state": before_state,
+                "started_order": len(transactions),
             }
             return OperationResult.ok(
                 operation="begin_edit_transaction",
@@ -168,6 +169,7 @@ def register_agent_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Args:
             transaction_id: Optional ID returned by begin_edit_transaction.
             require_known: Fail before touching GIMP when the transaction ID is not tracked.
+            recover_all: Roll back all active tracked transactions in reverse start order.
 
         Returns:
             Operation result with tracking and undo-group closure metadata.
@@ -193,6 +195,7 @@ def register_agent_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             )
             if txn is not None:
                 txn["status"] = "committed"
+                transactions.pop(transaction_id or "", None)
             return OperationResult.ok(
                 operation="end_edit_transaction",
                 message="Edit transaction ended",
@@ -210,16 +213,32 @@ def register_agent_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
     async def rollback_transaction(
         transaction_id: str | None = None,
         require_known: bool = False,
+        recover_all: bool = False,
     ) -> ToolResult:
         """Rollback a transaction using GIMP undo where available.
 
         Args:
             transaction_id: Optional ID returned by begin_edit_transaction.
             require_known: Fail before touching GIMP when the transaction ID is not tracked.
+            recover_all: Roll back and clear all tracked open transactions in LIFO order.
 
         Returns:
             Operation result with tracking, undo-group, and rollback metadata.
         """
+        recovered_transaction_ids: list[str] = []
+        if recover_all:
+            recovered_transaction_ids = [
+                item[0]
+                for item in sorted(
+                    transactions.items(),
+                    key=lambda pair: int(pair[1].get("started_order", 0)),
+                    reverse=True,
+                )
+                if item[1].get("status") == "active"
+            ]
+            transaction_id = (
+                recovered_transaction_ids[0] if recovered_transaction_ids else transaction_id
+            )
         txn = transactions.get(transaction_id or "")
         if require_known and txn is None:
             return OperationResult.fail(
@@ -253,14 +272,24 @@ def register_agent_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 await bridge.async_execute_python(code),
                 operation="rollback_transaction",
             )
-            if txn is not None:
+            if recover_all:
+                for recovered_id in recovered_transaction_ids:
+                    if recovered_id in transactions:
+                        transactions[recovered_id]["status"] = "rolled_back"
+                        transactions.pop(recovered_id, None)
+            elif txn is not None:
                 txn["status"] = "rolled_back"
+                transactions.pop(transaction_id or "", None)
             return OperationResult.ok(
                 operation="rollback_transaction",
-                message="Edit transaction rolled back",
+                message="Edit transaction rolled back"
+                if not recover_all
+                else "Open edit transactions recovered",
                 data={
                     "transaction_id": transaction_id,
-                    "tracked": txn is not None,
+                    "tracked": bool(recovered_transaction_ids) if recover_all else txn is not None,
+                    "recovered_transaction_ids": recovered_transaction_ids,
+                    "open_transaction_count": len(transactions),
                     "feature_id": "FEAT-012",
                     **data,
                 },

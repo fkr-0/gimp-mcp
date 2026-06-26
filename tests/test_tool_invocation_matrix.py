@@ -536,7 +536,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "text_layer_introspection": ((), {"layer_name": "Headline"}),
     "end_edit_transaction": ((), {}),
     "end_undo_group": ((), {}),
-    "execute_python": ((["print('ok')"],), {"timeout_seconds": 1.0}),
+    "execute_python": (
+        (["print('ok')"],),
+        {"timeout_seconds": 1.0, "require_debug_enabled": True, "allow_dangerous_code": True},
+    ),
     "explain_current_context": ((), {"detail_level": "high", "include_recommendations": True}),
     "export_image": (("/tmp/gimp-mcp-test.png",), {"format": "png", "quality": 90}),
     "fill_selection": ((), {"fill_type": "foreground", "color": "red"}),
@@ -829,7 +832,9 @@ async def test_execute_python_failure_preserves_gimp_traceback() -> None:
     """Raw Python escape-hatch failures retain GIMP traceback metadata."""
     tools = registered_tools(FailingExecuteBridge())
 
-    result = await tools["execute_python"](["raise RuntimeError('boom')"])
+    result = await tools["execute_python"](
+        ["raise RuntimeError('boom')"], require_debug_enabled=True, allow_dangerous_code=True
+    )
 
     assert result["success"] is False
     assert result["operation"] == "execute_python"

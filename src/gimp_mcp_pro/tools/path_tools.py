@@ -94,18 +94,41 @@ def register_path_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
                 error="Need at least 3 points (6 values) with even count",
             ).model_dump()
 
+        lifecycle_lines = [
+            "# __gimp_mcp_path_create_lifecycle__",
+            "path = None",
+            "inserted_path = False",
+            "try:",
+            f"    path = Gimp.Path.new(image, {py_literal(name)})",
+            f"    stroke_id = path.stroke_new_from_points(Gimp.PathStrokeType.BEZIER, {points}, {closed})",
+            "    if stroke_id < 0: raise RuntimeError('Could not create path stroke')",
+            f"    if not image.insert_path(path, None, {position}): raise RuntimeError('Could not insert path')",
+            "    inserted_path = True",
+            "    image.set_selected_paths([path])",
+            "    created_name = path.get_name()",
+            "except Exception:",
+            "    try:",
+            "        if inserted_path and path is not None:",
+            "            image.remove_path(path)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    try:",
+            "        del path",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = [
             "from gi.repository import Gimp",
+            "import gc",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            f"path = Gimp.Path.new(image, {py_literal(name)})",
-            f"stroke_id = path.stroke_new_from_points(Gimp.PathStrokeType.BEZIER, {points}, {closed})",
-            "if stroke_id < 0: raise RuntimeError('Could not create path stroke')",
-            f"if not image.insert_path(path, None, {position}): raise RuntimeError('Could not insert path')",
-            "image.set_selected_paths([path])",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
-            "print(path.get_name())",
+            "print(created_name)",
         ]
         try:
             result = await bridge.async_execute_python(code)
@@ -229,16 +252,40 @@ def register_path_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
             except ValueError as exc:
                 return OperationResult.fail(operation="stroke_path", error=str(exc)).model_dump()
 
-        code = ["from gi.repository import Gimp, Gegl"] + _path_lookup_code(path_name, path_index)
-        code += _drawable_lookup_code(layer_name, layer_index)
-        if color_expr is not None:
-            code.append(f"Gimp.context_set_foreground({color_expr})")
-        if brush_size is not None:
-            code.append(f"Gimp.context_set_line_width({brush_size})")
-        code += [
-            "drawable.edit_stroke_item(target)",
-            "Gimp.displays_flush()",
+        stroke_color_expr = color_expr or "None"
+        line_width_expr = repr(brush_size) if brush_size is not None else "None"
+        lifecycle_lines = [
+            "# __gimp_mcp_path_stroke_context_lifecycle__",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_line_width = Gimp.context_get_line_width()",
+            "stroke_color = None",
+            "try:",
+            f"    stroke_color = {stroke_color_expr}",
+            "    if stroke_color is not None:",
+            f"        Gimp.context_set_foreground({stroke_color_expr})",
+            f"    if {line_width_expr} is not None:",
+            f"        Gimp.context_set_line_width({line_width_expr})",
+            "    drawable.edit_stroke_item(target)",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_line_width(previous_line_width)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        del stroke_color",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
         ]
+        code = ["from gi.repository import Gimp, Gegl", "import gc"] + _path_lookup_code(
+            path_name, path_index
+        )
+        code += _drawable_lookup_code(layer_name, layer_index)
+        code += ["\n".join(lifecycle_lines), "Gimp.displays_flush()"]
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -263,9 +310,17 @@ def register_path_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
         Returns:
             Operation result dictionary with removed path metadata.
         """
+        lifecycle_lines = [
+            "# __gimp_mcp_path_remove_lifecycle__",
+            "image.undo_group_start()",
+            "try:",
+            "    removed_name = target.get_name()",
+            "    image.remove_path(target)",
+            "finally:",
+            "    image.undo_group_end()",
+        ]
         code = _path_lookup_code(path_name, path_index) + [
-            "removed_name = target.get_name()",
-            "image.remove_path(target)",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
             "print(removed_name)",
         ]

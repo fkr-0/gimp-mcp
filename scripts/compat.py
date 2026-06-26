@@ -33,6 +33,12 @@ COMPAT_PATH = PROJECT_ROOT / "compat.yml"
 README_PATH = PROJECT_ROOT / "README.md"
 TOOLS_DIR = PROJECT_ROOT / "src" / "gimp_mcp_pro" / "tools"
 RESULTS_TEMPLATE_PATH = PROJECT_ROOT / "compat.results.template.yml"
+LOGICAL_TOOL_MODULES = {
+    "inspect_context_backend": "inspect_tools",
+    "inspect_geometry_backend": "inspect_tools",
+    "inspect_snapshot_backend": "inspect_tools",
+    "inspect_bitmap_backend": "inspect_tools",
+}
 
 ToolRegistry = dict[str, list[str]]
 CheckStatus = Literal["pass", "fail", "skip", "waived"]
@@ -145,7 +151,8 @@ def extract_source_tool_registry(tools_dir: Path = TOOLS_DIR) -> ToolRegistry:
                     names.append(match.group(1))
                     break
         if names:
-            registry[path.stem] = names
+            module = LOGICAL_TOOL_MODULES.get(path.stem, path.stem)
+            registry.setdefault(module, []).extend(names)
     return registry
 
 

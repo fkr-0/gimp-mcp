@@ -159,15 +159,37 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         w = f"{params.width}" if params.width else "image.get_width()"
         h = f"{params.height}" if params.height else "image.get_height()"
 
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_create_lifecycle__",
+            "layer = None",
+            "inserted_layer = False",
+            "try:",
+            f"    layer = Gimp.Layer.new(image, {py_literal(params.name)}, {w}, {h}, {img_type}, {params.opacity}, {mode_expr})",
+            "    if layer is None: raise RuntimeError('Could not create layer')",
+            f"    image.insert_layer(layer, None, {params.position})",
+            "    inserted_layer = True",
+            f"    Gimp.Drawable.edit_fill(layer, {fill_expr})",
+            "except Exception:",
+            "    try:",
+            "        if inserted_layer and layer is not None:",
+            "            image.remove_layer(layer)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    try:",
+            "        del layer",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = [
             "from gi.repository import Gimp, Gegl",
+            "import gc",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open in GIMP')",
             "image = images[0]",
-            f"layer = Gimp.Layer.new(image, {py_literal(params.name)}, {w}, {h}, "
-            f"{img_type}, {params.opacity}, {mode_expr})",
-            f"image.insert_layer(layer, None, {params.position})",
-            f"Gimp.Drawable.edit_fill(layer, {fill_expr})",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:
@@ -256,11 +278,30 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 error="Must specify either layer_name or layer_index",
             ).model_dump()
 
-        code = _layer_lookup_code(layer_name, layer_index) + [
-            "image.set_selected_layers([target])",
-            "Gimp.displays_flush()",
-            "print(target.get_name())",
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_active_lifecycle__",
+            "previous_selected_layers = image.get_selected_layers()",
+            "try:",
+            "    image.set_selected_layers([target])",
+            "    result_name = target.get_name()",
+            "except Exception:",
+            "    try:",
+            "        image.set_selected_layers(previous_selected_layers)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    gc.collect()",
         ]
+        code = (
+            ["import gc"]
+            + _layer_lookup_code(layer_name, layer_index)
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+                "print(result_name)",
+            ]
+        )
         try:
             result = await bridge.async_execute_python(code)
             name = ""
@@ -295,6 +336,9 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
 
         code = _layer_lookup_code(layer_name, layer_index) + [
+            "# __gimp_mcp_layer_delete_lifecycle__",
+            "layers = image.get_layers()",
+            "if len(layers) <= 1: raise RuntimeError('Cannot delete the only layer')",
             "name = target.get_name()",
             "image.remove_layer(target)",
             "Gimp.displays_flush()",
@@ -329,10 +373,28 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 operation="set_layer_opacity", error=f"Opacity must be 0-100, got {opacity}"
             ).model_dump()
 
-        code = _layer_lookup_code(layer_name, layer_index) + [
-            f"target.set_opacity({opacity})",
-            "Gimp.displays_flush()",
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_opacity_lifecycle__",
+            "previous_opacity = target.get_opacity()",
+            "try:",
+            f"    target.set_opacity({opacity})",
+            "except Exception:",
+            "    try:",
+            "        target.set_opacity(previous_opacity)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    gc.collect()",
         ]
+        code = (
+            ["import gc"]
+            + _layer_lookup_code(layer_name, layer_index)
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -434,18 +496,45 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = _layer_lookup_code(layer_name, layer_index) + [
-            "dup = target.copy()",
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_duplicate_lifecycle__",
+            "dup = None",
+            "inserted_duplicate = False",
+            "try:",
+            "    dup = target.copy()",
+            "    if dup is None: raise RuntimeError('Could not duplicate layer')",
         ]
         if new_name:
-            code.append(f"dup.set_name('{new_name}')")
+            lifecycle_lines.append(f"    dup.set_name({py_literal(new_name)})")
         else:
-            code.append("dup.set_name('Copy of ' + target.get_name())")
-        code += [
-            "image.insert_layer(dup, None, 0)",
-            "Gimp.displays_flush()",
-            "print(dup.get_name())",
+            lifecycle_lines.append("    dup.set_name('Copy of ' + target.get_name())")
+        lifecycle_lines += [
+            "    image.insert_layer(dup, None, 0)",
+            "    inserted_duplicate = True",
+            "    result_name = dup.get_name()",
+            "except Exception:",
+            "    try:",
+            "        if inserted_duplicate and dup is not None:",
+            "            image.remove_layer(dup)",
+            "    except Exception:",
+            "        pass",
+            "    raise",
+            "finally:",
+            "    try:",
+            "        del dup",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
         ]
+        code = (
+            ["import gc"]
+            + _layer_lookup_code(layer_name, layer_index)
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+                "print(result_name)",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(
@@ -467,11 +556,29 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_merge_lifecycle__",
+            "visible_layers = [layer for layer in image.get_layers() if layer.get_visible()]",
+            "if len(visible_layers) < 2: raise RuntimeError('Need at least two visible layers to merge')",
+            "undo_started = False",
+            "try:",
+            "    image.undo_group_start()",
+            "    undo_started = True",
+            "    image.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)",
+            "finally:",
+            "    try:",
+            "        if undo_started:",
+            "            image.undo_group_end()",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
         code = [
+            "import gc",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
-            "image.merge_visible_layers(Gimp.MergeType.CLIP_TO_IMAGE)",
+            "\n".join(lifecycle_lines),
             "Gimp.displays_flush()",
         ]
         try:
@@ -1114,10 +1221,23 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = _layer_lookup_code(layer_name, layer_index) + [
-            "if not target.has_alpha():\n    target.add_alpha()",
-            "Gimp.displays_flush()",
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_alpha_lifecycle__",
+            "already_had_alpha = target.has_alpha()",
+            "try:",
+            "    if not already_had_alpha:",
+            "        target.add_alpha()",
+            "finally:",
+            "    gc.collect()",
         ]
+        code = (
+            ["import gc"]
+            + _layer_lookup_code(layer_name, layer_index)
+            + [
+                "\n".join(lifecycle_lines),
+                "Gimp.displays_flush()",
+            ]
+        )
         try:
             await bridge.async_execute_python(code)
             return OperationResult.ok(

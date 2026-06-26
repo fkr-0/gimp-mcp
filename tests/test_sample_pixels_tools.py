@@ -66,3 +66,35 @@ async def test_sample_pixels_rejects_empty_sampling_request() -> None:
     assert result["success"] is False
     assert "points or grid" in result["error"]
     assert bridge.calls == []
+
+
+@pytest.mark.asyncio
+async def test_sample_pixels_rejects_oversized_grid_before_bridge_call() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["sample_pixels"](
+        grid={"x": 0, "y": 0, "width": 100, "height": 100, "columns": 4097, "rows": 1},
+    )
+
+    assert result["success"] is False
+    assert "sample point" in result["error"].lower()
+    assert bridge.calls == []
+
+
+@pytest.mark.asyncio
+async def test_sample_pixels_rejects_excessive_average_radius_before_bridge_call() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["sample_pixels"](
+        points=[{"x": 1, "y": 2}],
+        sample_average=True,
+        average_radius=129.0,
+    )
+
+    assert result["success"] is False
+    assert "average_radius" in result["error"]
+    assert bridge.calls == []

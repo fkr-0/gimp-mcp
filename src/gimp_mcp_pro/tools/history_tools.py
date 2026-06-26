@@ -46,6 +46,7 @@ def _record_operation(operation: str, **data: Any) -> None:
 
 def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register history/undo tools with the MCP server."""
+    undo_groups: dict[str, dict[str, Any]] = {}
 
     @mcp.tool()
     async def create_checkpoint(
@@ -273,6 +274,7 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
+        group_id = f"undo-{uuid.uuid4().hex[:12]}"
         code = [
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
@@ -281,35 +283,65 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         ]
         try:
             await bridge.async_execute_python(code)
+            undo_groups[group_id] = {"name": name, "started_at": time.time()}
             return OperationResult.ok(
                 operation="begin_undo_group",
                 message=f"Undo group '{name}' started",
-                data={"name": name},
+                data={"name": name, "group_id": group_id, "open_group_count": len(undo_groups)},
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="begin_undo_group", error=str(e)).model_dump()
 
     @mcp.tool()
-    async def end_undo_group() -> ToolResult:
+    async def end_undo_group(
+        group_id: str | None = None,
+        close_all: bool = False,
+    ) -> ToolResult:
         """End the current undo group.
 
         Must be called after begin_undo_group. All operations between
         begin and end will be treated as one undo step.
 
+        Args:
+            group_id: Optional tracked undo-group ID returned by begin_undo_group.
+            close_all: Close all tracked open undo groups in reverse start order.
+
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = [
-            "images = Gimp.get_images()",
-            "if not images: raise RuntimeError('No images are open')",
-            "image = images[0]",
-            "image.undo_group_end()",
-        ]
+        if close_all:
+            closed_group_ids = list(reversed(list(undo_groups)))
+            count = max(1, len(closed_group_ids))
+            code = [
+                "images = Gimp.get_images()",
+                "if not images: raise RuntimeError('No images are open')",
+                "image = images[0]",
+                "# __gimp_mcp_history_close_all_undo_groups__",
+                *["image.undo_group_end()" for _ in range(count)],
+            ]
+        else:
+            closed_group_ids = [group_id] if group_id and group_id in undo_groups else []
+            code = [
+                "images = Gimp.get_images()",
+                "if not images: raise RuntimeError('No images are open')",
+                "image = images[0]",
+                "image.undo_group_end()",
+            ]
         try:
             await bridge.async_execute_python(code)
+            if close_all:
+                undo_groups.clear()
+            elif group_id and group_id in undo_groups:
+                undo_groups.pop(group_id, None)
             return OperationResult.ok(
                 operation="end_undo_group",
-                message="Undo group ended",
+                message="Undo group ended" if not close_all else "Open undo groups closed",
+                data={
+                    "group_id": group_id,
+                    "closed_group_ids": closed_group_ids,
+                    "closed_count": len(closed_group_ids) if close_all else 1,
+                    "open_group_count": len(undo_groups),
+                },
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="end_undo_group", error=str(e)).model_dump()

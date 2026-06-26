@@ -86,6 +86,48 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
 
 For `operation="edit_channels"`, `native_extra_for` appends the shared native GIMP channel code to the generated block. The public handler remains in `layer_tools.py`, while the common execution and JSON result handling stay in the backend helper.
 
+
+
+## Current architecture
+
+The backend now uses a small registry-driven code generation layer:
+
+- `NativeOperation` records the operation name, required payload keys, and generator function.
+- `NATIVE_OPERATIONS` is the only dispatch table for promoted native backend operations.
+- `native_extra_for()` now fails loudly for unknown operations instead of silently emitting payload-only code.
+- `CodeBuilder` provides minimal deterministic helpers for adding lines, adding indented blocks, and emitting JSON without introducing a full template engine.
+- `generated_context_helpers()` emits GIMP-side context managers for lifecycle-sensitive snippets such as PDB configs, file objects, drawable filters, and temporary duplicate images.
+
+The context managers are generated into the Python that runs inside GIMP. They are not host-side context managers around the bridge call. That distinction matters because GIMP object references, temporary images, PDB configs, and drawable filters must be released in the same interpreter that creates them.
+
+## Native operation lifecycle helpers
+
+Use generated context helpers when a native snippet creates temporary GIMP-side objects:
+
+- `managed_pdb_config(proc)` wraps `proc.create_config()` and releases the config reference.
+- `managed_file_obj(path)` wraps `Gio.File.new_for_path(...)` and releases the file object reference.
+- `managed_drawable_filter(drawable, operation)` wraps `Gimp.DrawableFilter.new(...)`, exposes `(df, cfg)`, attempts filter removal when available, and releases local references.
+- `temporary_duplicate_image(image)` wraps preview-image duplication and deletes the duplicate image in `finally`.
+
+These helpers are currently used by the promoted import/export/PDB/GEGL backend paths. New native snippets should prefer these helpers over hand-written `try/finally` blocks unless the operation needs category-specific rollback behavior.
+
+
+
+## Split generator modules
+
+`native_backend.py` now owns only the shared infrastructure: `CodeBuilder`, `NativeOperation`, JSON extraction, generated context-helper snippets, operation registry composition, and bridge execution.
+
+Operation-specific generated code lives in focused modules:
+
+- `native_channels.py` for channel operations.
+- `native_paths.py` for path operations.
+- `native_exports.py` for import/export operations.
+- `native_pdb.py` for PDB introspection and allowlisted PDB calls.
+- `native_gegl.py` for GEGL preview/apply operations.
+- `native_misc.py` for small promoted helpers that do not yet warrant dedicated modules.
+
+Each split module exposes an `operations()` function returning `dict[str, NativeOperation]`. The core backend composes `NATIVE_OPERATIONS` from those modules, so adding a backend operation means adding it to the correct concern module and registering it there. Keep public MCP tool registration in the category module; the split modules only generate GIMP-side Python snippets.
+
 ## Design rules
 
 Keep the module small and infrastructure-focused:

@@ -199,3 +199,26 @@ def test_bridge_api_docstrings_describe_public_contracts() -> None:
     assert "Args:" in async_send
     assert "Returns:" in async_send
     assert "Raises:" in async_send
+
+
+def test_native_backend_architecture_article_explains_purpose_usage_and_example() -> None:
+    """Native backend helper module needs a stable architecture article."""
+    article = PROJECT_ROOT / "docs" / "native-backend.md"
+    text = article.read_text()
+    index_text = (PROJECT_ROOT / "docs" / "index.md").read_text()
+    config = yaml.safe_load((PROJECT_ROOT / "mkdocs.yml").read_text())
+    nav_text = str(config["nav"])
+
+    assert "# Native Backend Helpers" in text
+    assert "src/gimp_mcp_pro/tools/native_backend.py" in text
+    assert "## Purpose" in text
+    assert "## When to use it" in text
+    assert "## How a category tool uses it" in text
+    assert "## Example" in text
+    assert "execute_json_tool" in text
+    assert "native_extra_for" in text
+    assert "build_json_code" in text
+    assert "not an MCP tool category" in text
+    assert "register_roadmap_tools" not in text
+    assert "native-backend.md" in index_text
+    assert "native-backend.md" in nav_text
