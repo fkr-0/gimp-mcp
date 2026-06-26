@@ -247,13 +247,15 @@ def register_pdb_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
         timeout = min(timeout_seconds, LONG_TIMEOUT)
 
         try:
-            result = await bridge.async_execute_python(code, timeout=timeout)
+            script = "\n".join(code)
+            result = await bridge.async_execute_python([script], timeout=timeout)
             return OperationResult.ok(
                 operation="execute_python",
                 message="Code executed successfully",
                 data={
                     "outputs": result.get("results", []),
                     "lines_executed": len(code),
+                    "script_executed": True,
                 },
             ).model_dump()
         except GimpCommandError as e:

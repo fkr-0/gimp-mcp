@@ -118,6 +118,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         position: int = 0,
         width: int | None = None,
         height: int | None = None,
+        activate: bool = True,
     ) -> ToolResult:
         """Create a new layer in the active image.
 
@@ -138,6 +139,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             position: Stack position (0 = top of stack)
             width: Layer width (defaults to image width)
             height: Layer height (defaults to image height)
+            activate: If True (default), make the new layer active so drawing/fill tools target it.
 
         Returns:
             Operation result with layer info.
@@ -169,6 +171,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             f"    image.insert_layer(layer, None, {params.position})",
             "    inserted_layer = True",
             f"    Gimp.Drawable.edit_fill(layer, {fill_expr})",
+            f"    if {activate!r}: image.set_selected_layers([layer])",
             "except Exception:",
             "    try:",
             "        if inserted_layer and layer is not None:",
@@ -202,6 +205,7 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                     "opacity": params.opacity,
                     "blend_mode": params.blend_mode.value,
                     "position": params.position,
+                    "active": activate,
                 },
             ).model_dump()
         except GimpCommandError as e:
@@ -481,6 +485,37 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="set_layer_mode", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def set_layer_blend_mode(
+        blend_mode: str,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Alias for set_layer_mode with discoverable blend-mode naming."""
+        try:
+            bm = BlendMode(blend_mode)
+        except ValueError:
+            valid = ", ".join(m.value for m in BlendMode)
+            return OperationResult.fail(
+                operation="set_layer_blend_mode",
+                error=f"Unknown blend mode '{blend_mode}'. Valid: {valid}",
+            ).model_dump()
+
+        mode_expr = BLEND_MODE_MAP.get(bm, "Gimp.LayerMode.NORMAL")
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            f"target.set_mode({mode_expr})",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code)
+            return OperationResult.ok(
+                operation="set_layer_blend_mode",
+                message=f"Layer blend mode set to '{blend_mode}'",
+                data={"blend_mode": blend_mode},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="set_layer_blend_mode", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def duplicate_layer(
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -588,6 +623,153 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="merge_visible_layers", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def new_layer_from_visible(
+        name: str = "Visible",
+        position: int = 0,
+        activate: bool = True,
+    ) -> ToolResult:
+        """Create a new layer from the current visible composite without merging originals."""
+        lifecycle_lines = [
+            "# __gimp_mcp_layer_new_from_visible_lifecycle__",
+            f"layer = Gimp.Layer.new_from_visible(image, image, {py_literal(name)})",
+            "if layer is None: raise RuntimeError('Could not create layer from visible')",
+            f"image.insert_layer(layer, None, {position})",
+            f"if {activate!r}: image.set_selected_layers([layer])",
+            "result_name = layer.get_name()",
+        ]
+        code = [
+            "from gi.repository import Gimp",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            "\n".join(lifecycle_lines),
+            "Gimp.displays_flush()",
+            "print(result_name)",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            layer_name = name
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    layer_name = str(out).strip()
+            return OperationResult.ok(
+                operation="new_layer_from_visible",
+                message=f"Created layer from visible '{layer_name}'",
+                data={"name": layer_name, "position": position, "active": activate},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="new_layer_from_visible", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def merge_down(
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+        merge_type: str = "clip_to_image",
+    ) -> ToolResult:
+        """Merge a layer down into the layer below it."""
+        merge_types = {
+            "expand_as_necessary": "Gimp.MergeType.EXPAND_AS_NECESSARY",
+            "clip_to_image": "Gimp.MergeType.CLIP_TO_IMAGE",
+            "clip_to_bottom_layer": "Gimp.MergeType.CLIP_TO_BOTTOM_LAYER",
+        }
+        merge_expr = merge_types.get(merge_type)
+        if merge_expr is None:
+            return OperationResult.fail(
+                operation="merge_down",
+                error=f"Unknown merge_type '{merge_type}'. Valid: {', '.join(sorted(merge_types))}",
+            ).model_dump()
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            f"merged = image.merge_down(target, {merge_expr})",
+            "if merged is None: raise RuntimeError('Could not merge layer down')",
+            "image.set_selected_layers([merged])",
+            "Gimp.displays_flush()",
+            "print(merged.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            merged_name = ""
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    merged_name = str(out).strip()
+            return OperationResult.ok(
+                operation="merge_down",
+                message="Layer merged down",
+                data={"merged_layer_name": merged_name or None, "merge_type": merge_type},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="merge_down", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def copy_layer_alpha_to_mask(
+        source_layer_name: str | None = None,
+        source_layer_index: int | None = None,
+        target_layer_name: str | None = None,
+        target_layer_index: int | None = None,
+        replace_existing: bool = True,
+    ) -> ToolResult:
+        """Copy a source layer's alpha silhouette into the target layer mask."""
+        if source_layer_name is None and source_layer_index is None:
+            return OperationResult.fail(
+                operation="copy_layer_alpha_to_mask",
+                error="Specify source_layer_name or source_layer_index",
+            ).model_dump()
+        if target_layer_name is None and target_layer_index is None:
+            return OperationResult.fail(
+                operation="copy_layer_alpha_to_mask",
+                error="Specify target_layer_name or target_layer_index",
+            ).model_dump()
+        code = [
+            "from gi.repository import Gimp",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+        ]
+        code += _layer_lookup_code(source_layer_name, source_layer_index)
+        code += ["source = target"]
+        code += _layer_lookup_code(target_layer_name, target_layer_index)
+        code += [
+            "saved_selection = Gimp.Selection.save(image)",
+            "undo_started = False",
+            "try:",
+            "    image.undo_group_start(); undo_started = True",
+            "    image.select_item(Gimp.ChannelOps.REPLACE, source)",
+            "    existing_mask = target.get_mask()",
+            f"    if existing_mask is not None and {replace_existing!r}: target.remove_mask(Gimp.MaskApplyMode.DISCARD)",
+            "    elif existing_mask is not None: raise RuntimeError('Target layer already has a mask')",
+            "    mask = target.create_mask(Gimp.AddMaskType.SELECTION)",
+            "    if mask is None: raise RuntimeError('Could not create layer mask from source alpha')",
+            "    if not target.add_mask(mask): raise RuntimeError('Could not add layer mask')",
+            "finally:",
+            "    try:",
+            "        if saved_selection is not None: image.select_item(Gimp.ChannelOps.REPLACE, saved_selection)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        if saved_selection is not None: image.remove_channel(saved_selection)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        if undo_started: image.undo_group_end()",
+            "    except Exception:",
+            "        pass",
+            "Gimp.displays_flush()",
+            "print(source.get_name() + ' -> ' + target.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            mapping = ""
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    mapping = str(out).strip()
+            return OperationResult.ok(
+                operation="copy_layer_alpha_to_mask",
+                message="Copied source layer alpha into target mask",
+                data={"mapping": mapping or None, "replace_existing": replace_existing},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="copy_layer_alpha_to_mask", error=str(e)).model_dump()
 
     @mcp.tool()
     async def add_layer_mask(

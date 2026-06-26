@@ -44,6 +44,7 @@ COMMANDS: dict[str, Command] = {
         "dist/gimp-mcp-pro-docs.pdf",
     ],
     "docs-serve": ["uv", "run", "--extra", "dev", "mkdocs", "serve"],
+    "install-plugin": ["uv", "run", "python", "scripts/install_gimp_plugin.py"],
     "compat-list-tools": ["uv", "run", "python", "scripts/compat.py", "list-tools", "--grouped"],
     "compat-validate": ["uv", "run", "python", "scripts/compat.py", "validate"],
     "compat-audit": ["uv", "run", "python", "scripts/compat.py", "audit"],

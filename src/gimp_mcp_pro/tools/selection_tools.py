@@ -17,6 +17,26 @@ def _op_expr(op: str) -> str:
     return SELECTION_OP_MAP.get(SelectionOp(op), "Gimp.ChannelOps.REPLACE")
 
 
+def _layer_lookup_code(layer_name: str | None, layer_index: int | None, variable: str = "target") -> list[str]:
+    """Generate Python code to look up a layer by name/index or use active layer."""
+    if layer_name is not None:
+        return [
+            f"{variable} = image.get_layer_by_name({py_literal(layer_name)})",
+            f"if {variable} is None: raise RuntimeError({py_literal(f'Layer {layer_name!r} not found')})",
+        ]
+    if layer_index is not None:
+        return [
+            "layers = image.get_layers()",
+            f"if {layer_index} >= len(layers): raise RuntimeError('Layer index {layer_index} out of range')",
+            f"{variable} = layers[{layer_index}]",
+        ]
+    return [
+        "sel = image.get_selected_layers()",
+        "if not sel: raise RuntimeError('No active layer')",
+        f"{variable} = sel[0]",
+    ]
+
+
 def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
     """Register all selection tools with the MCP server."""
 
@@ -221,6 +241,7 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
         threshold: float = 15.0,
         operation: str = "replace",
         sample_merged: bool = False,
+        contiguous: bool = False,
     ) -> ToolResult:
         """Select all pixels similar in color to the sampled point.
 
@@ -236,6 +257,8 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             operation: "replace", "add", "subtract", or "intersect"
             sample_merged: If True, sample color from all visible layers merged.
                 If False (default), sample from active layer only.
+            contiguous: If True, select only the connected blob touching (x, y).
+                If False (default), select matching color globally across the drawable.
 
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
@@ -247,7 +270,12 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             "try:",
             f"    Gimp.context_set_sample_threshold({threshold / 255.0})",
             f"    Gimp.context_set_sample_merged({sample_merged})",
-            f"    Gimp.Image.select_contiguous_color(image, {_op_expr(operation)}, drawable, {x}, {y})",
+            f"    if {contiguous!r}:",
+            f"        Gimp.Image.select_contiguous_color(image, {_op_expr(operation)}, drawable, {x}, {y})",
+            "    else:",
+            f"        _ok, sampled_color = image.pick_color([drawable], {x}, {y}, {sample_merged!r}, False, 0.0)",
+            f"        if not _ok or sampled_color is None: sampled_color = drawable.get_pixel(int({x}), int({y}))",
+            f"        Gimp.Image.select_color(image, {_op_expr(operation)}, drawable, sampled_color)",
             "finally:",
             "    try:",
             "        Gimp.context_set_sample_threshold(previous_sample_threshold)",
@@ -292,10 +320,50 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.ok(
                 operation="select_by_color",
                 message=f"Selected by color at ({x},{y}) threshold={threshold}",
-                data=sel_info,
+                data={**sel_info, "contiguous": contiguous},
             ).model_dump()
         except GimpCommandError as e:
             return OperationResult.fail(operation="select_by_color", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def select_layer_alpha(
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+        operation: str = "replace",
+    ) -> ToolResult:
+        """Select a layer's alpha channel using GIMP's image.select_item API.
+
+        Args:
+            layer_name: Layer name to select from.
+            layer_index: Layer index to select from. Uses the active layer if neither is supplied.
+            operation: "replace", "add", "subtract", or "intersect".
+
+        Returns:
+            Operation result dictionary with alpha-selection metadata.
+        """
+        code = [
+            "from gi.repository import Gimp",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            *_layer_lookup_code(layer_name, layer_index),
+            f"image.select_item({_op_expr(operation)}, target)",
+            "Gimp.displays_flush()",
+            "print(target.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            selected_name = layer_name or ""
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    selected_name = str(out).strip()
+            return OperationResult.ok(
+                operation="select_layer_alpha",
+                message=f"Selected alpha for layer '{selected_name or 'active'}'",
+                data={"layer_name": selected_name or None, "layer_index": layer_index, "operation": operation},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="select_layer_alpha", error=str(e)).model_dump()
 
     @mcp.tool()
     async def feather_selection(radius: float) -> ToolResult:

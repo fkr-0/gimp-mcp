@@ -24,6 +24,7 @@ import gi
 gi.require_version("Gimp", "3.0")
 
 from gi.repository import Gimp
+from gi.repository import Gegl
 from gi.repository import GLib
 from gi.repository import GObject
 
@@ -77,6 +78,50 @@ def exec_and_capture(command, context):
     return buf.getvalue()
 
 
+class _PDBExecutionHelper:
+    """Small ergonomic wrapper around GIMP's config-based PDB API."""
+
+    def __init__(self, pdb):
+        self._pdb = pdb
+
+    def __getattr__(self, name):
+        return getattr(self._pdb, name)
+
+    def run_proc(self, name, args=None, kwargs=None):
+        """Run a PDB procedure by name using dict kwargs or positional values."""
+        proc = self._pdb.lookup_procedure(name)
+        if proc is None:
+            raise RuntimeError(f"PDB procedure not found: {name}")
+        config = proc.create_config()
+        if isinstance(args, dict) and kwargs is None:
+            kwargs = args
+            args = None
+        if kwargs:
+            for key, value in kwargs.items():
+                config.set_property(key, value)
+        if args:
+            try:
+                property_names = [prop.name for prop in config.list_properties()]
+            except Exception:
+                property_names = []
+            for key, value in zip(property_names, args):
+                config.set_property(key, value)
+        return proc.run(config)
+
+
+def _build_exec_context():
+    """Build the persistent Python context exposed to execute_python."""
+    sys.modules.setdefault("Gimp", Gimp)
+    sys.modules.setdefault("Gegl", Gegl)
+    sys.modules.setdefault("GObject", GObject)
+    return {
+        "Gimp": Gimp,
+        "Gegl": Gegl,
+        "GObject": GObject,
+        "pdb": _PDBExecutionHelper(Gimp.get_pdb()),
+    }
+
+
 class MCPProPlugin(Gimp.PlugIn):
     """Enhanced GIMP MCP plugin with reliable framing and native handlers."""
 
@@ -92,8 +137,7 @@ class MCPProPlugin(Gimp.PlugIn):
         self.dispatch_direct = False
         self.flow_specs = {}
         # Persistent Python execution context
-        self.exec_context = {}
-        exec("from gi.repository import Gimp, Gegl", self.exec_context)
+        self.exec_context = _build_exec_context()
 
     # ------------------------------------------------------------------
     # GIMP Plugin registration
