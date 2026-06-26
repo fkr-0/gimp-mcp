@@ -372,6 +372,124 @@ def register_selection_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> 
             return OperationResult.fail(operation="select_layer_alpha", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def fuzzy_select(
+        x: float,
+        y: float,
+        threshold: float = 15.0,
+        operation: str = "replace",
+        sample_merged: bool = False,
+    ) -> ToolResult:
+        """Select the connected fuzzy/magic-wand region touching a sampled point.
+
+        Args:
+            x: Sample point X coordinate.
+            y: Sample point Y coordinate.
+            threshold: Color similarity threshold 0-255.
+            operation: "replace", "add", "subtract", or "intersect".
+            sample_merged: If True, sample all visible layers merged.
+
+        Returns:
+            Operation result dictionary with selection bounds and fuzzy-select metadata.
+        """
+        result = await select_by_color(
+            x=x,
+            y=y,
+            threshold=threshold,
+            operation=operation,
+            sample_merged=sample_merged,
+            contiguous=True,
+        )
+        result["operation"] = "fuzzy_select"
+        if result.get("success"):
+            result["message"] = (
+                f"Fuzzy selected connected region at ({x},{y}) threshold={threshold}"
+            )
+        return result
+
+    @mcp.tool()
+    async def select_color(
+        color: str,
+        threshold: float = 15.0,
+        operation: str = "replace",
+        sample_merged: bool = False,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Globally select pixels matching an explicit color value.
+
+        Args:
+            color: Color to select, for example "#f2dfc0", "white", or "rgb(255,0,0)".
+            threshold: Color similarity threshold 0-255.
+            operation: "replace", "add", "subtract", or "intersect".
+            sample_merged: If True, configure GIMP's sample-merged context while selecting.
+            layer_name: Drawable layer by name. Uses active layer if omitted.
+            layer_index: Drawable layer index. Uses active layer if omitted.
+
+        Returns:
+            Operation result dictionary with selection bounds and explicit-color metadata.
+        """
+        try:
+            parsed = Color(value=color)
+        except ValueError as e:
+            return OperationResult.fail(operation="select_color", error=str(e)).model_dump()
+        lifecycle_lines = [
+            "# __gimp_mcp_selection_explicit_color_lifecycle__",
+            "previous_sample_threshold = Gimp.context_get_sample_threshold()",
+            "previous_sample_merged = Gimp.context_get_sample_merged()",
+            "try:",
+            f"    Gimp.context_set_sample_threshold({threshold / 255.0})",
+            f"    Gimp.context_set_sample_merged({sample_merged})",
+            f"    selected_color = {parsed.to_gegl_code()}",
+            f"    Gimp.Image.select_color(image, {_op_expr(operation)}, drawable, selected_color)",
+            "finally:",
+            "    try:",
+            "        Gimp.context_set_sample_threshold(previous_sample_threshold)",
+            "    except Exception:",
+            "        pass",
+            "    try:",
+            "        Gimp.context_set_sample_merged(previous_sample_merged)",
+            "    except Exception:",
+            "        pass",
+            "    gc.collect()",
+        ]
+        code = [
+            "from gi.repository import Gimp, Gegl",
+            "import gc, json",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+            *_layer_lookup_code(layer_name, layer_index, variable="drawable"),
+            "\n".join(lifecycle_lines),
+            "Gimp.displays_flush()",
+            "bounds = Gimp.Selection.bounds(image)",
+            "if len(bounds) == 6:\n"
+            "    _, non_empty, x1, y1, x2, y2 = bounds\n"
+            "else:\n"
+            "    non_empty, x1, y1, x2, y2 = bounds",
+            "print(json.dumps({'has_selection': bool(non_empty), "
+            "'bounds': {'x': x1, 'y': y1, 'width': x2 - x1, 'height': y2 - y1}}))",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            import json as _json
+
+            sel_info = {}
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    try:
+                        sel_info = _json.loads(str(out).strip())
+                        break
+                    except _json.JSONDecodeError:
+                        continue
+            return OperationResult.ok(
+                operation="select_color",
+                message=f"Selected explicit color {parsed.value} threshold={threshold}",
+                data={**sel_info, "color": parsed.value, "threshold": threshold},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="select_color", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def feather_selection(radius: float) -> ToolResult:
         """Feather the current selection by a radius in pixels.
 

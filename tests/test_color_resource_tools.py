@@ -150,3 +150,47 @@ async def test_context_color_tools_have_direct_generated_code_coverage() -> None
     assert swapped["operation"] == "swap_colors"
     generated = generated_source(bridge)
     assert "Gimp.context_swap_colors()" in generated
+
+
+@pytest.mark.asyncio
+async def test_replace_color_selects_source_and_fills_replacement() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["replace_color"](source_color="white", replacement_color="black")
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1])
+    assert "source_color = Gegl.Color.new('white')" in generated
+    assert "replacement_color = Gegl.Color.new('black')" in generated
+    assert "image.select_color(Gimp.ChannelOps.REPLACE, drawable, source_color)" in generated
+    assert "Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)" in generated
+
+
+@pytest.mark.asyncio
+async def test_dominant_colors_uses_palette_analysis_backend() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["dominant_colors"](max_colors=4)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1])
+    assert "palette" in generated
+    assert result["operation"] == "dominant_colors"
+
+
+@pytest.mark.asyncio
+async def test_analyze_color_histogram_uses_drawable_histogram() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["analyze_color_histogram"](channels=["value", "alpha"])
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1])
+    assert "drawable.histogram(Gimp.HistogramChannel.VALUE, 0.0, 1.0)" in generated
+    assert "drawable.histogram(Gimp.HistogramChannel.ALPHA, 0.0, 1.0)" in generated

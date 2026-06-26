@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from gimp_mcp_pro.models.common import BlendMode, OperationResult, SelectionOp, py_literal
+from gimp_mcp_pro.bridge import LONG_TIMEOUT
+from gimp_mcp_pro.models.common import BlendMode, Color, OperationResult, SelectionOp, py_literal
 from gimp_mcp_pro.models.layer import CreateLayerParams
 from gimp_mcp_pro.tools.native_backend import SUPPORTED_CHANNEL_ACTIONS, execute_json_tool
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
@@ -490,7 +491,16 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         layer_name: str | None = None,
         layer_index: int | None = None,
     ) -> ToolResult:
-        """Alias for set_layer_mode with discoverable blend-mode naming."""
+        """Alias for set_layer_mode with discoverable blend-mode naming.
+
+        Args:
+            blend_mode: Blend mode name such as "normal", "multiply", or "screen".
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+
+        Returns:
+            Operation result dictionary with status, message, and blend-mode metadata.
+        """
         try:
             bm = BlendMode(blend_mode)
         except ValueError:
@@ -630,7 +640,16 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         position: int = 0,
         activate: bool = True,
     ) -> ToolResult:
-        """Create a new layer from the current visible composite without merging originals."""
+        """Create a new layer from the current visible composite without merging originals.
+
+        Args:
+            name: Name for the created visible-composite layer.
+            position: Stack position for the new layer.
+            activate: If True, make the created layer active.
+
+        Returns:
+            Operation result dictionary with created layer metadata.
+        """
         lifecycle_lines = [
             "# __gimp_mcp_layer_new_from_visible_lifecycle__",
             f"layer = Gimp.Layer.new_from_visible(image, image, {py_literal(name)})",
@@ -670,7 +689,16 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         layer_index: int | None = None,
         merge_type: str = "clip_to_image",
     ) -> ToolResult:
-        """Merge a layer down into the layer below it."""
+        """Merge a layer down into the layer below it.
+
+        Args:
+            layer_name: Layer to merge by name.
+            layer_index: Layer to merge by index. Uses active layer if neither specified.
+            merge_type: GIMP merge mode: expand_as_necessary, clip_to_image, or clip_to_bottom_layer.
+
+        Returns:
+            Operation result dictionary with merged layer metadata.
+        """
         merge_types = {
             "expand_as_necessary": "Gimp.MergeType.EXPAND_AS_NECESSARY",
             "clip_to_image": "Gimp.MergeType.CLIP_TO_IMAGE",
@@ -711,7 +739,18 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         target_layer_index: int | None = None,
         replace_existing: bool = True,
     ) -> ToolResult:
-        """Copy a source layer's alpha silhouette into the target layer mask."""
+        """Copy a source layer's alpha silhouette into the target layer mask.
+
+        Args:
+            source_layer_name: Source layer by name.
+            source_layer_index: Source layer by index.
+            target_layer_name: Target layer by name.
+            target_layer_index: Target layer by index.
+            replace_existing: Replace an existing target mask when present.
+
+        Returns:
+            Operation result dictionary with source-to-target mask metadata.
+        """
         if source_layer_name is None and source_layer_index is None:
             return OperationResult.fail(
                 operation="copy_layer_alpha_to_mask",
@@ -773,6 +812,176 @@ def register_layer_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         except GimpCommandError as e:
             return OperationResult.fail(
                 operation="copy_layer_alpha_to_mask", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def selection_to_layer_mask(
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+        replace_existing: bool = True,
+    ) -> ToolResult:
+        """Create or replace a layer mask from the current selection.
+
+        Args:
+            layer_name: Target layer by name.
+            layer_index: Target layer by index. Uses active layer if neither specified.
+            replace_existing: Replace an existing target mask when present.
+
+        Returns:
+            Operation result dictionary with layer mask metadata.
+        """
+        code = _layer_lookup_code(layer_name, layer_index) + [
+            "existing_mask = target.get_mask()",
+            f"if existing_mask is not None and {replace_existing!r}: target.remove_mask(Gimp.MaskApplyMode.DISCARD)",
+            "elif existing_mask is not None: raise RuntimeError('Layer already has a mask')",
+            "mask = target.create_mask(Gimp.AddMaskType.SELECTION)",
+            "if mask is None: raise RuntimeError('Could not create layer mask from selection')",
+            "if not target.add_mask(mask): raise RuntimeError('Could not add layer mask')",
+            "Gimp.displays_flush()",
+            "print(target.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code)
+            name = layer_name or ""
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    name = str(out).strip()
+            return OperationResult.ok(
+                operation="selection_to_layer_mask",
+                message="Created layer mask from selection",
+                data={"layer_name": name or None, "replace_existing": replace_existing},
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="selection_to_layer_mask", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def create_mask_from_color(
+        color: str | None = None,
+        x: float | None = None,
+        y: float | None = None,
+        threshold: float = 15.0,
+        contiguous: bool = False,
+        sample_merged: bool = False,
+        source_layer_name: str | None = None,
+        source_layer_index: int | None = None,
+        target_layer_name: str | None = None,
+        target_layer_index: int | None = None,
+        replace_existing: bool = True,
+    ) -> ToolResult:
+        """Create a layer mask from an explicit color or sampled color selection.
+
+        Args:
+            color: Explicit color to select, for example "#ffffff".
+            x: Optional sample X coordinate when color is omitted.
+            y: Optional sample Y coordinate when color is omitted.
+            threshold: Color similarity threshold 0-255.
+            contiguous: If True with x/y, use fuzzy connected-region selection.
+            sample_merged: If True, sample all visible layers merged.
+            source_layer_name: Source drawable layer by name. Uses active layer if omitted.
+            source_layer_index: Source drawable layer by index. Uses active layer if omitted.
+            target_layer_name: Target layer to receive the mask by name. Uses source/active layer if omitted.
+            target_layer_index: Target layer to receive the mask by index. Uses source/active layer if omitted.
+            replace_existing: Replace an existing target mask when present.
+
+        Returns:
+            Operation result dictionary with color-mask metadata.
+        """
+        if color is None and (x is None or y is None):
+            return OperationResult.fail(
+                operation="create_mask_from_color",
+                error="Specify either color or both x and y sample coordinates",
+            ).model_dump()
+        parsed = None
+        if color is not None:
+            try:
+                parsed = Color(value=color)
+            except ValueError as e:
+                return OperationResult.fail(
+                    operation="create_mask_from_color", error=str(e)
+                ).model_dump()
+        code = [
+            "from gi.repository import Gimp, Gegl",
+            "import gc",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open')",
+            "image = images[0]",
+        ]
+        code += _layer_lookup_code(source_layer_name, source_layer_index)
+        code += ["source = target"]
+        if target_layer_name is not None or target_layer_index is not None:
+            code += _layer_lookup_code(target_layer_name, target_layer_index)
+        code += [
+            "previous_sample_threshold = Gimp.context_get_sample_threshold()",
+            "previous_sample_merged = Gimp.context_get_sample_merged()",
+            "saved_selection = Gimp.Selection.save(image)",
+            "undo_started = False",
+            "try:",
+            "    image.undo_group_start(); undo_started = True",
+            f"    Gimp.context_set_sample_threshold({threshold / 255.0})",
+            f"    Gimp.context_set_sample_merged({sample_merged!r})",
+        ]
+        if parsed is not None:
+            code.append(f"    selected_color = {parsed.to_gegl_code()}")
+            code.append("    image.select_color(Gimp.ChannelOps.REPLACE, source, selected_color)")
+        elif contiguous:
+            code.append(
+                f"    image.select_contiguous_color(Gimp.ChannelOps.REPLACE, source, {x}, {y})"
+            )
+        else:
+            code.append(
+                f"    _ok, selected_color = image.pick_color([source], {x}, {y}, {sample_merged!r}, False, 0.0)"
+            )
+            code.append(
+                f"    if not _ok or selected_color is None: selected_color = source.get_pixel(int({x}), int({y}))"
+            )
+            code.append("    image.select_color(Gimp.ChannelOps.REPLACE, source, selected_color)")
+        code += [
+            "    existing_mask = target.get_mask()",
+            f"    if existing_mask is not None and {replace_existing!r}: target.remove_mask(Gimp.MaskApplyMode.DISCARD)",
+            "    elif existing_mask is not None: raise RuntimeError('Target layer already has a mask')",
+            "    mask = target.create_mask(Gimp.AddMaskType.SELECTION)",
+            "    if mask is None: raise RuntimeError('Could not create layer mask from color selection')",
+            "    if not target.add_mask(mask): raise RuntimeError('Could not add layer mask')",
+            "finally:",
+            "    try: Gimp.context_set_sample_threshold(previous_sample_threshold)",
+            "    except Exception: pass",
+            "    try: Gimp.context_set_sample_merged(previous_sample_merged)",
+            "    except Exception: pass",
+            "    try:",
+            "        if saved_selection is not None: image.select_item(Gimp.ChannelOps.REPLACE, saved_selection)",
+            "    except Exception: pass",
+            "    try:",
+            "        if saved_selection is not None: image.remove_channel(saved_selection)",
+            "    except Exception: pass",
+            "    try:",
+            "        if undo_started: image.undo_group_end()",
+            "    except Exception: pass",
+            "    gc.collect()",
+            "Gimp.displays_flush()",
+            "print(target.get_name())",
+        ]
+        try:
+            result = await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            mask_target = target_layer_name or ""
+            for out in result.get("results", []):
+                if out and str(out).strip():
+                    mask_target = str(out).strip()
+            return OperationResult.ok(
+                operation="create_mask_from_color",
+                message="Created layer mask from color selection",
+                data={
+                    "target_layer_name": mask_target or None,
+                    "color": parsed.value if parsed is not None else None,
+                    "sample": {"x": x, "y": y} if parsed is None else None,
+                    "threshold": threshold,
+                    "contiguous": contiguous,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="create_mask_from_color", error=str(e)
             ).model_dump()
 
     @mcp.tool()

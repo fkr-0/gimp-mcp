@@ -247,3 +247,46 @@ async def test_copy_layer_alpha_to_mask_uses_select_item_and_selection_mask() ->
     assert "image.select_item(Gimp.ChannelOps.REPLACE, source)" in generated
     assert "target.create_mask(Gimp.AddMaskType.SELECTION)" in generated
     assert "target.add_mask(mask)" in generated
+
+
+@pytest.mark.asyncio
+async def test_set_layer_blend_mode_alias_uses_layer_mode_api() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["set_layer_blend_mode"]("multiply", layer_index=0)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "target.set_mode(Gimp.LayerMode.MULTIPLY)" in generated
+    assert result["operation"] == "set_layer_blend_mode"
+
+
+@pytest.mark.asyncio
+async def test_selection_to_layer_mask_creates_selection_mask() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["selection_to_layer_mask"](layer_index=0)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "mask = target.create_mask(Gimp.AddMaskType.SELECTION)" in generated
+    assert "target.add_mask(mask)" in generated
+
+
+@pytest.mark.asyncio
+async def test_create_mask_from_color_selects_color_then_creates_mask() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_layer_tools(mcp, bridge)
+
+    result = await mcp.tools["create_mask_from_color"](color="#ffffff", target_layer_index=0)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "selected_color = Gegl.Color.new('#ffffff')" in generated
+    assert "image.select_color(Gimp.ChannelOps.REPLACE, source, selected_color)" in generated
+    assert "mask = target.create_mask(Gimp.AddMaskType.SELECTION)" in generated

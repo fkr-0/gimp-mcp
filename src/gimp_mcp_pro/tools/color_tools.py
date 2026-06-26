@@ -506,6 +506,85 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             return OperationResult.fail(operation="color_to_alpha", error=str(e)).model_dump()
 
     @mcp.tool()
+    async def replace_color(
+        source_color: str,
+        replacement_color: str,
+        threshold: float = 15.0,
+        sample_merged: bool = False,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+        preserve_selection: bool = True,
+    ) -> ToolResult:
+        """Replace pixels matching a source color with a replacement color.
+
+        Args:
+            source_color: Color to replace, for example "#ffffff" or "white".
+            replacement_color: Color to fill into the selected source-color pixels.
+            threshold: Color similarity threshold 0-255.
+            sample_merged: If True, use GIMP's sample-merged context while selecting.
+            layer_name: Target layer by name. Uses active layer if omitted.
+            layer_index: Target layer by index. Uses active layer if omitted.
+            preserve_selection: Restore the previous selection after replacement.
+
+        Returns:
+            Operation result dictionary with replacement metadata.
+        """
+        try:
+            source = Color(value=source_color)
+            replacement = Color(value=replacement_color)
+        except ValueError as e:
+            return OperationResult.fail(operation="replace_color", error=str(e)).model_dump()
+        code = _color_preamble(layer_name, layer_index) + [
+            "import gc",
+            "previous_foreground = Gimp.context_get_foreground()",
+            "previous_sample_threshold = Gimp.context_get_sample_threshold()",
+            "previous_sample_merged = Gimp.context_get_sample_merged()",
+            f"saved_selection = Gimp.Selection.save(image) if {preserve_selection!r} else None",
+            "undo_started = False",
+            "try:",
+            "    image.undo_group_start(); undo_started = True",
+            f"    Gimp.context_set_sample_threshold({threshold / 255.0})",
+            f"    Gimp.context_set_sample_merged({sample_merged!r})",
+            f"    source_color = {source.to_gegl_code()}",
+            f"    replacement_color = {replacement.to_gegl_code()}",
+            "    Gimp.context_set_foreground(replacement_color)",
+            "    image.select_color(Gimp.ChannelOps.REPLACE, drawable, source_color)",
+            "    Gimp.Drawable.edit_fill(drawable, Gimp.FillType.FOREGROUND)",
+            "finally:",
+            "    try: Gimp.context_set_foreground(previous_foreground)",
+            "    except Exception: pass",
+            "    try: Gimp.context_set_sample_threshold(previous_sample_threshold)",
+            "    except Exception: pass",
+            "    try: Gimp.context_set_sample_merged(previous_sample_merged)",
+            "    except Exception: pass",
+            "    try:",
+            "        if saved_selection is not None: image.select_item(Gimp.ChannelOps.REPLACE, saved_selection)",
+            "    except Exception: pass",
+            "    try:",
+            "        if saved_selection is not None: image.remove_channel(saved_selection)",
+            "    except Exception: pass",
+            "    try:",
+            "        if undo_started: image.undo_group_end()",
+            "    except Exception: pass",
+            "    gc.collect()",
+            "Gimp.displays_flush()",
+        ]
+        try:
+            await bridge.async_execute_python(code, timeout=LONG_TIMEOUT)
+            return OperationResult.ok(
+                operation="replace_color",
+                message=f"Replaced {source.value} with {replacement.value}",
+                data={
+                    "source_color": source.value,
+                    "replacement_color": replacement.value,
+                    "threshold": threshold,
+                    "preserve_selection": preserve_selection,
+                },
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="replace_color", error=str(e)).model_dump()
+
+    @mcp.tool()
     async def auto_white_balance(
         layer_name: str | None = None,
         layer_index: int | None = None,
@@ -943,6 +1022,116 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         except GimpCommandError as e:
             return OperationResult.fail(
                 operation="analyze_color_palette", error=str(e)
+            ).model_dump()
+
+    @mcp.tool()
+    async def dominant_colors(
+        max_colors: int = 8,
+        ignore_transparent: bool = True,
+        region: dict[str, Any] | None = None,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Return dominant colors for a layer or region.
+
+        Args:
+            max_colors: Maximum number of dominant colors to return.
+            ignore_transparent: Skip fully transparent samples.
+            region: Optional x/y/width/height rectangle in layer coordinates.
+            layer_name: Target layer by name.
+            layer_index: Target layer by index.
+
+        Returns:
+            Operation result with dominant color entries and coverage metadata.
+        """
+        if max_colors < 1 or max_colors > 64:
+            return OperationResult.fail(
+                operation="dominant_colors", error="max_colors must be between 1 and 64"
+            ).model_dump()
+        try:
+            result = await bridge.async_execute_python(
+                _palette_analysis_code(
+                    max_colors, ignore_transparent, region, layer_name, layer_index
+                ),
+                timeout=LONG_TIMEOUT,
+            )
+            data = _json_from_bridge(result)
+            data.setdefault("palette", [])
+            data.setdefault("coverage", [])
+            return OperationResult.ok(
+                operation="dominant_colors",
+                message=f"Found up to {max_colors} dominant color(s)",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(operation="dominant_colors", error=str(e)).model_dump()
+
+    @mcp.tool()
+    async def analyze_color_histogram(
+        channels: list[str] | None = None,
+        start_range: float = 0.0,
+        end_range: float = 1.0,
+        layer_name: str | None = None,
+        layer_index: int | None = None,
+    ) -> ToolResult:
+        """Analyze channel histogram summary statistics for a layer.
+
+        Args:
+            channels: Channels to inspect: value, red, green, blue, alpha. Defaults to all common channels.
+            start_range: Lower histogram range bound from 0.0 to 1.0.
+            end_range: Upper histogram range bound from 0.0 to 1.0.
+            layer_name: Target layer by name. Uses active layer if omitted.
+            layer_index: Target layer by index. Uses active layer if omitted.
+
+        Returns:
+            Operation result with mean, standard deviation, median, pixel count, selected count, and percentile per channel.
+        """
+        selected_channels = channels or ["value", "red", "green", "blue", "alpha"]
+        allowed = {"value", "red", "green", "blue", "alpha"}
+        unknown = sorted(set(selected_channels) - allowed)
+        if unknown:
+            return OperationResult.fail(
+                operation="analyze_color_histogram",
+                error=f"Unknown channel(s): {', '.join(unknown)}",
+            ).model_dump()
+        if not (0.0 <= start_range <= end_range <= 1.0):
+            return OperationResult.fail(
+                operation="analyze_color_histogram",
+                error="start_range and end_range must satisfy 0.0 <= start <= end <= 1.0",
+            ).model_dump()
+        channel_expr = {
+            "value": "Gimp.HistogramChannel.VALUE",
+            "red": "Gimp.HistogramChannel.RED",
+            "green": "Gimp.HistogramChannel.GREEN",
+            "blue": "Gimp.HistogramChannel.BLUE",
+            "alpha": "Gimp.HistogramChannel.ALPHA",
+        }
+        lines = _color_preamble(layer_name, layer_index) + [
+            "import json",
+            "stats = {}",
+        ]
+        for channel in selected_channels:
+            lines += [
+                f"ok, mean, std_dev, median, pixels, count, percentile = drawable.histogram({channel_expr[channel]}, {start_range}, {end_range})",
+                f"stats[{channel!r}] = {{'ok': bool(ok), 'mean': mean, 'std_dev': std_dev, 'median': median, 'pixels': pixels, 'count': count, 'percentile': percentile}}",
+            ]
+        lines += [
+            "print(json.dumps({'channels': stats, 'range': {'start': "
+            f"{start_range!r}, 'end': {end_range!r}"
+            "}}))"
+        ]
+        try:
+            result = await bridge.async_execute_python(lines)
+            data = _json_from_bridge(result)
+            data.setdefault("channels", {})
+            return OperationResult.ok(
+                operation="analyze_color_histogram",
+                message=f"Analyzed histogram for {len(selected_channels)} channel(s)",
+                data=data,
+            ).model_dump()
+        except GimpCommandError as e:
+            return OperationResult.fail(
+                operation="analyze_color_histogram", error=str(e)
             ).model_dump()
 
     @mcp.tool()

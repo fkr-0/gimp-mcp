@@ -144,3 +144,38 @@ async def test_select_layer_alpha_uses_image_select_item() -> None:
     generated = "\n".join(bridge.calls[-1][1])
     assert "target = layers[2]" in generated
     assert "image.select_item(Gimp.ChannelOps.ADD, target)" in generated
+
+
+@pytest.mark.asyncio
+async def test_fuzzy_select_alias_for_contiguous_color_selection() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_selection_tools(mcp, bridge)
+
+    result = await mcp.tools["fuzzy_select"](x=7, y=8, threshold=32.0)
+
+    assert result["success"] is True
+    assert result["operation"] == "fuzzy_select"
+    generated = "\n".join(bridge.calls[-1][1])
+    assert (
+        "Gimp.Image.select_contiguous_color(image, Gimp.ChannelOps.REPLACE, drawable, 7, 8)"
+        in generated
+    )
+
+
+@pytest.mark.asyncio
+async def test_select_color_uses_explicit_global_color_selection() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_selection_tools(mcp, bridge)
+
+    result = await mcp.tools["select_color"]("#ffffff", threshold=10.0, layer_index=0)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "drawable = layers[0]" in generated
+    assert "selected_color = Gegl.Color.new('#ffffff')" in generated
+    assert (
+        "Gimp.Image.select_color(image, Gimp.ChannelOps.REPLACE, drawable, selected_color)"
+        in generated
+    )

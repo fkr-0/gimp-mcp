@@ -51,7 +51,7 @@ def test_every_source_registered_tool_has_focused_non_matrix_test_reference() ->
         if not pattern.search(focused_test_text):
             missing.append(f"{group_name}.{tool_name}")
 
-    assert len(pairs) == 176
+    assert len(pairs) == 183
     assert missing == []
 
 

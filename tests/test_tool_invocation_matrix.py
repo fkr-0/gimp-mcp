@@ -461,6 +461,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "add_text": (("hello",), {"x": 1, "y": 2, "color": "#ff0000"}),
     "adjust_brightness_contrast": ((), {"brightness": 12, "contrast": -6}),
     "adjust_color_balance": ((), {"range": "shadows", "cyan_red": 10.0, "magenta_green": -5.0}),
+    "analyze_color_histogram": ((), {"channels": ["value", "alpha"]}),
     "analyze_color_palette": (
         (),
         {
@@ -504,6 +505,10 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     ),
     "create_layer": ((), {"name": "Paint", "opacity": 80, "fill": "transparent"}),
     "create_layer_group": ((), {"name": "Group A", "position": 0}),
+    "create_mask_from_color": (
+        (),
+        {"color": "#ffffff", "target_layer_index": 0, "replace_existing": True},
+    ),
     "create_contact_sheet": (
         (),
         {"target": "visible_layers", "max_tile_size": 96, "label_tiles": True},
@@ -520,6 +525,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "delete_layer": ((), {"layer_index": 0}),
     "delete_guide": ((7,), {}),
     "desaturate": ((), {"method": "luminosity"}),
+    "dominant_colors": ((), {"max_colors": 5, "ignore_transparent": True}),
     "draw_brush_stroke": (([0, 0, 10, 10, 20, 5],), {"tool": "pencil"}),
     "dry_run_macro": (
         ([{"tool": "scale_image", "arguments": {"width": 320, "height": 200}}],),
@@ -546,6 +552,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "flatten_image": ((), {}),
     "flip_image": ((), {"direction": "vertical"}),
     "flip_layer": ((), {"direction": "horizontal", "layer_index": 0}),
+    "fuzzy_select": ((4, 5), {"threshold": 20.0}),
     "get_flow": (("prepare-product-image",), {}),
     "get_colors": ((), {}),
     "get_context_state": ((), {}),
@@ -612,6 +619,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     ),
     "posterize": ((), {"levels": 5}),
     "redo": ((), {"steps": 1}),
+    "replace_color": ((), {"source_color": "white", "replacement_color": "black"}),
     "remove_layer_mask": ((), {"apply": False, "layer_index": 0}),
     "remove_path": ((), {"path_name": "Path 1"}),
     "rollback_transaction": ((), {}),
@@ -639,6 +647,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "scale_layer": ((128, 96), {"interpolation": "linear", "layer_index": 0}),
     "save_selection_to_channel": ((), {"name": "Saved alpha"}),
     "search_pdb": (("blur",), {"max_results": 5}),
+    "select_color": (("#ffffff",), {"threshold": 20.0}),
     "select_by_color": ((4, 5), {"threshold": 20.0}),
     "select_layer_alpha": ((), {"layer_index": 0, "operation": "replace"}),
     "select_all": ((), {}),
@@ -654,6 +663,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "observe_region": ((1, 2, 30, 40), {"max_size": 64}),
     "get_layer_tree_detailed": ((), {}),
     "resolve_target": (("Layer 1",), {"target_types": ["layer"], "require_unique": True}),
+    "selection_to_layer_mask": ((), {"layer_index": 0, "replace_existing": True}),
     "session_capabilities": ((), {}),
     "set_active_layer": ((), {"layer_index": 0}),
     "set_image_grid": (
@@ -793,7 +803,7 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     tools = registered_tools(ScriptedToolBridge())
 
     assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 176
+    assert len(TOOL_SUCCESS_CASES) == 183
 
 
 @pytest.mark.asyncio
