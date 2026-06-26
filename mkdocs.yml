@@ -78,6 +78,7 @@ nav:
       - Repeatable Flows: repeatable-flows.md
   - Architecture:
       - Async Tool Architecture: async-tool-architecture.md
+      - Native Backend Helpers: native-backend.md
       - Future Tool Roadmap: future-tools-roadmap.md
       - GIMP MCP Menu Design: superpowers/specs/2026-06-22-gimp-mcp-menu-design.md
       - Repeatable Flows Design: superpowers/specs/2026-06-22-repeatable-flows-design.md
