@@ -1,0 +1,409 @@
+schema_version: 1
+tool_group: color_tools
+source_path: src/gimp_mcp_pro/tools/color_tools.py
+source_lines: 1248
+source_tool_count: 25
+review_scope:
+  focus:
+  - design cohesion
+  - generated-code implementation safety
+  - test coverage depth
+  - lifecycle and resource cleanup
+  method: static source inspection plus test-reference inventory and focused pytest verification
+  limitations:
+  - No live GIMP smoke was run for this review; generated-code tests exercise offline bridge behavior only.
+summary:
+  overall_risk: medium
+  strong_points:
+  - All 25 color tools have at least test references; several high-risk paths have direct generated-code tests.
+  - set_paint_context validates brush/pattern/gradient before mutation, records previous context, rolls back on
+    failure, and releases temporary colors.
+  - color_to_alpha has direct DrawableFilter lifecycle cleanup assertions for df/cfg deletion and gc.collect().
+  - sampling and palette-analysis helpers use generated code with deterministic JSON payloads and bounded palette
+    max_colors.
+  primary_concerns:
+  - The module still aggregates pixel adjustment, paint resources, sampling, palette analysis, and native backend
+    delegation, though generated-code helpers are split into color_backend.py.
+  - Most mutating pixel-adjustment tools do not have explicit generated-code undo-group/rollback lifecycle assertions.
+  - sample_pixels permits arbitrarily large grid rows*columns and an uncapped average_radius, so generated-code
+    work and response size can grow without a local safety limit.
+  completed_fixes:
+  - src/gimp_mcp_pro/tools/color_backend.py
+  - src/gimp_mcp_pro/tools/color_backend.py extracts generated-code helpers and resource/sampling support from color_tools.py
+  - Mutating color adjustment tools now emit __gimp_mcp_color_adjustment_lifecycle__ with image.undo_group_start/end
+    in finally
+  - sample_pixels now rejects requests above MAX_SAMPLE_POINTS before bridge calls
+  - sample_pixels now rejects average_radius above MAX_AVERAGE_RADIUS before bridge calls
+  - tests/test_color_lifecycle_tools.py now parameterizes the shared lifecycle policy across mutating adjustment
+    tools
+findings:
+- id: COLOR-DESIGN-001
+  severity: medium
+  title: color_tools.py has become a mixed-responsibility mega-module
+  evidence:
+  - src/gimp_mcp_pro/tools/color_tools.py has 1,248 lines and 25 MCP handlers.
+  - 'The module contains at least four distinct concerns: pixel adjustment handlers, paint-resource/context handlers,
+    sampling/palette analysis, and promoted native palette backend delegation.'
+  - _set_paint_context_code is 141 lines; _sample_pixels_code is 93 lines; _palette_analysis_code is 57 lines.
+  impact: Changes to small color operations now require navigating unrelated generated-code helpers, which raises
+    regression risk and weakens ownership boundaries.
+  recommendation: 'Split by behavior rather than by historical roadmap: color_adjustment_tools or helper section,
+    paint_context_tools, color_sampling_tools, and palette_tools/native delegation. Keep register_color_tools as
+    an aggregator if API stability matters.'
+  status: resolved
+  completion_evidence:
+  - Extracted generated-code helper responsibilities to src/gimp_mcp_pro/tools/color_backend.py.
+  - Added structure guard ensuring color_tools.py no longer defines extracted helper functions and stays below 1250
+    lines.
+- id: COLOR-LIFECYCLE-001
+  severity: high
+  title: Mutating adjustment tools lack explicit undo/rollback lifecycle contract
+  evidence:
+  - Mutating adjustment handlers call generated GIMP operations after _color_preamble selection, but there is no
+    shared undo-group wrapper in _color_preamble.
+  - Direct lifecycle tests exist for set_paint_context and color_to_alpha, but the adjustment group is mostly covered
+    through matrix/generated-code success paths.
+  - Affected handlers include adjust_brightness_contrast, adjust_hue_saturation, adjust_color_balance, adjust_levels,
+    adjust_curves, desaturate, invert_colors, apply_threshold, posterize, and auto_white_balance.
+  impact: A failing generated mutation can leave partial document state changes with no asserted transaction boundary
+    or rollback policy.
+  recommendation: 'Define a single mutation lifecycle policy for adjustment tools: either explicit image.undo_group_start/end
+    with finally cleanup, or document why GIMP plug-in invocation provides the atomic boundary. Add focused generated-code
+    tests that assert the chosen policy.'
+  status: resolved
+  completion_evidence:
+  - Added _color_adjustment_lifecycle helper with image.undo_group_start(), mutation try block, Gimp.displays_flush(),
+    and image.undo_group_end() in finally.
+  - Applied the lifecycle wrapper to ten mutating adjustment tools.
+- id: COLOR-TEST-001
+  severity: medium
+  title: 'Coverage is broad but uneven: many tools are matrix-only or success-path-only'
+  evidence:
+  - All 25 tools have at least a test reference, but several core adjustment tools are covered only by test_tool_invocation_matrix.py
+    and/or generic generated-code success tests.
+  - Focused tests exist for color_to_alpha lifecycle, set_paint_context lifecycle, sample_pixels normal/empty cases,
+    and resource inventory/context behavior.
+  - There are no focused negative tests for unbounded sample_pixels grid dimensions or average_radius limits.
+  impact: Generic success-path coverage protects registration and basic generated output, but misses lifecycle contracts
+    and unsafe input boundaries.
+  recommendation: Add focused tests for one representative mutation lifecycle wrapper, then parameterize over all
+    mutating adjustment tools. Add negative tests for oversized sample_pixels grids and average radius bounds.
+  status: resolved
+  completion_evidence:
+  - Added parameterized lifecycle tests for ten mutating adjustment tools.
+  - Added negative before-bridge tests for oversized sample_pixels grids and excessive average_radius.
+- id: COLOR-IMPLEMENTATION-001
+  severity: medium
+  title: sample_pixels generated work is not bounded by a local maximum
+  evidence:
+  - _normalise_sample_points validates grid rows/columns are >= 1 and width/height are non-negative, but does not
+    cap rows*columns.
+  - _sample_pixels_code emits nested loops using the requested rows and columns and appends one result per sample
+    point.
+  - average_radius is coerced to at least 0.0 but has no upper bound before being passed into image.pick_color.
+  impact: A large grid can generate excessive GIMP work and large JSON payloads, creating latency and memory pressure
+    from an otherwise read-only tool.
+  recommendation: Introduce a MAX_SAMPLE_POINTS constant and a MAX_AVERAGE_RADIUS constant, reject oversized requests
+    before bridge calls, and add tests proving rejection happens before generated code is executed.
+  status: resolved
+  completion_evidence:
+  - Added MAX_SAMPLE_POINTS = 4096 and MAX_AVERAGE_RADIUS = 128.0.
+  - _normalise_sample_points rejects oversized grids before code generation.
+  - sample_pixels rejects excessive average_radius before bridge calls.
+- id: COLOR-LIFECYCLE-002
+  severity: low
+  title: High-risk lifecycle paths have recently improved direct coverage
+  evidence:
+  - tests/test_color_lifecycle_tools.py asserts set_paint_context validation-before-mutation, rollback, temp color
+    deletion, and gc.collect().
+  - tests/test_color_resource_tools.py asserts color_to_alpha DrawableFilter lifecycle markers, df/cfg deletion,
+    and gc.collect().
+  impact: The two most obvious resource/context lifecycle paths are no longer only matrix-covered.
+  recommendation: Keep these tests as templates for adjustment mutation lifecycle tests and any future DrawableFilter-based
+    color operations.
+  status: resolved
+  completion_evidence:
+  - Kept existing lifecycle coverage for set_paint_context and color_to_alpha as passing regression templates.
+recommended_next_tests:
+- id: COLOR-NEXT-001
+  title: Reject oversized sample_pixels requests before bridge execution
+  target: tests/test_sample_pixels_tools.py
+  expected_red_first: A 10_000 x 10_000 grid currently reaches bridge code instead of failing locally.
+- id: COLOR-NEXT-002
+  title: Assert adjustment tools use a shared mutation lifecycle policy
+  target: tests/test_color_lifecycle_tools.py
+  expected_red_first: Current generated code does not include an explicit undo group or documented lifecycle marker
+    for adjustment mutations.
+- id: COLOR-NEXT-003
+  title: Refactor color_tools into cohesive helper modules behind the existing register_color_tools API
+  target: src/gimp_mcp_pro/tools/color_tools.py
+  expected_red_first: A structure guard can require thin aggregator registration and forbid growth of generated
+    helper blocks in the aggregator.
+tools:
+- name: adjust_brightness_contrast
+  line_range: 39-74
+  lines: 36
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: dominant_colors
+  line_range: 1022-1061
+  lines: 40
+  area: sampling/palette-analysis
+  test_coverage: direct
+  test_evidence:
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: read-only bounded palette analysis using the shared backend helper
+- name: adjust_color_balance
+  line_range: 119-186
+  lines: 68
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_color_resource_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: adjust_curves
+  line_range: 253-303
+  lines: 51
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: adjust_hue_saturation
+  line_range: 77-116
+  lines: 40
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: adjust_levels
+  line_range: 189-250
+  lines: 62
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: analyze_color_palette
+  line_range: 876-946
+  lines: 71
+  area: sampling/palette-analysis
+  test_coverage: direct
+  test_evidence:
+  - tests/test_remaining_feature_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: read-only generated code path
+- name: analyze_color_histogram
+  line_range: 1064-1113
+  lines: 50
+  area: sampling/palette-analysis
+  test_coverage: direct
+  test_evidence:
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: read-only histogram summary with bounded channel and range validation
+- name: apply_threshold
+  line_range: 376-409
+  lines: 34
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: auto_white_balance
+  line_range: 509-534
+  lines: 26
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: brush_inventory
+  line_range: 537-582
+  lines: 46
+  area: paint-resource/context
+  test_coverage: direct
+  test_evidence:
+  - tests/test_asset_context_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: resource/context read-back path
+- name: replace_color
+  line_range: 503-535
+  lines: 33
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: typed mutating color replacement path
+- name: color_to_alpha
+  line_range: 443-506
+  lines: 64
+  area: native-backend delegated/generated
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_resource_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: DrawableFilter lifecycle cleanup is directly tested
+- name: desaturate
+  line_range: 306-346
+  lines: 41
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: get_colors
+  line_range: 809-853
+  lines: 45
+  area: paint-resource/context
+  test_coverage: matrix-only
+  test_evidence:
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: resource/context read-back path
+- name: invert_colors
+  line_range: 349-373
+  lines: 25
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: list_gimp_resources
+  line_range: 728-806
+  lines: 79
+  area: paint-resource/context
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_resource_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: resource/context read-back path
+- name: palette_create_or_update
+  line_range: 1082-1119
+  lines: 38
+  area: native-backend delegated/generated
+  test_coverage: direct
+  test_evidence:
+  - tests/test_promoted_roadmap_native_backends.py
+  - tests/test_roadmap_tool_review.py
+  lifecycle_notes: delegates to native_backend.execute_json_tool
+- name: posterize
+  line_range: 412-440
+  lines: 29
+  area: pixel-adjustment
+  test_coverage: direct
+  test_evidence:
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: mutates active drawable; no explicit undo-group or rollback assertion found in generated-code
+    tests
+- name: resource_catalog
+  line_range: 679-725
+  lines: 47
+  area: paint-resource/context
+  test_coverage: direct
+  test_evidence:
+  - tests/test_big_remaining_feature_chunk.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: resource/context read-back path
+- name: sample_color
+  line_range: 1027-1079
+  lines: 53
+  area: sampling/palette-analysis
+  test_coverage: direct
+  test_evidence:
+  - tests/test_compat_contract.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: read-only generated code path
+- name: sample_pixels
+  line_range: 949-1024
+  lines: 76
+  area: sampling/palette-analysis
+  test_coverage: direct
+  test_evidence:
+  - tests/test_sample_pixels_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: read-only sampling; bounded by validation for region/max_colors, but grid request size needs
+    explicit cap
+- name: set_paint_context
+  line_range: 618-676
+  lines: 59
+  area: paint-resource/context
+  test_coverage: direct
+  test_evidence:
+  - tests/test_asset_context_tools.py
+  - tests/test_color_lifecycle_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: context/resource read-back; set_paint_context has explicit rollback and gc cleanup coverage
+- name: set_paint_resource
+  line_range: 585-615
+  lines: 31
+  area: paint-resource/context
+  test_coverage: direct
+  test_evidence:
+  - tests/test_asset_context_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: resource/context read-back path
+- name: swap_colors
+  line_range: 856-873
+  lines: 18
+  area: paint-resource/context
+  test_coverage: matrix-only
+  test_evidence:
+  - tests/test_tool_invocation_matrix.py
+  lifecycle_notes: resource/context read-back path
+verification:
+- command: uv run pytest --no-cov tests/test_color_tool_group_review.py -q
+  result: 'passed: 4 passed after resolution update'
+- command: uv run pytest --no-cov tests/test_color_lifecycle_tools.py tests/test_color_resource_tools.py tests/test_sample_pixels_tools.py
+    tests/test_asset_context_tools.py tests/test_tool_invocation_matrix.py -q
+  result: superseded by focused color suite rerun
+- command: uv run python scripts/project.py check
+  result: 'passed: docs audit, ruff format --check, ruff check, mypy, and 730 pytest tests passed'
+- command: uv run pytest --no-cov tests/test_sample_pixels_tools.py::test_sample_pixels_rejects_oversized_grid_before_bridge_call
+    tests/test_sample_pixels_tools.py::test_sample_pixels_rejects_excessive_average_radius_before_bridge_call tests/test_color_lifecycle_tools.py::test_mutating_color_adjustments_use_shared_undo_lifecycle
+    -q
+  result: passed in current fix pass
+- command: uv run pytest --no-cov tests/test_color_tool_group_review.py::test_color_tools_uses_extracted_backend_helpers
+    tests/test_sample_pixels_tools.py tests/test_color_lifecycle_tools.py tests/test_color_resource_tools.py tests/test_asset_context_tools.py
+    -q
+  result: passed in current fix pass
+- command: uv run pytest --no-cov tests/test_native_backend_architecture.py -q
+  result: passed in current fix pass
+helper_backend_path: src/gimp_mcp_pro/tools/color_backend.py
+helper_backend_lines: 603

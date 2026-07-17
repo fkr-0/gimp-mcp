@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.3.0 (2026-07-17)
+
+### Async high-level operations
+
+- Added the session-scoped `list_checkpoints`, `restore_checkpoint`, and
+  `discard_checkpoint` workflow tools, bringing the registry to 186 fully async
+  MCP tools.
+- Made checkpoint restoration deliberately non-destructive: saved state opens
+  as a new GIMP document instead of replacing the active image.
+- Added path-redacted checkpoint listings and controlled temporary-file cleanup.
+
+### Fixes and implementation gaps
+
+- Fixed `create_checkpoint(include_xcf_copy=true)` so it writes a real XCF with
+  `Gimp.file_save`; the previous implementation duplicated and deleted an image
+  without persisting the checkpoint.
+- Unified checkpoint IDs across the MCP response, session index, generated GIMP
+  code, and XCF filename.
+- Removed the hard-coded `/tmp` assumption and now use the host temporary
+  directory consistently on both sides of the bridge.
+- Ensured temporary duplicate image references are released after saving.
+
+### Testing and compatibility
+
+- Added focused lifecycle tests covering create, list, restore, discard, path
+  redaction, metadata-only checkpoints, and duplicate-image cleanup.
+- Extended the invocation and generated-code matrices to cover the complete
+  186-tool async registry.
+- Added a clean-profile Xvfb GIMP 3.2.4 E2E flow for checkpoint creation, XCF
+  save, reopening as a new document, and deletion.
+- Recorded a verified 24/24 compatibility run with zero failures and
+  `claim_allowed: true`.
+
+### Documentation and release
+
+- Regenerated the complete tool reference and docstring audit for 186 tools.
+- Updated README, compatibility contracts, roadmap/risk review counts, and live
+  compatibility evidence.
+- Built and validated the strict MkDocs site, source distribution, and wheel.
+
 ## 0.2.0 (2026-07-17)
 
 ### Checkpoint lifecycle

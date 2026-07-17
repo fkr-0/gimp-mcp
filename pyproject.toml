@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gimp-mcp-pro"
-version = "0.2.0"
+version = "0.3.0"
 description = "Production-grade MCP server for GIMP 3.0+ — typed tools, reliable communication, AI-friendly workflows"
 readme = "README.md"
 license = "MIT"

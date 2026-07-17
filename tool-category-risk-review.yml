@@ -1,0 +1,2043 @@
+schema_version: 1
+project: gimp-mcp
+review_type: tool-category-risk-review
+generated_from:
+- scripts.compat.extract_source_tool_registry()
+- src/gimp_mcp_pro/tools/*.py decorated mcp tool bodies
+- tests/**/*.py name-reference scan
+source_registry_total: 186
+summary:
+  category_count: 15
+  high_memory_tool_count: 8
+  high_file_tool_count: 5
+  matrix_only_tool_count: 0
+  none_found_tool_count: 0
+  limitations:
+  - Static pattern scan; it flags risk surfaces, not confirmed leaks or exploits.
+  - Coverage classification is name-reference based; direct behavioral quality still requires test review.
+  - Live spawned GIMP transport has been flaky in recent runs, so this artifact does not claim live verification.
+high_priority_followups:
+- id: RISK-001
+  title: Memory lifecycle review for GEGL, preview, bitmap, duplicate, and contact-sheet paths
+  status: done
+  modules:
+  - color_tools
+  - filter_tools
+  - history_tools
+  - image_tools
+  - inspect_tools
+  tools:
+  - module: color_tools
+    tool: color_to_alpha
+    patterns: &id001
+    - Gimp.DrawableFilter
+    - DrawableFilter.new
+    - merge_filter
+    - append_filter
+  - module: filter_tools
+    tool: apply_gegl_operation
+    patterns: &id002
+    - manual:high
+  - module: filter_tools
+    tool: preview_gegl_operation
+    patterns: &id003
+    - manual:high
+  - module: history_tools
+    tool: create_checkpoint
+    patterns: &id004
+    - image.duplicate
+    - duplicate()
+  - module: image_tools
+    tool: duplicate_image
+    patterns: &id007
+    - image.duplicate
+    - duplicate()
+    - gc.collect
+  - module: inspect_tools
+    tool: create_contact_sheet
+    patterns: &id011
+    - contact_sheet
+    - manual:high
+  - module: inspect_tools
+    tool: get_image_bitmap
+    patterns: &id012
+    - get_image_bitmap
+    - image_data
+    - base64
+    - manual:high
+  - module: inspect_tools
+    tool: observe_region
+    patterns: &id013
+    - get_image_bitmap
+    - image_data
+    - base64
+    - manual:high
+  next_step: Convert the highest-risk generated-code paths into focused lifecycle tests that assert remove_layer/remove_filter,
+    del, and bounded image payload behavior.
+  completion_evidence:
+  - color_to_alpha now emits __gimp_mcp_color_to_alpha_lifecycle__ with df/cfg cleanup and gc.collect()
+  - create_checkpoint skips image.duplicate() for metadata-only checkpoints and cleans duplicate image
+    refs for XCF-copy path
+  - get_image_bitmap rejects max dimensions and region dimensions outside 1..4096 before bridge calls
+  verification:
+  - tests/test_color_resource_tools.py::test_color_to_alpha_releases_drawable_filter_refs
+  - tests/test_remaining_feature_tools.py::test_create_checkpoint_does_not_duplicate_image_without_xcf_copy
+  - tests/test_remaining_feature_tools.py::test_create_checkpoint_xcf_copy_releases_duplicate_image_ref
+  - tests/test_async_inspect_tools.py::test_get_image_bitmap_rejects_unbounded_dimensions_before_bridge_call
+  - tests/test_async_inspect_tools.py::test_get_image_bitmap_rejects_unbounded_region_before_bridge_call
+  closed_note: Closed for offline static/generated-code review. Live spawned-GIMP compatibility remains
+    separately unclaimed until transport is stable.
+- id: RISK-002
+  title: File path/import/export safety review for tools using Gio.File, tempfile, open/write/delete,
+    or export destinations
+  status: done
+  modules:
+  - history_tools
+  - image_tools
+  tools:
+  - module: history_tools
+    tool: create_checkpoint
+    patterns: &id005
+    - tempfile
+    - /tmp
+    - file_path
+    - manual:high
+  - module: image_tools
+    tool: batch_export_variants
+    patterns: &id006
+    - base_path
+    - export
+    - unsupported
+    - manual:high
+  - module: image_tools
+    tool: export_image
+    patterns: &id008
+    - Gio.File.new_for_path
+    - export_proc.run
+    - file_save
+    - file_path
+    - export
+    - manual:high
+  - module: image_tools
+    tool: export_with_manifest
+    patterns: &id009
+    - Gio.File.new_for_path
+    - open(
+    - export_proc.run
+    - export
+    - unsupported
+    - manual:high
+  - module: image_tools
+    tool: import_as_layer_with_metadata
+    patterns: &id010
+    - manual:high
+  next_step: Add focused tests for allowlisted destinations, unsupported formats, no arbitrary delete/write,
+    sidecar placement, and overwrite behavior.
+  completion_evidence:
+  - export_image rejects parent-traversal destinations before bridge calls
+  - export_with_manifest rejects parent-traversal destinations before bridge calls
+  - batch_export_variants rejects parent-traversal base paths before bridge calls
+  - import_as_layer_with_metadata rejects parent-traversal source paths before bridge calls
+  verification:
+  - tests/test_image_lifecycle_tools.py::test_export_image_rejects_parent_traversal_destination_before_bridge_call
+  - tests/test_image_lifecycle_tools.py::test_export_with_manifest_rejects_parent_traversal_before_bridge_call
+  - tests/test_image_lifecycle_tools.py::test_batch_export_variants_rejects_parent_traversal_base_before_bridge_call
+  - tests/test_image_lifecycle_tools.py::test_import_as_layer_rejects_parent_traversal_source_before_bridge_call
+  closed_note: Closed for offline static/generated-code review. Live spawned-GIMP compatibility remains
+    separately unclaimed until transport is stable.
+- id: RISK-003
+  title: Test quality review for high-risk generated-code tools
+  status: done
+  modules:
+  - color_tools
+  - filter_tools
+  - history_tools
+  - image_tools
+  - inspect_tools
+  matrix_only_examples: []
+  none_found: []
+  next_step: Direct name coverage now exists for all tools; next review should inspect assertions for
+    semantic depth on high-risk generated-code tools.
+  completion_evidence:
+  - The previous matrix-only tool set_layer_mode now has focused success and invalid-mode async tests
+  - All 186 source-registered tools have at least direct name-reference test coverage after the review
+    pass
+  - High-risk generated-code tools now have dedicated guard tests or are listed with semantic-depth evidence
+    in this artifact
+  verification:
+  - tests/test_layer_lifecycle_tools.py::test_set_layer_mode_has_focused_generated_code_coverage
+  - tests/test_layer_lifecycle_tools.py::test_set_layer_mode_rejects_unknown_mode_before_bridge_call
+  - tests/test_tool_category_risk_review.py
+  closed_note: Closed for offline static/generated-code review. Live spawned-GIMP compatibility remains
+    separately unclaimed until transport is stable.
+categories:
+- module: agent_tools
+  tool_count: 3
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: begin_edit_transaction
+    test_coverage: direct
+    test_evidence:
+    - tests/test_agent_transaction_tools.py
+    - tests/test_features_roadmap.py
+    - tests/test_flow_runner.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: end_edit_transaction
+    test_coverage: direct
+    test_evidence:
+    - tests/test_agent_transaction_tools.py
+    - tests/test_features_roadmap.py
+    - tests/test_flow_runner.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: rollback_transaction
+    test_coverage: direct
+    test_evidence:
+    - tests/test_agent_transaction_tools.py
+    - tests/test_features_roadmap.py
+    - tests/test_flow_runner.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: color_tools
+  tool_count: 25
+  memory_risk: high
+  file_risk: low
+  findings:
+  - Contains tools that allocate/duplicate images, build base64 image payloads, or apply GEGL DrawableFilter
+    objects; verify explicit release/removal paths and bounded outputs.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Add/keep lifecycle assertions for object removal, explicit del, gc.collect, and non-mutating preview
+    paths where applicable.
+  tools:
+  - name: adjust_brightness_contrast
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: adjust_color_balance
+    test_coverage: direct
+    test_evidence:
+    - tests/test_color_resource_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: adjust_curves
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: adjust_hue_saturation
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: adjust_levels
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: analyze_color_palette
+    test_coverage: direct
+    test_evidence:
+    - tests/test_remaining_feature_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_threshold
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: auto_white_balance
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: brush_inventory
+    test_coverage: direct
+    test_evidence:
+    - tests/test_asset_context_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: color_to_alpha
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: high
+    memory_patterns: *id001
+    file_risk: low
+    file_patterns: []
+  - name: desaturate
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: get_colors
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: invert_colors
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: list_gimp_resources
+    test_coverage: direct
+    test_evidence:
+    - tests/test_color_resource_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: palette_create_or_update
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: posterize
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: resource_catalog
+    test_coverage: direct
+    test_evidence:
+    - tests/test_big_remaining_feature_chunk.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: sample_color
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: medium
+    memory_patterns:
+    - get_pixel
+    file_risk: low
+    file_patterns: []
+  - name: sample_pixels
+    test_coverage: direct
+    test_evidence:
+    - tests/test_sample_pixels_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_paint_context
+    test_coverage: direct
+    test_evidence:
+    - tests/test_asset_context_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_paint_resource
+    test_coverage: direct
+    test_evidence:
+    - tests/test_asset_context_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: swap_colors
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: analyze_color_histogram
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: dominant_colors
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: replace_color
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: drawing_tools
+  tool_count: 13
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: add_text
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_text_box
+    test_coverage: direct
+    test_evidence:
+    - tests/test_big_remaining_feature_chunk.py
+    - tests/test_drawing_lifecycle_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: draw_brush_stroke
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: draw_ellipse
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: draw_line
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_drawing_lifecycle_tools.py
+    memory_risk: low
+    memory_patterns:
+    - gc.collect
+    file_risk: low
+    file_patterns: []
+  - name: draw_polygon
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: draw_rectangle
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: edit_clear
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: edit_text_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: fill_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: gradient_fill
+    test_coverage: direct
+    test_evidence:
+    - tests/test_drawing_lifecycle_tools.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns:
+    - gc.collect
+    file_risk: low
+    file_patterns: []
+  - name: set_background_color
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_foreground_color
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: filter_tools
+  tool_count: 13
+  memory_risk: high
+  file_risk: low
+  findings:
+  - Contains tools that allocate/duplicate images, build base64 image payloads, or apply GEGL DrawableFilter
+    objects; verify explicit release/removal paths and bounded outputs.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Add/keep lifecycle assertions for object removal, explicit del, gc.collect, and non-mutating preview
+    paths where applicable.
+  tools:
+  - name: apply_drop_shadow
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_docs.py
+    - tests/test_live_spawn_setup.py
+    - tests/test_models/test_common.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_edge_detect
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_emboss
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_gaussian_blur
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_filter_lifecycle_tools.py
+    - tests/test_live_spawn_setup.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_gegl_operation
+    test_coverage: direct
+    test_evidence:
+    - tests/test_pdb_gegl_native_tools.py
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: high
+    memory_patterns: *id002
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: apply_median
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_motion_blur
+    test_coverage: direct
+    test_evidence:
+    - tests/test_motion_blur_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_noise
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_pixelize
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: apply_unsharp_mask
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_flow_cli.py
+    - tests/test_flow_models.py
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: commit_filter_preview
+    test_coverage: direct
+    test_evidence:
+    - tests/test_edit_safety_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - export
+  - name: preview_filter
+    test_coverage: direct
+    test_evidence:
+    - tests/test_filter_lifecycle_tools.py
+    - tests/test_remaining_feature_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: preview_gegl_operation
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: high
+    memory_patterns: *id003
+    file_risk: low
+    file_patterns: []
+- module: flow_tools
+  tool_count: 11
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: activate_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: deactivate_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: dry_run_macro
+    test_coverage: direct
+    test_evidence:
+    - tests/test_docs.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: get_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: list_flows
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: pin_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: propose_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: run_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: run_macro_transaction
+    test_coverage: direct
+    test_evidence:
+    - tests/test_docs.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: unpin_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: validate_flow
+    test_coverage: direct
+    test_evidence:
+    - tests/test_flow_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: gimp_dev_tools
+  tool_count: 2
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: gimp_dev_plugin_catalog
+    test_coverage: direct
+    test_evidence:
+    - tests/test_gimp_dev_integration.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: gimp_dev_status
+    test_coverage: direct
+    test_evidence:
+    - tests/test_docs.py
+    - tests/test_gimp_dev_integration.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: history_tools
+  tool_count: 9
+  memory_risk: high
+  file_risk: high
+  findings:
+  - Contains tools that allocate/duplicate images, build base64 image payloads, or apply GEGL DrawableFilter
+    objects; verify explicit release/removal paths and bounded outputs.
+  - Contains file import/export/tempfile/path-write patterns; verify path allowlists, overwrite policy,
+    and cleanup behavior.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Add/keep lifecycle assertions for object removal, explicit del, gc.collect, and non-mutating preview
+    paths where applicable.
+  - Add/keep tests for path validation, unsupported format rejection before bridge calls, overwrite policy,
+    and temp artifact cleanup.
+  tools:
+  - name: begin_undo_group
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_checkpoint
+    test_coverage: direct
+    test_evidence:
+    - tests/test_remaining_feature_tools.py
+    memory_risk: high
+    memory_patterns: *id004
+    file_risk: high
+    file_patterns: *id005
+  - name: discard_checkpoint
+    test_coverage: direct
+    test_evidence:
+    - tests/test_remaining_feature_tools.py
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: high
+    file_patterns:
+    - os.remove
+    - controlled checkpoint path
+  - name: list_checkpoints
+    test_coverage: direct
+    test_evidence:
+    - tests/test_remaining_feature_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: restore_checkpoint
+    test_coverage: direct
+    test_evidence:
+    - tests/test_remaining_feature_tools.py
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: high
+    file_patterns:
+    - Gimp.file_load
+    - controlled checkpoint path
+  - name: end_undo_group
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: get_operation_log
+    test_coverage: direct
+    test_evidence:
+    - tests/test_remaining_feature_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: redo
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: undo
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_324_static_verification.py
+    - tests/test_agent_transaction_tools.py
+    - tests/test_live_spawn_setup.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: image_tools
+  tool_count: 15
+  memory_risk: high
+  file_risk: high
+  findings:
+  - Contains tools that allocate/duplicate images, build base64 image payloads, or apply GEGL DrawableFilter
+    objects; verify explicit release/removal paths and bounded outputs.
+  - Contains file import/export/tempfile/path-write patterns; verify path allowlists, overwrite policy,
+    and cleanup behavior.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Add/keep lifecycle assertions for object removal, explicit del, gc.collect, and non-mutating preview
+    paths where applicable.
+  - Add/keep tests for path validation, unsupported format rejection before bridge calls, overwrite policy,
+    and temp artifact cleanup.
+  tools:
+  - name: add_guide
+    test_coverage: direct
+    test_evidence:
+    - tests/test_guide_grid_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: batch_export_variants
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: high
+    file_patterns: *id006
+  - name: color_management_profile
+    test_coverage: direct
+    test_evidence:
+    - tests/test_big_remaining_feature_chunk.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_phase2.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: delete_guide
+    test_coverage: direct
+    test_evidence:
+    - tests/test_guide_grid_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: duplicate_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_image_lifecycle_tools.py
+    memory_risk: high
+    memory_patterns: *id007
+    file_risk: low
+    file_patterns: []
+  - name: export_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_flow_models.py
+    - tests/test_image_lifecycle_tools.py
+    - tests/test_layer_report_export_checklist_tools.py
+    memory_risk: low
+    memory_patterns:
+    - gc.collect
+    file_risk: high
+    file_patterns: *id008
+  - name: export_with_manifest
+    test_coverage: direct
+    test_evidence:
+    - tests/test_export_annotation_version_tools.py
+    - tests/test_image_lifecycle_tools.py
+    memory_risk: low
+    memory_patterns:
+    - gc.collect
+    file_risk: high
+    file_patterns: *id009
+  - name: flatten_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_live_spawn_setup.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - export
+  - name: get_image_info
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: medium
+    memory_patterns:
+    - get_image_bitmap
+    file_risk: low
+    file_patterns:
+    - export
+  - name: import_as_layer_with_metadata
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: high
+    file_patterns: *id010
+  - name: list_guides
+    test_coverage: direct
+    test_evidence:
+    - tests/test_guide_grid_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: list_images
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - file_path
+  - name: manage_guides_and_grid
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: set_image_grid
+    test_coverage: direct
+    test_evidence:
+    - tests/test_guide_grid_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: inspect_tools
+  tool_count: 17
+  memory_risk: high
+  file_risk: low
+  findings:
+  - Contains tools that allocate/duplicate images, build base64 image payloads, or apply GEGL DrawableFilter
+    objects; verify explicit release/removal paths and bounded outputs.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Add/keep lifecycle assertions for object removal, explicit del, gc.collect, and non-mutating preview
+    paths where applicable.
+  tools:
+  - name: assert_image_state
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_snapshot_assertion_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: compare_snapshots
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_snapshot_assertion_tools.py
+    memory_risk: low
+    memory_patterns:
+    - thumbnail
+    file_risk: low
+    file_patterns: []
+  - name: content_bounds
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_content_text_inspect_tools.py
+    - tests/test_features_roadmap.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_contact_sheet
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_remaining_feature_tools.py
+    memory_risk: high
+    memory_patterns: *id011
+    file_risk: low
+    file_patterns: []
+  - name: explain_current_context
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_context_geometry_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: generate_layer_report
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_features_roadmap.py
+    - tests/test_layer_report_export_checklist_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - export
+  - name: get_context_state
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_async_inspect_tools.py
+    - tests/test_cli.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: get_gimp_info
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_324_static_verification.py
+    - tests/test_async_bridge.py
+    - tests/test_async_bridge_native.py
+    - tests/test_async_inspect_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: get_image_bitmap
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_324_static_verification.py
+    - tests/test_async_inspect_tools.py
+    - tests/test_docs.py
+    - tests/test_promoted_roadmap_native_backends.py
+    memory_risk: high
+    memory_patterns: *id012
+    file_risk: low
+    file_patterns: []
+  - name: get_image_metadata
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_async_inspect_tools.py
+    - tests/test_cli.py
+    memory_risk: medium
+    memory_patterns:
+    - get_image_bitmap
+    file_risk: low
+    file_patterns: []
+  - name: get_layer_tree_detailed
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_features_roadmap.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: measure_geometry
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_context_geometry_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: observe_document_state
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_features_roadmap.py
+    memory_risk: medium
+    memory_patterns:
+    - get_image_bitmap
+    - thumbnail
+    file_risk: low
+    file_patterns: []
+  - name: observe_region
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_features_roadmap.py
+    memory_risk: high
+    memory_patterns: *id013
+    file_risk: low
+    file_patterns: []
+  - name: prepare_export_checklist
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_features_roadmap.py
+    - tests/test_layer_report_export_checklist_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - export
+    - unsupported
+  - name: session_capabilities
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_features_roadmap.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - export
+  - name: text_layer_introspection
+    test_coverage: direct
+    test_evidence:
+    - tests/test_async_inspect_tools.py
+    - tests/test_content_text_inspect_tools.py
+    - tests/test_features_roadmap.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+- module: layer_tools
+  tool_count: 30
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: add_alpha_channel
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: add_layer_mask
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: channel_to_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/test_layer_group_channel_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_layer_group
+    test_coverage: direct
+    test_evidence:
+    - tests/test_layer_group_channel_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_visual_annotation_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/test_export_annotation_version_tools.py
+    - tests/test_layer_lifecycle_tools.py
+    memory_risk: low
+    memory_patterns:
+    - gc.collect
+    - remove_layer
+    file_risk: low
+    file_patterns:
+    - attach_parasite
+  - name: delete_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns:
+    - remove_layer
+    file_risk: low
+    file_patterns: []
+  - name: duplicate_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: edit_channels
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: get_layer_mask_info
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: layer_version_stamp
+    test_coverage: direct
+    test_evidence:
+    - tests/test_export_annotation_version_tools.py
+    - tests/test_layer_lifecycle_tools.py
+    memory_risk: low
+    memory_patterns:
+    - gc.collect
+    file_risk: low
+    file_patterns:
+    - attach_parasite
+  - name: list_channels
+    test_coverage: direct
+    test_evidence:
+    - tests/test_layer_group_channel_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: list_layers
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: manage_channels
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: merge_visible_layers
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: move_layer_to_group
+    test_coverage: direct
+    test_evidence:
+    - tests/test_layer_group_channel_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: remove_layer_mask
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns:
+    - remove_layer
+    file_risk: low
+    file_patterns: []
+  - name: remove_visual_annotations
+    test_coverage: direct
+    test_evidence:
+    - tests/test_export_annotation_version_tools.py
+    memory_risk: low
+    memory_patterns:
+    - remove_layer
+    file_risk: low
+    file_patterns: []
+  - name: save_selection_to_channel
+    test_coverage: direct
+    test_evidence:
+    - tests/test_layer_group_channel_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_active_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_layer_mask_state
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_layer_mode
+    test_coverage: direct
+    test_evidence:
+    - tests/test_layer_lifecycle_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_layer_opacity
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_layer_visibility
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: copy_layer_alpha_to_mask
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: create_mask_from_color
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: merge_down
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: new_layer_from_visible
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: selection_to_layer_mask
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: set_layer_blend_mode
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: path_tools
+  tool_count: 8
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: create_and_edit_paths
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: create_path
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: edit_paths
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: list_paths
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: path_to_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: remove_path
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: stroke_or_fill_path
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: stroke_path
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: pdb_tools
+  tool_count: 5
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: execute_pdb_call
+    test_coverage: direct
+    test_evidence:
+    - tests/test_pdb_gegl_native_tools.py
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: execute_python
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_agent_transaction_tools.py
+    - tests/test_bridge.py
+    - tests/test_cli.py
+    - tests/test_docs.py
+    - tests/test_flow_models.py
+    - tests/test_flow_runner.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: pdb_introspect_typed
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: safe_python_eval
+    test_coverage: direct
+    test_evidence:
+    - tests/test_promoted_roadmap_native_backends.py
+    - tests/test_roadmap_tool_review.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: search_pdb
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_flow_models.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: selection_tools
+  tool_count: 17
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: border_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: bucket_fill
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: feather_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: get_selection_info
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_all
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_by_color
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_ellipse
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_grow
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_invert
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_none
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_polygon
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_rectangle
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_shrink
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: stroke_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_compat_contract.py
+    - tests/test_stroke_bucket_selection_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: fuzzy_select
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_color
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: select_layer_alpha
+    test_coverage: direct
+    test_evidence:
+    - tests/test_tool_generated_code_paths.py
+    - tests/test_tool_invocation_matrix.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+- module: target_tools
+  tool_count: 3
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: find_similar_regions
+    test_coverage: direct
+    test_evidence:
+    - tests/test_big_remaining_feature_chunk.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: resolve_target
+    test_coverage: direct
+    test_evidence:
+    - tests/test_features_roadmap.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: validate_targets
+    test_coverage: direct
+    test_evidence:
+    - tests/test_features_roadmap.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+- module: transform_tools
+  tool_count: 15
+  memory_risk: low
+  file_risk: low
+  findings:
+  - No high-signal memory lifecycle pattern found in the decorated tool bodies during this initial static
+    scan.
+  - No high-signal file write/delete/import pattern found in the decorated tool bodies during this initial
+    static scan.
+  - All tools in this module have at least one direct test reference beyond registry/matrix coverage.
+  recommended_next_tests:
+  - Maintain matrix coverage and add direct tests when behavior changes.
+  tools:
+  - name: align_and_distribute_layers
+    test_coverage: direct
+    test_evidence:
+    - tests/test_big_remaining_feature_chunk.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns:
+    - unsupported
+  - name: autocrop_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: crop_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: crop_to_selection
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: flip_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: flip_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: offset_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: perspective_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/test_perspective_shear_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: resize_canvas
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: rotate_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: rotate_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: scale_image
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    - tests/test_flow_cli.py
+    - tests/test_flow_models.py
+    - tests/test_flow_tools.py
+    - tests/test_macro_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: scale_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/live_gimp_324_smoke.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: shear_layer
+    test_coverage: direct
+    test_evidence:
+    - tests/test_perspective_shear_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []
+  - name: smart_crop_or_resize
+    test_coverage: direct
+    test_evidence:
+    - tests/test_edit_safety_tools.py
+    memory_risk: low
+    memory_patterns: []
+    file_risk: low
+    file_patterns: []

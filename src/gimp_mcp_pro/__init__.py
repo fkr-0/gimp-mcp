@@ -1,3 +1,3 @@
 """GIMP MCP Pro — production-grade MCP server for GIMP 3.0+."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
