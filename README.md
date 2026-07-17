@@ -2,16 +2,16 @@
 
 **Production-grade Model Context Protocol server for GIMP 3.0+**
 
-> 183 typed tools • reliable communication • AI-friendly workflows
+> 186 typed tools • reliable communication • AI-friendly workflows
 
 GIMP MCP Pro lets AI assistants (Claude, etc.) control GIMP through well-structured, typed MCP tools — creating images, managing layers, drawing shapes, applying filters, adjusting colors, and more.
 
 ## Features
 
-- **183 typed MCP tools** across 15 tool modules — image management, layers, selections, vector paths, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, repeatable flows, gimp.dev discovery, and agent workflow helpers
+- **186 typed MCP tools** across 15 tool modules — image management, layers, selections, vector paths, drawing/text, transforms, colors, filters, inspection/observation, target resolution, history, PDB access, repeatable flows, gimp.dev discovery, and agent workflow helpers
 - **Reliable communication** — length-prefixed socket framing (no more JSON boundary guessing)
 - **Persistent connections** — one TCP connection, kept alive, with automatic reconnection
-- **GIMP 3.2.4 compatibility verified** — the isolated clean-profile Xvfb matrix in `compat.results.yml` records 24 passing checks, 0 failures, the 183-tool registry, and `claim_allowed: true`
+- **GIMP 3.2.4 compatibility verified** — the isolated clean-profile Xvfb matrix in `compat.results.yml` records 24 passing checks, 0 failures, the 186-tool registry, and `claim_allowed: true`
 - **Undo groups** — multi-step AI workflows as a single undo step
 - **Pydantic validation** — inputs validated before reaching GIMP
 - **AI guidance prompts** — best practices and iterative workflow documentation
@@ -26,7 +26,7 @@ gimp_3_2_4:
   status: verified
   contract: compat.yml
   latest_live_results: compat.results.yml
-  registered_tools: 183
+  registered_tools: 186
   live_checks_passed: 24
   live_checks_failed: 0
   clean_profile: true
@@ -49,7 +49,7 @@ AI Assistant  ←→  MCP Server (gimp-mcp-pro)  ←→  GIMP Plugin
 
 Two processes: the MCP server runs outside GIMP and communicates with a plugin running inside GIMP's Python process via TCP with length-prefixed framing.
 
-The MCP server registers all 183 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
+The MCP server registers all 186 tools as async coroutine handlers and uses the asyncio-native `AsyncGimpBridge` for tool execution. The synchronous `GimpBridge` remains available for CLI diagnostics, the REPL, and legacy callers. See `docs/async-tool-architecture.md` for the async contract and regression checks.
 
 ## Project tooling
 
@@ -156,7 +156,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 
 ## Tool Reference
 
-### Image Management (183 tools)
+### Image Management (186 tools)
 | Tool | Description |
 |------|-------------|
 | `create_image` | Create a new blank image |
@@ -166,7 +166,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `flatten_image` | Flatten all layers into one |
 | `duplicate_image` | Duplicate entire image |
 
-### Layer Operations (183 tools)
+### Layer Operations (186 tools)
 | Tool | Description |
 |------|-------------|
 | `create_layer` | Create a new layer |
@@ -179,7 +179,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `merge_visible_layers` | Merge all visible layers |
 | `add_alpha_channel` | Add transparency support to a layer |
 
-### Drawing (183 tools)
+### Drawing (186 tools)
 | Tool | Description |
 |------|-------------|
 | `set_foreground_color` | Set drawing color |
@@ -193,7 +193,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `add_text` | Add a text layer with font/size/color |
 | `edit_clear` | Clear the current selection area to transparency |
 
-### Selections (183 tools)
+### Selections (186 tools)
 | Tool | Description |
 |------|-------------|
 | `select_rectangle` | Rectangular selection |
@@ -205,7 +205,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `select_grow` | Expand selection by pixels |
 | `select_shrink` | Shrink selection by pixels |
 
-### Transforms (183 tools)
+### Transforms (186 tools)
 | Tool | Description |
 |------|-------------|
 | `scale_image` | Scale entire image |
@@ -220,7 +220,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `resize_canvas` | Resize canvas without scaling content |
 | `offset_layer` | Move layer position on canvas |
 
-### Color Adjustments (183 tools)
+### Color Adjustments (186 tools)
 | Tool | Description |
 |------|-------------|
 | `adjust_brightness_contrast` | Brightness and contrast |
@@ -237,7 +237,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `swap_colors` | Swap foreground and background |
 | `sample_color` | Pick color from pixel |
 
-### Filters & Effects (183 tools)
+### Filters & Effects (186 tools)
 | Tool | Description |
 |------|-------------|
 | `apply_gaussian_blur` | Gaussian blur |
@@ -249,7 +249,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `apply_median` | Median denoise filter |
 | `apply_drop_shadow` | Drop shadow effect |
 
-### Inspection (183 tools)
+### Inspection (186 tools)
 | Tool | Description |
 |------|-------------|
 | `get_image_bitmap` | Get image as viewable PNG (for AI verification) |
@@ -257,15 +257,19 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `get_context_state` | Current colors, brush, opacity settings |
 | `get_gimp_info` | GIMP version, environment, capabilities |
 
-### History (183 tools)
+### History (186 tools)
 | Tool | Description |
 |------|-------------|
 | `undo` | Undo previous operation(s) where GIMP exposes the operation |
 | `redo` | Redo previously undone operation(s) where GIMP exposes the operation |
 | `begin_undo_group` | Group operations as a single undo step |
 | `end_undo_group` | End current undo group |
+| `create_checkpoint` | Save a controlled, restoreable XCF checkpoint |
+| `list_checkpoints` | List session checkpoints without exposing local paths |
+| `restore_checkpoint` | Open a checkpoint as a new, non-destructive document |
+| `discard_checkpoint` | Remove a controlled checkpoint |
 
-### Advanced (183 tools)
+### Advanced (186 tools)
 | Tool | Description |
 |------|-------------|
 | `search_pdb` | Search GIMP's procedure database |

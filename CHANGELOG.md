@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 (2026-07-17)
+
+### Checkpoint lifecycle
+
+- Added async `list_checkpoints`, `restore_checkpoint`, and `discard_checkpoint` workflow tools.
+- `create_checkpoint(include_xcf_copy=true)` now writes a real temporary XCF using GIMP's file API.
+- Restores are deliberately non-destructive: a checkpoint is opened as a new document rather than replacing the active image.
+- Fixed checkpoint IDs so the MCP response, in-memory index, and generated XCF refer to the same checkpoint.
+
+### Release quality
+
+- Updated the public tool count to 186 and the package version to 0.2.0.
+
 ## 0.1.0 (2026-02-12)
 
 Initial release — 67 typed MCP tools for GIMP 3.0+.
