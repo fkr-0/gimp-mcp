@@ -59,7 +59,7 @@ Contract:
 
 ## `list_checkpoints` {#list-checkpoints}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:160`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:158`
 
 ```python
 async def list_checkpoints() -> ToolResult
@@ -89,7 +89,7 @@ Returns:
 
 ## `restore_checkpoint` {#restore-checkpoint}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:191`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:189`
 
 ```python
 async def restore_checkpoint(checkpoint_id: str) -> ToolResult
@@ -163,7 +163,7 @@ Returns:
 
 ## `get_operation_log` {#get-operation-log}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:284`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:288`
 
 ```python
 async def get_operation_log(limit: int = 20, include_snapshots: bool = False, redact_paths: bool = True) -> ToolResult
@@ -205,7 +205,7 @@ Contract:
 
 ## `undo` {#undo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:324`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:328`
 
 ```python
 async def undo(steps: int = 1) -> ToolResult
@@ -240,7 +240,7 @@ Returns:
 
 ## `redo` {#redo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:367`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:371`
 
 ```python
 async def redo(steps: int = 1) -> ToolResult
@@ -275,7 +275,7 @@ Returns:
 
 ## `begin_undo_group` {#begin-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:410`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:414`
 
 ```python
 async def begin_undo_group(name: str = 'AI Operation') -> ToolResult
@@ -318,7 +318,7 @@ Returns:
 
 ## `end_undo_group` {#end-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:446`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:450`
 
 ```python
 async def end_undo_group(group_id: str | None = None, close_all: bool = False) -> ToolResult

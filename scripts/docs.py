@@ -202,7 +202,7 @@ def render_index(tools: Sequence[ToolDoc]) -> str:
 GIMP MCP Pro exposes typed Model Context Protocol tools for operating GIMP from an AI assistant while keeping GIMP-specific execution inside a plug-in process.
 
 !!! success "GIMP 3.2.4 compatibility verified"
-    `compat.results.yml` records a 24/24 isolated clean-profile Xvfb run with the 183-tool registry and `claim_allowed: true`. Re-run the contract whenever the plug-in protocol or GIMP-facing generated code changes.
+    `compat.results.yml` records a 24/24 isolated clean-profile Xvfb run with the 186-tool registry and `claim_allowed: true`. Re-run the contract whenever the plug-in protocol or GIMP-facing generated code changes.
 
 ## Documentation map
 
