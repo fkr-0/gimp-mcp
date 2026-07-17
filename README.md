@@ -264,7 +264,7 @@ Ask Claude: *"Create an 800x600 image with a red circle in the center and the te
 | `redo` | Redo previously undone operation(s) where GIMP exposes the operation |
 | `begin_undo_group` | Group operations as a single undo step |
 | `end_undo_group` | End current undo group |
-| `create_checkpoint` | Save a controlled, restoreable XCF checkpoint |
+| `create_checkpoint` | Save a controlled, restorable XCF checkpoint |
 | `list_checkpoints` | List session checkpoints without exposing local paths |
 | `restore_checkpoint` | Open a checkpoint as a new, non-destructive document |
 | `discard_checkpoint` | Remove a controlled checkpoint |

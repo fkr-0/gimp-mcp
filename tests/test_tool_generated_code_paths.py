@@ -236,7 +236,7 @@ class FakeGimpDevAdapter:
         return GimpDevAdapter().summarize_catalog(catalog)
 
 
-LOCAL_TOOL_NAMES = {"compare_snapshots", "get_operation_log"}
+LOCAL_TOOL_NAMES = {"compare_snapshots", "get_operation_log", "list_checkpoints"}
 
 FLOW_TOOL_NAMES = {
     "propose_flow",
@@ -575,7 +575,7 @@ SUCCESS_TOOL_ARGS.update(
     [
         name
         for name in sorted(registered_tools(ScriptedBridge()).keys())
-        if name != "validate_targets"
+        if name not in {"validate_targets", "restore_checkpoint", "discard_checkpoint"}
     ],
 )
 async def test_all_tools_have_fast_success_path(tool_name: str) -> None:

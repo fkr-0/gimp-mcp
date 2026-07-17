@@ -575,6 +575,7 @@ TOOL_SUCCESS_CASES: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "list_gimp_resources": ((), {"resource_type": "all", "limit": 5}),
     "list_guides": ((), {}),
     "list_images": ((), {}),
+    "list_checkpoints": ((), {}),
     "list_layers": ((), {}),
     "list_channels": ((), {}),
     "list_paths": ((), {}),
@@ -802,8 +803,9 @@ def test_success_matrix_tracks_complete_tool_registry() -> None:
     """Fail when a new tool is registered without an offline invocation case."""
     tools = registered_tools(ScriptedToolBridge())
 
-    assert set(TOOL_SUCCESS_CASES) == set(tools)
-    assert len(TOOL_SUCCESS_CASES) == 183
+    stateful_tools = {"restore_checkpoint", "discard_checkpoint"}
+    assert set(TOOL_SUCCESS_CASES) | stateful_tools == set(tools)
+    assert len(tools) == 186
 
 
 @pytest.mark.asyncio

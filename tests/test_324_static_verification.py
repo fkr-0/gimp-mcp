@@ -99,6 +99,6 @@ def test_plugin_launches_flow_runner_without_shell() -> None:
 def test_compat_tool_extractor_counts_async_defs() -> None:
     names = compat.flatten_registry(compat.extract_source_tool_registry())
 
-    assert len(names) == 183
+    assert len(names) == 186
     assert "get_gimp_info" in names
     assert "get_image_bitmap" in names

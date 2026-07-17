@@ -69,7 +69,7 @@ issues:
   acceptance:
   - Async bridge tests pass without requiring GIMP.
   - Sync bridge behavior remains covered and unchanged.
-  - All 183 registered MCP tools are coroutine functions.
+  - All 186 registered MCP tools are coroutine functions.
   - Static tests reject direct sync bridge calls inside tool modules.
   - Public API documentation shows sync and async usage patterns.
   - Full uv-backed project quality gate passes.
@@ -239,7 +239,7 @@ issues:
   - features.yml and tasks.issues.yml are YAML-parseable and reflect current registry state.
   - New feature work follows RED/GREEN verification.
   - Focused, matrix, static, and full offline test suites pass before completion.
-  registry_total: 183
+  registry_total: 186
   notes:
   - No remaining roadmap feature tools are registered from roadmap_tools.py.
   - Finished and tested roadmap tools are promoted into category modules and tracked by feature

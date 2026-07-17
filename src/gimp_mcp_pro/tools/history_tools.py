@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 import time
 import uuid
 from collections import deque
@@ -71,17 +73,21 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         """
         checkpoint_id = str(uuid.uuid4())
         safe_label = label.strip() or "checkpoint"
+        checkpoint_dir = os.path.join(tempfile.gettempdir(), "gimp-mcp-checkpoints")
+        xcf_path = (
+            os.path.join(checkpoint_dir, f"{checkpoint_id}.xcf") if include_xcf_copy else None
+        )
         code = [
             "from gi.repository import Gio, Gimp",
-            "import gc, json, os, tempfile",
+            "import gc, json, os",
             "images = Gimp.get_images()",
             "if not images: raise RuntimeError('No images are open')",
             "image = images[0]",
             f"checkpoint_id = {checkpoint_id!r}",
-            "checkpoint_dir = os.path.join(tempfile.gettempdir(), 'gimp-mcp-checkpoints')",
+            f"checkpoint_dir = {checkpoint_dir!r}",
             "os.makedirs(checkpoint_dir, exist_ok=True)",
             f"include_xcf_copy = {include_xcf_copy!r}",
-            "xcf_path = os.path.join(checkpoint_dir, checkpoint_id + '.xcf') if include_xcf_copy else None",
+            f"xcf_path = {xcf_path!r}",
         ]
         if include_xcf_copy:
             checkpoint_lifecycle = [
@@ -123,9 +129,7 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
                 "label": safe_label,
                 "created_at": time.time(),
                 "include_xcf_copy": include_xcf_copy,
-                "xcf_path": f"/tmp/gimp-mcp-checkpoints/{checkpoint_id}.xcf"
-                if include_xcf_copy
-                else None,
+                "xcf_path": xcf_path,
             }
             data = {
                 "checkpoint_id": checkpoint_id,
@@ -223,7 +227,9 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
         ]
         try:
             await bridge.async_execute_python(code)
-            _record_operation("restore_checkpoint", checkpoint_id=checkpoint_id, label=checkpoint["label"])
+            _record_operation(
+                "restore_checkpoint", checkpoint_id=checkpoint_id, label=checkpoint["label"]
+            )
             return OperationResult.ok(
                 operation="restore_checkpoint",
                 message=f"Checkpoint '{checkpoint['label']}' opened as a new image",
@@ -265,9 +271,13 @@ def register_history_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> No
             try:
                 await bridge.async_execute_python(code)
             except GimpCommandError as e:
-                return OperationResult.fail(operation="discard_checkpoint", error=str(e)).model_dump()
+                return OperationResult.fail(
+                    operation="discard_checkpoint", error=str(e)
+                ).model_dump()
         checkpoints.pop(checkpoint_id, None)
-        _record_operation("discard_checkpoint", checkpoint_id=checkpoint_id, label=checkpoint["label"])
+        _record_operation(
+            "discard_checkpoint", checkpoint_id=checkpoint_id, label=checkpoint["label"]
+        )
         return OperationResult.ok(
             operation="discard_checkpoint",
             message=f"Checkpoint '{checkpoint['label']}' discarded",

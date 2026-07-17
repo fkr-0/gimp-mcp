@@ -75,10 +75,10 @@ async def test_create_checkpoint_records_controlled_temp_checkpoint_metadata() -
     assert result["operation"] == "create_checkpoint"
     assert result["data"]["label"] == "before blur"
     generated = "\n".join(bridge.calls[-1][1])
-    assert "tempfile.gettempdir()" in generated
     assert "gimp-mcp-checkpoints" in generated
-    assert "checkpoint_id = str(uuid.uuid4())" in generated
+    assert f"checkpoint_id = {result['data']['checkpoint_id']!r}" in generated
     assert "image.duplicate()" in generated
+    assert "Gimp.file_save(Gimp.RunMode.NONINTERACTIVE" in generated
     assert "xcf_path" in generated
 
     log_result = await mcp.tools["get_operation_log"](limit=5)
@@ -86,6 +86,45 @@ async def test_create_checkpoint_records_controlled_temp_checkpoint_metadata() -
     assert log_result["operation"] == "get_operation_log"
     assert log_result["data"]["operations"][0]["operation"] == "create_checkpoint"
     assert "local_file_path" not in str(log_result["data"])
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_lifecycle_lists_restores_and_discards_xcf_copy() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_history_tools(mcp, bridge)
+
+    created = await mcp.tools["create_checkpoint"](label="release smoke", include_xcf_copy=True)
+    checkpoint_id = created["data"]["checkpoint_id"]
+
+    listed = await mcp.tools["list_checkpoints"]()
+    assert listed["success"] is True
+    assert listed["data"]["count"] == 1
+    assert listed["data"]["checkpoints"] == [
+        {
+            "checkpoint_id": checkpoint_id,
+            "label": "release smoke",
+            "created_at": listed["data"]["checkpoints"][0]["created_at"],
+            "restorable": True,
+        }
+    ]
+    assert "gimp-mcp-checkpoints" not in str(listed["data"])
+
+    restored = await mcp.tools["restore_checkpoint"](checkpoint_id)
+    assert restored["success"] is True
+    assert restored["data"]["opened_as_new_document"] is True
+    restore_code = "\n".join(bridge.calls[-1][1])
+    assert "__gimp_mcp_restore_checkpoint__" in restore_code
+    assert "Gimp.file_load(Gimp.RunMode.NONINTERACTIVE" in restore_code
+
+    discarded = await mcp.tools["discard_checkpoint"](checkpoint_id)
+    assert discarded["success"] is True
+    discard_code = "\n".join(bridge.calls[-1][1])
+    assert "__gimp_mcp_discard_checkpoint__" in discard_code
+    assert "os.remove(checkpoint_path)" in discard_code
+
+    empty = await mcp.tools["list_checkpoints"]()
+    assert empty["data"]["count"] == 0
 
 
 @pytest.mark.asyncio

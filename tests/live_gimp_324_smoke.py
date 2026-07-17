@@ -734,7 +734,7 @@ def run_docs_check() -> dict[str, Any]:
     """Record README/doc compatibility-claim evidence."""
     try:
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        tool_count_ok = "183 typed" in readme or "183 tools" in readme
+        tool_count_ok = "186 typed" in readme or "186 tools" in readme
         stale_claim_absent = "GIMP 3.0.8 compatible" not in readme
         compatibility_table = "compatibility" in readme.lower() and "3.2.4" in readme
         ok = tool_count_ok and stale_claim_absent and compatibility_table
@@ -911,6 +911,27 @@ async def _async_transport_probe(config: ServerConfig) -> dict[str, Any]:
                 tool_call("get_image_bitmap", 64, 64),
             ],
         )
+        checkpoint_result = await tools["create_checkpoint"](
+            label="async live checkpoint", include_xcf_copy=True
+        )
+        tool_results.append({"tool": "create_checkpoint", **checkpoint_result})
+        checkpoint_id = checkpoint_result.get("data", {}).get("checkpoint_id")
+        if isinstance(checkpoint_id, str):
+            for tool_name, args in [
+                ("list_checkpoints", ()),
+                ("restore_checkpoint", (checkpoint_id,)),
+                ("discard_checkpoint", (checkpoint_id,)),
+            ]:
+                result = await tools[tool_name](*args)
+                tool_results.append({"tool": tool_name, **result})
+        else:
+            tool_results.append(
+                {
+                    "tool": "checkpoint_lifecycle",
+                    "success": False,
+                    "error": "create_checkpoint did not return a checkpoint_id",
+                }
+            )
         failures = [item for item in tool_results if not item.get("success")]
         return {
             "async_bridge_class": bridge.__class__.__name__,
@@ -930,7 +951,7 @@ def _async_transport_check(config: ServerConfig) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - live compat evidence must preserve failures
         return make_check("C-025-async-transport", "fail", {"error": str(exc)})
     ok = (
-        evidence.get("registered_tool_total") == 183
+        evidence.get("registered_tool_total") == 186
         and not evidence.get("failed_tools")
         and isinstance(evidence.get("first_round_trip"), dict)
         and evidence["first_round_trip"].get("status") == "success"
@@ -1035,7 +1056,7 @@ if missing:
 
 def _registry_total_check(tools: dict[str, Any]) -> dict[str, Any]:
     """Check live captured MCP tool registry count."""
-    expected = 183
+    expected = 186
     names = sorted(tools)
     return make_check(
         "mcp-tools",
@@ -1050,8 +1071,8 @@ def _docs_contract_check() -> dict[str, Any]:
     failures: list[str] = []
     if "GIMP 3.0.8 compatible" in readme:
         failures.append("README contains stale GIMP 3.0.8 compatibility wording")
-    if "183 typed" not in readme:
-        failures.append("README does not advertise 183 typed tools")
+    if "186 typed" not in readme:
+        failures.append("README does not advertise 186 typed tools")
     if "gimp_mcp_plugin/gimp_mcp_plugin.py" not in readme:
         failures.append("README does not document the canonical GIMP plug-in directory/file layout")
     if "claim_allowed: false" not in readme and "claim_allowed: true" not in readme:
@@ -1131,11 +1152,11 @@ def run_smoke(
             ],
         )
         registry_evidence = {
-            "expected_total": 183,
+            "expected_total": 186,
             "actual_total": len(tools),
             "tools": sorted(tools),
         }
-        if len(tools) != 183:
+        if len(tools) != 186:
             image_check["status"] = "fail"
             image_check["evidence"]["failed_tools"].append("registry-count")
         image_check["evidence"]["registry"] = registry_evidence

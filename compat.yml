@@ -91,7 +91,7 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 183
+    current_total: 186
     by_module:
       agent_tools: 3
       color_tools: 25
@@ -99,7 +99,7 @@ known_repo_observations:
       filter_tools: 13
       flow_tools: 11
       gimp_dev_tools: 2
-      history_tools: 6
+      history_tools: 9
       image_tools: 15
       inspect_tools: 17
       layer_tools: 30
@@ -108,7 +108,7 @@ known_repo_observations:
       selection_tools: 17
       target_tools: 3
       transform_tools: 15
-    reconciliation_required: Current code registers 183 unique MCP tool decorators, now distributed
+    reconciliation_required: Current code registers 186 unique MCP tool decorators, now distributed
       across finalized category modules.
   plugin_entrypoint:
     source: gimp_plugin/gimp_mcp_plugin.py
@@ -516,7 +516,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 183
+  expected_registry_total: 186
   registry:
     agent_tools:
     - begin_edit_transaction
@@ -593,6 +593,9 @@ mcp_tool_contract:
     - gimp_dev_plugin_catalog
     history_tools:
     - create_checkpoint
+    - list_checkpoints
+    - restore_checkpoint
+    - discard_checkpoint
     - get_operation_log
     - undo
     - redo

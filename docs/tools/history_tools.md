@@ -5,6 +5,9 @@ Source module: `src/gimp_mcp_pro/tools/history_tools.py`
 | Tool | Summary | Parameters |
 |---|---|---:|
 | [`create_checkpoint`](#create-checkpoint) | Create a controlled checkpoint record for the active image. | 2 |
+| [`list_checkpoints`](#list-checkpoints) | List checkpoints created during this MCP server session. | 0 |
+| [`restore_checkpoint`](#restore-checkpoint) | Open an XCF-backed checkpoint as a new GIMP document. | 1 |
+| [`discard_checkpoint`](#discard-checkpoint) | Delete a controlled XCF checkpoint and remove it from this session's index. | 1 |
 | [`get_operation_log`](#get-operation-log) | Return recent MCP operation-log entries. | 3 |
 | [`undo`](#undo) | Undo the last operation(s). | 1 |
 | [`redo`](#redo) | Redo previously undone operation(s). | 1 |
@@ -13,7 +16,7 @@ Source module: `src/gimp_mcp_pro/tools/history_tools.py`
 
 ## `create_checkpoint` {#create-checkpoint}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:52`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:55`
 
 ```python
 async def create_checkpoint(label: str = 'checkpoint', include_xcf_copy: bool = False) -> ToolResult
@@ -24,11 +27,11 @@ async def create_checkpoint(label: str = 'checkpoint', include_xcf_copy: bool = 
 | Parameter | Description |
 |---|---|
 | `label` | Human-readable checkpoint label. |
-| `include_xcf_copy` | Include controlled temporary XCF-copy metadata. |
+| `include_xcf_copy` | Save a controlled temporary XCF copy that can be restored later. |
 
 ## Returns
 
-Operation result with checkpoint ID and metadata. Contract: Checkpoints are generated under a controlled temporary directory and do not overwrite user files. Local paths are redacted from operation logs.
+Operation result with checkpoint ID and metadata. Contract: Checkpoints are generated under a controlled temporary directory and do not overwrite user files. XCF-backed checkpoints can only be restored into a new document, never silently over the active image. Local paths are redacted from operation logs and tool responses.
 
 ## Contract
 
@@ -43,18 +46,124 @@ Create a controlled checkpoint record for the active image.
 
 Args:
     label: Human-readable checkpoint label.
-    include_xcf_copy: Include controlled temporary XCF-copy metadata.
+    include_xcf_copy: Save a controlled temporary XCF copy that can be restored later.
 
 Returns:
     Operation result with checkpoint ID and metadata.
 
 Contract:
     Checkpoints are generated under a controlled temporary directory and
-    do not overwrite user files. Local paths are redacted from operation logs.
+    do not overwrite user files. XCF-backed checkpoints can only be
+    restored into a new document, never silently over the active image.
+    Local paths are redacted from operation logs and tool responses.
+
+## `list_checkpoints` {#list-checkpoints}
+
+Source: `src/gimp_mcp_pro/tools/history_tools.py:160`
+
+```python
+async def list_checkpoints() -> ToolResult
+```
+
+## Returns
+
+Operation result with current checkpoint metadata and retention scope.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+List checkpoints created during this MCP server session.
+
+Returns a compact, path-redacted index. An XCF-backed checkpoint can be
+opened with ``restore_checkpoint``; metadata-only checkpoints are useful
+as audit markers but cannot restore pixels.
+
+Returns:
+    Operation result with current checkpoint metadata and retention scope.
+
+## `restore_checkpoint` {#restore-checkpoint}
+
+Source: `src/gimp_mcp_pro/tools/history_tools.py:191`
+
+```python
+async def restore_checkpoint(checkpoint_id: str) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `checkpoint_id` | ID returned by ``create_checkpoint`` with ``include_xcf_copy=true``. |
+
+## Returns
+
+Operation result with the opened image ID and redacted checkpoint metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Open an XCF-backed checkpoint as a new GIMP document.
+
+This is deliberately non-destructive: it never replaces the active
+document. Compare the newly opened checkpoint with the current image,
+then copy or export the material you want to keep.
+
+Args:
+    checkpoint_id: ID returned by ``create_checkpoint`` with ``include_xcf_copy=true``.
+
+Returns:
+    Operation result with the opened image ID and redacted checkpoint metadata.
+
+## `discard_checkpoint` {#discard-checkpoint}
+
+Source: `src/gimp_mcp_pro/tools/history_tools.py:247`
+
+```python
+async def discard_checkpoint(checkpoint_id: str) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `checkpoint_id` | ID returned by ``create_checkpoint``. |
+
+## Returns
+
+Operation result with deletion status and no local path disclosure.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Delete a controlled XCF checkpoint and remove it from this session's index.
+
+Args:
+    checkpoint_id: ID returned by ``create_checkpoint``.
+
+Returns:
+    Operation result with deletion status and no local path disclosure.
 
 ## `get_operation_log` {#get-operation-log}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:134`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:284`
 
 ```python
 async def get_operation_log(limit: int = 20, include_snapshots: bool = False, redact_paths: bool = True) -> ToolResult
@@ -96,7 +205,7 @@ Contract:
 
 ## `undo` {#undo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:174`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:324`
 
 ```python
 async def undo(steps: int = 1) -> ToolResult
@@ -131,7 +240,7 @@ Returns:
 
 ## `redo` {#redo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:217`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:367`
 
 ```python
 async def redo(steps: int = 1) -> ToolResult
@@ -166,7 +275,7 @@ Returns:
 
 ## `begin_undo_group` {#begin-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:260`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:410`
 
 ```python
 async def begin_undo_group(name: str = 'AI Operation') -> ToolResult
@@ -209,7 +318,7 @@ Returns:
 
 ## `end_undo_group` {#end-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:296`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:446`
 
 ```python
 async def end_undo_group(group_id: str | None = None, close_all: bool = False) -> ToolResult

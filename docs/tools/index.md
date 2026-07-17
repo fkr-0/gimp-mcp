@@ -5,7 +5,7 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **183**
+Total tools: **186**
 
 | Category | Tools | Page |
 |---|---:|---|
@@ -15,7 +15,7 @@ Total tools: **183**
 | Filters and Effects | 13 | [filter_tools](filter_tools.md) |
 | Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
 | gimp.dev Integration | 2 | [gimp_dev_tools](gimp_dev_tools.md) |
-| History | 6 | [history_tools](history_tools.md) |
+| History | 9 | [history_tools](history_tools.md) |
 | Image Management | 15 | [image_tools](image_tools.md) |
 | Inspection | 17 | [inspect_tools](inspect_tools.md) |
 | Layer Operations | 30 | [layer_tools](layer_tools.md) |
@@ -115,6 +115,9 @@ Total tools: **183**
 ### History
 
 - [`create_checkpoint`](history_tools.md#create-checkpoint) — Create a controlled checkpoint record for the active image.
+- [`list_checkpoints`](history_tools.md#list-checkpoints) — List checkpoints created during this MCP server session.
+- [`restore_checkpoint`](history_tools.md#restore-checkpoint) — Open an XCF-backed checkpoint as a new GIMP document.
+- [`discard_checkpoint`](history_tools.md#discard-checkpoint) — Delete a controlled XCF checkpoint and remove it from this session's index.
 - [`get_operation_log`](history_tools.md#get-operation-log) — Return recent MCP operation-log entries.
 - [`undo`](history_tools.md#undo) — Undo the last operation(s).
 - [`redo`](history_tools.md#redo) — Redo previously undone operation(s).
