@@ -149,6 +149,12 @@ def _macro_rolled_back(run: dict[str, Any]) -> bool:
     return run.get("status") == "rolled-back"
 
 
+def _tool_succeeded(result: dict[str, Any]) -> bool:
+    if "success" in result:
+        return bool(result["success"])
+    return result.get("status", "success") in {"success", "ok"}
+
+
 async def _capture_macro_state(operations: OperationRegistry) -> dict[str, Any] | None:
     if "observe_document_state" not in operations.names():
         return None
@@ -433,6 +439,8 @@ def register_flow_tools(
         transaction_label: str = "MCP Macro Transaction",
         rollback_on_failure: bool = True,
         capture_before_after: bool = False,
+        preconditions: list[dict[str, Any]] | None = None,
+        postconditions: list[dict[str, Any]] | None = None,
     ) -> ToolResult:
         """Execute a typed multi-step macro as one fail-safe transaction.
 
@@ -441,6 +449,8 @@ def register_flow_tools(
             transaction_label: Human-readable label for the undo/transaction phase.
             rollback_on_failure: Must remain true so macro execution is atomic.
             capture_before_after: Capture document observations before and after execution when available.
+            preconditions: Optional image-state assertions checked before opening the transaction.
+            postconditions: Optional image-state assertions executed as the final transactional step; failure rolls back all edits.
 
         Returns:
             Operation result dictionary with transaction id, step results, rollback status, and evidence.
@@ -452,8 +462,40 @@ def register_flow_tools(
                 data={"rolled_back": False, "step_results": []},
             ).model_dump()
         try:
-            flow = _macro_flow(steps, transaction_label)
             operations = registry_factory(bridge)
+            precondition_result = None
+            if preconditions:
+                if "assert_image_state" not in operations.names():
+                    return OperationResult.fail(
+                        operation="run_macro_transaction",
+                        error="preconditions require assert_image_state",
+                        data={"validation_stage": "preconditions", "rolled_back": False},
+                    ).model_dump()
+                precondition_result = await operations.get("assert_image_state")(
+                    assertions=preconditions
+                )
+                if not _tool_succeeded(precondition_result):
+                    return OperationResult.fail(
+                        operation="run_macro_transaction",
+                        error=precondition_result.get("error", "macro preconditions failed"),
+                        data={
+                            "validation_stage": "preconditions",
+                            "precondition_result": precondition_result,
+                            "transaction_id": None,
+                            "step_results": [],
+                            "rolled_back": False,
+                        },
+                    ).model_dump()
+
+            guarded_steps = list(steps)
+            if postconditions:
+                guarded_steps.append(
+                    {
+                        "tool": "assert_image_state",
+                        "arguments": {"assertions": postconditions},
+                    }
+                )
+            flow = _macro_flow(guarded_steps, transaction_label)
             failures = _macro_failures(flow, operations)
             if failures:
                 return OperationResult.fail(
@@ -477,6 +519,8 @@ def register_flow_tools(
                 "step_results": _macro_step_results(run),
                 "rolled_back": rolled_back,
                 "run": run,
+                "precondition_result": precondition_result,
+                "postconditions_requested": len(postconditions or []),
             }
             if capture_before_after:
                 data["evidence"] = {

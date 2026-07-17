@@ -5,7 +5,7 @@ fork: fkr-0/gimp-mcp
 branch: 3.2.4
 source_issue: GIMP-MCP-001
 created_at: 2026-06-21
-status: unverified
+status: verified
 contract:
   title: Verify and certify GIMP 3.2.4 compatibility
   scope: Verify that this fork's MCP server, bundled GIMP plug-in, bridge protocol, advertised
@@ -91,27 +91,25 @@ known_repo_observations:
   existing_task_file: tasks.issues.yml
   extracted_tool_registry:
     source: src/gimp_mcp_pro/tools/**/*.py @mcp.tool decorators
-    current_total: 171
+    current_total: 183
     by_module:
       agent_tools: 3
-      color_tools: 21
+      color_tools: 25
       drawing_tools: 13
-      filter_tools: 11
+      filter_tools: 13
       flow_tools: 11
       gimp_dev_tools: 2
       history_tools: 6
-      image_tools: 12
+      image_tools: 15
       inspect_tools: 17
-      layer_tools: 22
-      path_tools: 5
-      pdb_tools: 2
-      roadmap_tools: 14
-      selection_tools: 14
+      layer_tools: 30
+      path_tools: 8
+      pdb_tools: 5
+      selection_tools: 17
       target_tools: 3
       transform_tools: 15
-    reconciliation_required: README count is reconciled with current code registering 171
-      unique MCP tool decorators. The compatibility gate MUST keep the public count synchronized
-      with the runtime registry before publishing a 3.2.4 support claim.
+    reconciliation_required: Current code registers 183 unique MCP tool decorators, now distributed
+      across finalized category modules.
   plugin_entrypoint:
     source: gimp_plugin/gimp_mcp_plugin.py
     procedure_name: plug-in-mcp-pro-server
@@ -518,7 +516,7 @@ mcp_tool_contract:
   id: mcp-tools
   required: true
   source_of_truth: runtime FastMCP registration from @mcp.tool decorators
-  expected_registry_total: 171
+  expected_registry_total: 183
   registry:
     agent_tools:
     - begin_edit_transaction
@@ -535,6 +533,7 @@ mcp_tool_contract:
     - apply_threshold
     - posterize
     - color_to_alpha
+    - replace_color
     - auto_white_balance
     - brush_inventory
     - set_paint_resource
@@ -544,8 +543,11 @@ mcp_tool_contract:
     - get_colors
     - swap_colors
     - analyze_color_palette
+    - dominant_colors
+    - analyze_color_histogram
     - sample_pixels
     - sample_color
+    - palette_create_or_update
     drawing_tools:
     - set_foreground_color
     - set_background_color
@@ -572,6 +574,8 @@ mcp_tool_contract:
     - apply_noise
     - apply_median
     - apply_drop_shadow
+    - preview_gegl_operation
+    - apply_gegl_operation
     flow_tools:
     - propose_flow
     - list_flows
@@ -607,6 +611,9 @@ mcp_tool_contract:
     - export_image
     - flatten_image
     - duplicate_image
+    - import_as_layer_with_metadata
+    - batch_export_variants
+    - manage_guides_and_grid
     inspect_tools:
     - explain_current_context
     - measure_geometry
@@ -633,8 +640,14 @@ mcp_tool_contract:
     - set_layer_opacity
     - set_layer_visibility
     - set_layer_mode
+    - set_layer_blend_mode
     - duplicate_layer
     - merge_visible_layers
+    - new_layer_from_visible
+    - merge_down
+    - copy_layer_alpha_to_mask
+    - selection_to_layer_mask
+    - create_mask_from_color
     - add_layer_mask
     - get_layer_mask_info
     - set_layer_mask_state
@@ -648,30 +661,23 @@ mcp_tool_contract:
     - remove_visual_annotations
     - layer_version_stamp
     - add_alpha_channel
+    - edit_channels
+    - manage_channels
     path_tools:
     - create_path
     - list_paths
     - path_to_selection
     - stroke_path
     - remove_path
-    pdb_tools:
-    - search_pdb
-    - execute_python
-    roadmap_tools:
-    - edit_channels
-    - manage_channels
     - edit_paths
     - create_and_edit_paths
     - stroke_or_fill_path
-    - palette_create_or_update
-    - import_as_layer_with_metadata
-    - batch_export_variants
+    pdb_tools:
+    - search_pdb
+    - execute_pdb_call
+    - execute_python
     - pdb_introspect_typed
     - safe_python_eval
-    - manage_guides_and_grid
-    - preview_gegl_operation
-    - execute_pdb_call
-    - apply_gegl_operation
     selection_tools:
     - select_rectangle
     - select_ellipse
@@ -680,6 +686,9 @@ mcp_tool_contract:
     - select_none
     - select_invert
     - select_by_color
+    - fuzzy_select
+    - select_color
+    - select_layer_alpha
     - feather_selection
     - border_selection
     - stroke_selection

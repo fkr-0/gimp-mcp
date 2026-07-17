@@ -1,12 +1,7 @@
-"""Color adjustment tools for GIMP MCP Pro.
-
-Covers brightness/contrast, levels, curves, hue-saturation, desaturation,
-color inversion, threshold, posterize, and color-to-alpha.
-"""
+"""Color adjustment, sampling, palette, and paint-resource MCP tools."""
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from gimp_mcp_pro.bridge import LONG_TIMEOUT
@@ -16,11 +11,13 @@ from gimp_mcp_pro.tools.color_backend import (
     PAINT_RESOURCE_ALIASES,
     _brush_inventory_code,
     _color_adjustment_lifecycle,
+    _color_histogram_code,
     _color_preamble,
     _json_from_bridge,
     _normalise_sample_points,
     _palette_analysis_code,
     _resource_catalog_code,
+    _sample_color_code,
     _sample_pixels_code,
     _set_paint_context_code,
     _set_paint_resource_code,
@@ -28,8 +25,6 @@ from gimp_mcp_pro.tools.color_backend import (
 from gimp_mcp_pro.tools.native_backend import execute_json_tool
 from gimp_mcp_pro.tools.types import AsyncToolBridge, MCPToolRegistrar, ToolResult
 from gimp_mcp_pro.utils.errors import GimpCommandError
-
-logger = logging.getLogger("gimp_mcp_pro.tools.color")
 
 
 def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None:
@@ -1099,29 +1094,12 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 operation="analyze_color_histogram",
                 error="start_range and end_range must satisfy 0.0 <= start <= end <= 1.0",
             ).model_dump()
-        channel_expr = {
-            "value": "Gimp.HistogramChannel.VALUE",
-            "red": "Gimp.HistogramChannel.RED",
-            "green": "Gimp.HistogramChannel.GREEN",
-            "blue": "Gimp.HistogramChannel.BLUE",
-            "alpha": "Gimp.HistogramChannel.ALPHA",
-        }
-        lines = _color_preamble(layer_name, layer_index) + [
-            "import json",
-            "stats = {}",
-        ]
-        for channel in selected_channels:
-            lines += [
-                f"ok, mean, std_dev, median, pixels, count, percentile = drawable.histogram({channel_expr[channel]}, {start_range}, {end_range})",
-                f"stats[{channel!r}] = {{'ok': bool(ok), 'mean': mean, 'std_dev': std_dev, 'median': median, 'pixels': pixels, 'count': count, 'percentile': percentile}}",
-            ]
-        lines += [
-            "print(json.dumps({'channels': stats, 'range': {'start': "
-            f"{start_range!r}, 'end': {end_range!r}"
-            "}}))"
-        ]
         try:
-            result = await bridge.async_execute_python(lines)
+            result = await bridge.async_execute_python(
+                _color_histogram_code(
+                    selected_channels, start_range, end_range, layer_name, layer_index
+                )
+            )
             data = _json_from_bridge(result)
             data.setdefault("channels", {})
             return OperationResult.ok(
@@ -1186,18 +1164,7 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         )
         try:
             result = await bridge.async_execute_python(code)
-            import json as _json
-
-            sample_data: dict[str, Any] = {}
-            for out in result.get("results", []):
-                if out and str(out).strip():
-                    try:
-                        decoded = _json.loads(str(out).strip())
-                    except _json.JSONDecodeError:
-                        continue
-                    if isinstance(decoded, dict):
-                        sample_data = decoded
-                        break
+            sample_data = _json_from_bridge(result)
             sample_data.setdefault("samples", [])
             sample_data.setdefault("color_space", "rgba")
             sample_data["points_requested"] = points_requested
@@ -1229,36 +1196,9 @@ def register_color_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result dictionary with status, message, and tool-specific data or error details.
         """
-        code = [
-            "import json",
-            "from gi.repository import Gimp, Gegl",
-            "images = Gimp.get_images()",
-            "if not images: raise RuntimeError('No images are open')",
-            "image = images[0]",
-            "sel = image.get_selected_layers()",
-            "if not sel: raise RuntimeError('No active layer')",
-            "drawable = sel[0]",
-            "result = {}",
-            "try:\n"
-            f"    color = drawable.get_pixel({x}, {y})\n"
-            "    rgba = color.get_rgba()\n"
-            "    result = {'r': round(rgba.red, 4), 'g': round(rgba.green, 4), 'b': round(rgba.blue, 4), 'a': round(rgba.alpha, 4)}\n"
-            "except Exception as e:\n"
-            "    result = {'error': str(e)}",
-            "print(json.dumps(result))",
-        ]
         try:
-            result = await bridge.async_execute_python(code)
-            import json as _json
-
-            color_data = {}
-            for out in result.get("results", []):
-                if out and out.strip():
-                    try:
-                        color_data = _json.loads(out.strip())
-                        break
-                    except _json.JSONDecodeError:
-                        continue
+            result = await bridge.async_execute_python(_sample_color_code(x, y, sample_merged))
+            color_data = _json_from_bridge(result)
             return OperationResult.ok(
                 operation="sample_color",
                 message=f"Color sampled at ({x}, {y})",

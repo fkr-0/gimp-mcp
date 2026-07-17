@@ -4,15 +4,21 @@ Source module: `src/gimp_mcp_pro/tools/layer_tools.py`
 
 | Tool | Summary | Parameters |
 |---|---|---:|
-| [`create_layer`](#create-layer) | Create a new layer in the active image. | 8 |
+| [`create_layer`](#create-layer) | Create a new layer in the active image. | 9 |
 | [`list_layers`](#list-layers) | List all layers in the active image with their properties. | 0 |
 | [`set_active_layer`](#set-active-layer) | Set which layer is active (the one drawing tools operate on). | 2 |
 | [`delete_layer`](#delete-layer) | Delete a layer from the active image. | 2 |
 | [`set_layer_opacity`](#set-layer-opacity) | Set a layer's opacity. | 3 |
 | [`set_layer_visibility`](#set-layer-visibility) | Show or hide a layer. | 3 |
 | [`set_layer_mode`](#set-layer-mode) | Set a layer's blend mode (normal, multiply, screen, overlay, etc.). | 3 |
+| [`set_layer_blend_mode`](#set-layer-blend-mode) | Alias for set_layer_mode with discoverable blend-mode naming. | 3 |
 | [`duplicate_layer`](#duplicate-layer) | Duplicate a layer. | 3 |
 | [`merge_visible_layers`](#merge-visible-layers) | Merge all visible layers into one. | 0 |
+| [`new_layer_from_visible`](#new-layer-from-visible) | Create a new layer from the current visible composite without merging originals. | 3 |
+| [`merge_down`](#merge-down) | Merge a layer down into the layer below it. | 3 |
+| [`copy_layer_alpha_to_mask`](#copy-layer-alpha-to-mask) | Copy a source layer's alpha silhouette into the target layer mask. | 5 |
+| [`selection_to_layer_mask`](#selection-to-layer-mask) | Create or replace a layer mask from the current selection. | 3 |
+| [`create_mask_from_color`](#create-mask-from-color) | Create a layer mask from an explicit color or sampled color selection. | 11 |
 | [`add_layer_mask`](#add-layer-mask) | Add a layer mask to a layer. | 3 |
 | [`get_layer_mask_info`](#get-layer-mask-info) | Get layer mask status for a layer. | 2 |
 | [`set_layer_mask_state`](#set-layer-mask-state) | Set layer mask editing/display/apply flags. | 5 |
@@ -31,10 +37,10 @@ Source module: `src/gimp_mcp_pro/tools/layer_tools.py`
 
 ## `create_layer` {#create-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:111`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:113`
 
 ```python
-async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mode: str = 'normal', fill: str = 'transparent', has_alpha: bool = True, position: int = 0, width: int | None = None, height: int | None = None) -> ToolResult
+async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mode: str = 'normal', fill: str = 'transparent', has_alpha: bool = True, position: int = 0, width: int | None = None, height: int | None = None, activate: bool = True) -> ToolResult
 ```
 
 ## Parameters
@@ -49,6 +55,7 @@ async def create_layer(name: str = 'New Layer', opacity: float = 100.0, blend_mo
 | `position` | Stack position (0 = top of stack) |
 | `width` | Layer width (defaults to image width) |
 | `height` | Layer height (defaults to image height) |
+| `activate` | If True (default), make the new layer active so drawing/fill tools target it. |
 
 ## Returns
 
@@ -82,13 +89,14 @@ Args:
     position: Stack position (0 = top of stack)
     width: Layer width (defaults to image width)
     height: Layer height (defaults to image height)
+    activate: If True (default), make the new layer active so drawing/fill tools target it.
 
 Returns:
     Operation result with layer info.
 
 ## `list_layers` {#list-layers}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:188`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:216`
 
 ```python
 async def list_layers() -> ToolResult
@@ -118,7 +126,7 @@ Returns:
 
 ## `set_active_layer` {#set-active-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:235`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:263`
 
 ```python
 async def set_active_layer(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -159,7 +167,7 @@ Returns:
 
 ## `delete_layer` {#delete-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:278`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:325`
 
 ```python
 async def delete_layer(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -196,7 +204,7 @@ Returns:
 
 ## `set_layer_opacity` {#set-layer-opacity}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:311`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:361`
 
 ```python
 async def set_layer_opacity(opacity: float, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -235,7 +243,7 @@ Returns:
 
 ## `set_layer_visibility` {#set-layer-visibility}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:346`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:414`
 
 ```python
 async def set_layer_visibility(visible: bool, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -274,7 +282,7 @@ Returns:
 
 ## `set_layer_mode` {#set-layer-mode}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:377`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:445`
 
 ```python
 async def set_layer_mode(blend_mode: str, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -315,9 +323,48 @@ Args:
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
+## `set_layer_blend_mode` {#set-layer-blend-mode}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:489`
+
+```python
+async def set_layer_blend_mode(blend_mode: str, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `blend_mode` | Blend mode name such as "normal", "multiply", or "screen". |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
+
+## Returns
+
+Operation result dictionary with status, message, and blend-mode metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Alias for set_layer_mode with discoverable blend-mode naming.
+
+Args:
+    blend_mode: Blend mode name such as "normal", "multiply", or "screen".
+    layer_name: Target layer by name.
+    layer_index: Target layer by index. Uses active layer if neither specified.
+
+Returns:
+    Operation result dictionary with status, message, and blend-mode metadata.
+
 ## `duplicate_layer` {#duplicate-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:421`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:529`
 
 ```python
 async def duplicate_layer(layer_name: str | None = None, layer_index: int | None = None, new_name: str | None = None) -> ToolResult
@@ -356,7 +403,7 @@ Returns:
 
 ## `merge_visible_layers` {#merge-visible-layers}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:457`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:592`
 
 ```python
 async def merge_visible_layers() -> ToolResult
@@ -386,9 +433,224 @@ Warnings:
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
+## `new_layer_from_visible` {#new-layer-from-visible}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:638`
+
+```python
+async def new_layer_from_visible(name: str = 'Visible', position: int = 0, activate: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `name` | Name for the created visible-composite layer. |
+| `position` | Stack position for the new layer. |
+| `activate` | If True, make the created layer active. |
+
+## Returns
+
+Operation result dictionary with created layer metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create a new layer from the current visible composite without merging originals.
+
+Args:
+    name: Name for the created visible-composite layer.
+    position: Stack position for the new layer.
+    activate: If True, make the created layer active.
+
+Returns:
+    Operation result dictionary with created layer metadata.
+
+## `merge_down` {#merge-down}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:687`
+
+```python
+async def merge_down(layer_name: str | None = None, layer_index: int | None = None, merge_type: str = 'clip_to_image') -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `layer_name` | Layer to merge by name. |
+| `layer_index` | Layer to merge by index. Uses active layer if neither specified. |
+| `merge_type` | GIMP merge mode: expand_as_necessary, clip_to_image, or clip_to_bottom_layer. |
+
+## Returns
+
+Operation result dictionary with merged layer metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Merge a layer down into the layer below it.
+
+Args:
+    layer_name: Layer to merge by name.
+    layer_index: Layer to merge by index. Uses active layer if neither specified.
+    merge_type: GIMP merge mode: expand_as_necessary, clip_to_image, or clip_to_bottom_layer.
+
+Returns:
+    Operation result dictionary with merged layer metadata.
+
+## `copy_layer_alpha_to_mask` {#copy-layer-alpha-to-mask}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:735`
+
+```python
+async def copy_layer_alpha_to_mask(source_layer_name: str | None = None, source_layer_index: int | None = None, target_layer_name: str | None = None, target_layer_index: int | None = None, replace_existing: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `source_layer_name` | Source layer by name. |
+| `source_layer_index` | Source layer by index. |
+| `target_layer_name` | Target layer by name. |
+| `target_layer_index` | Target layer by index. |
+| `replace_existing` | Replace an existing target mask when present. |
+
+## Returns
+
+Operation result dictionary with source-to-target mask metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Copy a source layer's alpha silhouette into the target layer mask.
+
+Args:
+    source_layer_name: Source layer by name.
+    source_layer_index: Source layer by index.
+    target_layer_name: Target layer by name.
+    target_layer_index: Target layer by index.
+    replace_existing: Replace an existing target mask when present.
+
+Returns:
+    Operation result dictionary with source-to-target mask metadata.
+
+## `selection_to_layer_mask` {#selection-to-layer-mask}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:818`
+
+```python
+async def selection_to_layer_mask(layer_name: str | None = None, layer_index: int | None = None, replace_existing: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. Uses active layer if neither specified. |
+| `replace_existing` | Replace an existing target mask when present. |
+
+## Returns
+
+Operation result dictionary with layer mask metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create or replace a layer mask from the current selection.
+
+Args:
+    layer_name: Target layer by name.
+    layer_index: Target layer by index. Uses active layer if neither specified.
+    replace_existing: Replace an existing target mask when present.
+
+Returns:
+    Operation result dictionary with layer mask metadata.
+
+## `create_mask_from_color` {#create-mask-from-color}
+
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:860`
+
+```python
+async def create_mask_from_color(color: str | None = None, x: float | None = None, y: float | None = None, threshold: float = 15.0, contiguous: bool = False, sample_merged: bool = False, source_layer_name: str | None = None, source_layer_index: int | None = None, target_layer_name: str | None = None, target_layer_index: int | None = None, replace_existing: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `color` | Explicit color to select, for example "#ffffff". |
+| `x` | Optional sample X coordinate when color is omitted. |
+| `y` | Optional sample Y coordinate when color is omitted. |
+| `threshold` | Color similarity threshold 0-255. |
+| `contiguous` | If True with x/y, use fuzzy connected-region selection. |
+| `sample_merged` | If True, sample all visible layers merged. |
+| `source_layer_name` | Source drawable layer by name. Uses active layer if omitted. |
+| `source_layer_index` | Source drawable layer by index. Uses active layer if omitted. |
+| `target_layer_name` | Target layer to receive the mask by name. Uses source/active layer if omitted. |
+| `target_layer_index` | Target layer to receive the mask by index. Uses source/active layer if omitted. |
+| `replace_existing` | Replace an existing target mask when present. |
+
+## Returns
+
+Operation result dictionary with color-mask metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Create a layer mask from an explicit color or sampled color selection.
+
+Args:
+    color: Explicit color to select, for example "#ffffff".
+    x: Optional sample X coordinate when color is omitted.
+    y: Optional sample Y coordinate when color is omitted.
+    threshold: Color similarity threshold 0-255.
+    contiguous: If True with x/y, use fuzzy connected-region selection.
+    sample_merged: If True, sample all visible layers merged.
+    source_layer_name: Source drawable layer by name. Uses active layer if omitted.
+    source_layer_index: Source drawable layer by index. Uses active layer if omitted.
+    target_layer_name: Target layer to receive the mask by name. Uses source/active layer if omitted.
+    target_layer_index: Target layer to receive the mask by index. Uses source/active layer if omitted.
+    replace_existing: Replace an existing target mask when present.
+
+Returns:
+    Operation result dictionary with color-mask metadata.
+
 ## `add_layer_mask` {#add-layer-mask}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:485`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:988`
 
 ```python
 async def add_layer_mask(mask_type: str = 'white', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -427,7 +689,7 @@ Returns:
 
 ## `get_layer_mask_info` {#get-layer-mask-info}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:530`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1033`
 
 ```python
 async def get_layer_mask_info(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -464,7 +726,7 @@ Returns:
 
 ## `set_layer_mask_state` {#set-layer-mask-state}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:573`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1076`
 
 ```python
 async def set_layer_mask_state(edit_mask: bool | None = None, show_mask: bool | None = None, apply_mask: bool | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -507,7 +769,7 @@ Returns:
 
 ## `remove_layer_mask` {#remove-layer-mask}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:618`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1121`
 
 ```python
 async def remove_layer_mask(apply: bool = False, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -546,7 +808,7 @@ Returns:
 
 ## `create_layer_group` {#create-layer-group}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:650`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1153`
 
 ```python
 async def create_layer_group(name: str = 'Group', position: int = 0, parent_group_name: str | None = None, parent_group_index: int | None = None) -> ToolResult
@@ -587,7 +849,7 @@ Returns:
 
 ## `move_layer_to_group` {#move-layer-to-group}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:707`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1210`
 
 ```python
 async def move_layer_to_group(layer_name: str | None = None, layer_index: int | None = None, group_name: str | None = None, group_index: int | None = None, position: int = 0) -> ToolResult
@@ -630,7 +892,7 @@ Returns:
 
 ## `list_channels` {#list-channels}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:759`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1262`
 
 ```python
 async def list_channels() -> ToolResult
@@ -656,7 +918,7 @@ Returns:
 
 ## `save_selection_to_channel` {#save-selection-to-channel}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:801`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1304`
 
 ```python
 async def save_selection_to_channel(name: str = 'Selection') -> ToolResult
@@ -691,7 +953,7 @@ Returns:
 
 ## `channel_to_selection` {#channel-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:838`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1341`
 
 ```python
 async def channel_to_selection(channel_name: str | None = None, channel_index: int | None = None, operation: str = 'replace') -> ToolResult
@@ -730,7 +992,7 @@ Returns:
 
 ## `create_visual_annotation_layer` {#create-visual-annotation-layer}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:882`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1385`
 
 ```python
 async def create_visual_annotation_layer(annotations: list[dict[str, object]], layer_name: str | None = None, temporary: bool = True) -> ToolResult
@@ -769,7 +1031,7 @@ Returns:
 
 ## `remove_visual_annotations` {#remove-visual-annotations}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:960`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1463`
 
 ```python
 async def remove_visual_annotations(annotation_layer_ids: list[int] | None = None, remove_all_mcp_annotations: bool = False) -> ToolResult
@@ -806,7 +1068,7 @@ Returns:
 
 ## `layer_version_stamp` {#layer-version-stamp}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:1016`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1519`
 
 ```python
 async def layer_version_stamp(target: dict[str, object] | str, metadata: dict[str, object], merge: bool = True) -> ToolResult
@@ -845,7 +1107,7 @@ Returns:
 
 ## `add_alpha_channel` {#add-alpha-channel}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:1099`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1602`
 
 ```python
 async def add_alpha_channel(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -886,7 +1148,7 @@ Returns:
 
 ## `edit_channels` {#edit-channels}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:1129`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1645`
 
 ```python
 async def edit_channels(action: str, channel: dict[str, Any] | str | None = None, name: str | None = None) -> ToolResult
@@ -925,7 +1187,7 @@ Returns:
 
 ## `manage_channels` {#manage-channels}
 
-Source: `src/gimp_mcp_pro/tools/layer_tools.py:1165`
+Source: `src/gimp_mcp_pro/tools/layer_tools.py:1681`
 
 ```python
 async def manage_channels(action: str = 'list', channel_ref: dict[str, Any] | str | None = None, name: str | None = None, visible: bool | None = None) -> ToolResult

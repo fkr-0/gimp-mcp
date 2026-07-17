@@ -14,11 +14,11 @@ Source module: `src/gimp_mcp_pro/tools/flow_tools.py`
 | [`unpin_flow`](#unpin-flow) | Remove a flow's direct GIMP menu entry. | 1 |
 | [`run_flow`](#run-flow) | Execute a validated or active flow through the shared operation registry. | 4 |
 | [`dry_run_macro`](#dry-run-macro) | Validate a typed multi-step macro without mutating GIMP state. | 1 |
-| [`run_macro_transaction`](#run-macro-transaction) | Execute a typed multi-step macro as one fail-safe transaction. | 4 |
+| [`run_macro_transaction`](#run-macro-transaction) | Execute a typed multi-step macro as one fail-safe transaction. | 6 |
 
 ## `propose_flow` {#propose-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:175`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:181`
 
 ```python
 async def propose_flow(definition: dict[str, Any]) -> ToolResult
@@ -53,7 +53,7 @@ Returns:
 
 ## `list_flows` {#list-flows}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:200`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:206`
 
 ```python
 async def list_flows(state: str | None = None) -> ToolResult
@@ -88,7 +88,7 @@ Returns:
 
 ## `get_flow` {#get-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:225`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:231`
 
 ```python
 async def get_flow(flow_id: str) -> ToolResult
@@ -123,7 +123,7 @@ Returns:
 
 ## `validate_flow` {#validate-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:243`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:249`
 
 ```python
 async def validate_flow(flow_id: str) -> ToolResult
@@ -158,7 +158,7 @@ Returns:
 
 ## `activate_flow` {#activate-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:272`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:278`
 
 ```python
 async def activate_flow(flow_id: str, confirm_unsafe: bool = False) -> ToolResult
@@ -195,7 +195,7 @@ Returns:
 
 ## `deactivate_flow` {#deactivate-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:299`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:305`
 
 ```python
 async def deactivate_flow(flow_id: str) -> ToolResult
@@ -230,7 +230,7 @@ Returns:
 
 ## `pin_flow` {#pin-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:318`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:324`
 
 ```python
 async def pin_flow(flow_id: str) -> ToolResult
@@ -265,7 +265,7 @@ Returns:
 
 ## `unpin_flow` {#unpin-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:336`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:342`
 
 ```python
 async def unpin_flow(flow_id: str) -> ToolResult
@@ -300,7 +300,7 @@ Returns:
 
 ## `run_flow` {#run-flow}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:354`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:360`
 
 ```python
 async def run_flow(flow_id: str, parameters: dict[str, Any] | None = None, confirm_unsafe: bool = False, checkpoint_decision: str = 'commit') -> ToolResult
@@ -341,7 +341,7 @@ Returns:
 
 ## `dry_run_macro` {#dry-run-macro}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:394`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:400`
 
 ```python
 async def dry_run_macro(steps: list[dict[str, Any]]) -> ToolResult
@@ -376,10 +376,10 @@ Returns:
 
 ## `run_macro_transaction` {#run-macro-transaction}
 
-Source: `src/gimp_mcp_pro/tools/flow_tools.py:431`
+Source: `src/gimp_mcp_pro/tools/flow_tools.py:437`
 
 ```python
-async def run_macro_transaction(steps: list[dict[str, Any]], transaction_label: str = 'MCP Macro Transaction', rollback_on_failure: bool = True, capture_before_after: bool = False) -> ToolResult
+async def run_macro_transaction(steps: list[dict[str, Any]], transaction_label: str = 'MCP Macro Transaction', rollback_on_failure: bool = True, capture_before_after: bool = False, preconditions: list[dict[str, Any]] | None = None, postconditions: list[dict[str, Any]] | None = None) -> ToolResult
 ```
 
 ## Parameters
@@ -390,6 +390,8 @@ async def run_macro_transaction(steps: list[dict[str, Any]], transaction_label: 
 | `transaction_label` | Human-readable label for the undo/transaction phase. |
 | `rollback_on_failure` | Must remain true so macro execution is atomic. |
 | `capture_before_after` | Capture document observations before and after execution when available. |
+| `preconditions` | Optional image-state assertions checked before opening the transaction. |
+| `postconditions` | Optional image-state assertions executed as the final transactional step; failure rolls back all edits. |
 
 ## Returns
 
@@ -411,6 +413,8 @@ Args:
     transaction_label: Human-readable label for the undo/transaction phase.
     rollback_on_failure: Must remain true so macro execution is atomic.
     capture_before_after: Capture document observations before and after execution when available.
+    preconditions: Optional image-state assertions checked before opening the transaction.
+    postconditions: Optional image-state assertions executed as the final transactional step; failure rolls back all edits.
 
 Returns:
     Operation result dictionary with transaction id, step results, rollback status, and evidence.

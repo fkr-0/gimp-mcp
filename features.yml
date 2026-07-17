@@ -6,14 +6,15 @@ scope: Future MCP tool features useful for an LLM agent operating GIMP.
 status: active-reconciled-2026-06-23
 principles:
 - Prefer small typed tools over one large execute_python escape hatch.
-- Make inspection and reversibility first-class; agents need to see, verify, undo, and retry.
-- Return compact structured JSON plus optional bounded image payloads; avoid unbounded binary
-  transfers.
+- Make inspection and reversibility first-class; agents need to see, verify, undo,
+  and retry.
+- Return compact structured JSON plus optional bounded image payloads; avoid unbounded
+  binary transfers.
 - Keep destructive operations wrapped in undo groups and explicit transaction IDs.
-- Make every live-GIMP feature testable through clean-profile spawned smoke tests under Xvfb
-  only.
-- Preserve user safety by defaulting to localhost-only bridge access and avoiding arbitrary
-  file or shell access.
+- Make every live-GIMP feature testable through clean-profile spawned smoke tests
+  under Xvfb only.
+- Preserve user safety by defaulting to localhost-only bridge access and avoiding
+  arbitrary file or shell access.
 priority_legend:
   P0: Core agent safety or observability; implement before broad autonomous editing.
   P1: High-value editing workflow support.
@@ -22,32 +23,32 @@ priority_legend:
 categories:
 - id: observe
   title: Visual and document observation
-  why: Agents need a compact but reliable view of the current image, layer stack, active context,
-    and selected regions before choosing actions.
+  why: Agents need a compact but reliable view of the current image, layer stack,
+    active context, and selected regions before choosing actions.
 - id: target
   title: Target resolution and validation
-  why: Agents frequently refer to layers, groups, channels, paths, regions, or text objects
-    by natural-language descriptions; tools should resolve these safely.
+  why: Agents frequently refer to layers, groups, channels, paths, regions, or text
+    objects by natural-language descriptions; tools should resolve these safely.
 - id: transaction
   title: Reversible edit transactions
-  why: Autonomous edits need checkpoints, undo groups, before/after evidence, and rollback
-    on failed validation.
+  why: Autonomous edits need checkpoints, undo groups, before/after evidence, and
+    rollback on failed validation.
 - id: edit
   title: Typed editing primitives
-  why: Common operations should be exposed as validated tool calls rather than generated Python
-    snippets.
+  why: Common operations should be exposed as validated tool calls rather than generated
+    Python snippets.
 - id: verify
   title: Visual verification and regression checks
-  why: The agent should assert that a change actually happened and did not damage unrelated
-    regions.
+  why: The agent should assert that a change actually happened and did not damage
+    unrelated regions.
 - id: asset
   title: Asset, preset, and file workflow
-  why: Practical GIMP work involves brushes, palettes, fonts, gradients, templates, import/export
-    settings, and sidecar notes.
+  why: Practical GIMP work involves brushes, palettes, fonts, gradients, templates,
+    import/export settings, and sidecar notes.
 - id: script
   title: Safe scripting and macro workflows
-  why: Some agent workflows need multi-step procedures, but they should be inspectable, sandboxed,
-    and replayable.
+  why: Some agent workflows need multi-step procedures, but they should be inspectable,
+    sandboxed, and replayable.
 features:
 - id: FEAT-001
   name: observe_document_state
@@ -78,8 +79,8 @@ features:
   status: implemented
   current_tools:
   - observe_document_state
-  current_state_note: Current registry exposes document snapshot with bounded thumbnail support;
-    layer previews remain warned as follow-up.
+  current_state_note: Current registry exposes document snapshot with bounded thumbnail
+    support; layer previews remain warned as follow-up.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
@@ -87,8 +88,8 @@ features:
   name: get_layer_tree_detailed
   category: observe
   priority: P0
-  summary: Return nested layer/group structure with visibility, opacity, mode, lock state,
-    masks, bounds, and type hints.
+  summary: Return nested layer/group structure with visibility, opacity, mode, lock
+    state, masks, bounds, and type hints.
   agent_value: Prevents edits to the wrong layer and helps the agent understand compositing
     structure.
   proposed_tool_shape:
@@ -101,8 +102,8 @@ features:
       groups: list
       warnings: list
   acceptance:
-  - Distinguishes raster, text, vector/path-backed, group, and mask-bearing layers where GIMP
-    exposes this.
+  - Distinguishes raster, text, vector/path-backed, group, and mask-bearing layers
+    where GIMP exposes this.
   - Identifies invisible or locked layers before destructive edits.
   status: implemented
   current_tools:
@@ -115,7 +116,8 @@ features:
   name: observe_region
   category: observe
   priority: P0
-  summary: Return a cropped visual observation plus metadata for a specific rectangle or selection.
+  summary: Return a cropped visual observation plus metadata for a specific rectangle
+    or selection.
   agent_value: Lets the agent inspect details without transferring the whole canvas.
   proposed_tool_shape:
     input:
@@ -133,7 +135,8 @@ features:
   status: implemented
   current_tools:
   - observe_region
-  current_state_note: Region bitmap plus sampled colors are exposed; histogram remains optional/placeholder.
+  current_state_note: Region bitmap plus sampled colors are exposed; histogram remains
+    optional/placeholder.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
@@ -157,8 +160,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - create_contact_sheet
-  current_state_note: Added read-only layer contact-sheet index with stable IDs and explicit
-    hidden-layer policy.
+  current_state_note: Added read-only layer contact-sheet index with stable IDs and
+    explicit hidden-layer policy.
   verification:
   - tests/test_remaining_feature_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
@@ -168,8 +171,8 @@ features:
   category: observe
   priority: P0
   summary: Sample colors at points, grids, or along paths.
-  agent_value: Enables precise color reasoning, palette extraction, and verification without
-    relying only on screenshots.
+  agent_value: Enables precise color reasoning, palette extraction, and verification
+    without relying only on screenshots.
   proposed_tool_shape:
     input:
       points: list
@@ -185,8 +188,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - sample_pixels
-  current_state_note: Added multi-point and grid pixel sampling with per-layer and merged-composite
-    modes.
+  current_state_note: Added multi-point and grid pixel sampling with per-layer and
+    merged-composite modes.
   verification:
   - tests/test_sample_pixels_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
@@ -213,8 +216,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - analyze_color_palette
-  current_state_note: Added deterministic palette/coverage/contrast analysis for layer or
-    region sampling.
+  current_state_note: Added deterministic palette/coverage/contrast analysis for layer
+    or region sampling.
   verification:
   - tests/test_remaining_feature_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
@@ -223,8 +226,8 @@ features:
   name: resolve_target
   category: target
   priority: P0
-  summary: Resolve a natural-language or structured target reference into concrete GIMP object
-    IDs.
+  summary: Resolve a natural-language or structured target reference into concrete
+    GIMP object IDs.
   agent_value: Reduces hallucinated layer names and supports robust multi-step plans.
   proposed_tool_shape:
     input:
@@ -242,7 +245,8 @@ features:
   status: implemented
   current_tools:
   - resolve_target
-  current_state_note: Target resolution tool is registered and covered by invocation matrix.
+  current_state_note: Target resolution tool is registered and covered by invocation
+    matrix.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
@@ -250,7 +254,8 @@ features:
   name: validate_targets
   category: target
   priority: P0
-  summary: Check whether proposed target IDs are still valid and editable before an operation.
+  summary: Check whether proposed target IDs are still valid and editable before an
+    operation.
   agent_value: Prevents stale-plan errors after the document changes.
   proposed_tool_shape:
     input:
@@ -266,7 +271,8 @@ features:
   status: implemented
   current_tools:
   - validate_targets
-  current_state_note: Target validation tool is registered and covered by invocation matrix.
+  current_state_note: Target validation tool is registered and covered by invocation
+    matrix.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
@@ -274,7 +280,8 @@ features:
   name: find_similar_regions
   category: target
   priority: P2
-  summary: Locate regions matching approximate color, transparency, or simple shape criteria.
+  summary: Locate regions matching approximate color, transparency, or simple shape
+    criteria.
   agent_value: Helps the agent find repeated visual elements for batch edits.
   proposed_tool_shape:
     input:
@@ -290,8 +297,8 @@ features:
   - Does not claim semantic object recognition.
   status: implemented_this_pass
   implemented_tool: find_similar_regions
-  current_state_note: Deterministic pixel/alpha similar-region search is implemented without
-    semantic object-recognition claims.
+  current_state_note: Deterministic pixel/alpha similar-region search is implemented
+    without semantic object-recognition claims.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[find_similar_regions]
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[find_similar_regions]
@@ -374,7 +381,8 @@ features:
   category: transaction
   priority: P1
   summary: Save an in-memory or temporary-file checkpoint with metadata.
-  agent_value: Supports longer multi-step edits where ordinary undo history may be insufficient.
+  agent_value: Supports longer multi-step edits where ordinary undo history may be
+    insufficient.
   proposed_tool_shape:
     input:
       label: string
@@ -388,7 +396,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - create_checkpoint
-  current_state_note: Added controlled temporary checkpoint records with redacted path metadata.
+  current_state_note: Added controlled temporary checkpoint records with redacted
+    path metadata.
   verification:
   - tests/test_remaining_feature_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
@@ -398,7 +407,8 @@ features:
   category: verify
   priority: P0
   summary: Compare two snapshots, thumbnails, layers, or regions.
-  agent_value: Lets the agent verify that an operation produced the intended visual change.
+  agent_value: Lets the agent verify that an operation produced the intended visual
+    change.
   proposed_tool_shape:
     input:
       before: snapshot_or_region_ref
@@ -433,14 +443,14 @@ features:
       passed: boolean
       results: list
   acceptance:
-  - Supports assertions such as layer_exists, layer_visible, selection_non_empty, region_changed,
-    dimensions_equal, color_close.
+  - Supports assertions such as layer_exists, layer_visible, selection_non_empty,
+    region_changed, dimensions_equal, color_close.
   - Returns structured failures without throwing for ordinary assertion failures.
   status: implemented_this_pass
   current_tools:
   - assert_image_state
-  current_state_note: Added typed state assertion evaluation for supplied or observed document
-    state.
+  current_state_note: Added typed state assertion evaluation for supplied or observed
+    document state.
   verification:
   - tests/test_snapshot_assertion_tools.py
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path
@@ -462,8 +472,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - get_operation_log
-  current_state_note: Added bounded operation-log retrieval with snapshot omission and path
-    redaction.
+  current_state_note: Added bounded operation-log retrieval with snapshot omission
+    and path redaction.
   verification:
   - tests/test_remaining_feature_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
@@ -490,8 +500,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - preview_filter
-  current_state_note: Added temporary-layer GEGL filter preview that avoids mutating the original
-    drawable.
+  current_state_note: Added temporary-layer GEGL filter preview that avoids mutating
+    the original drawable.
   verification:
   - tests/test_remaining_feature_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path
@@ -513,8 +523,9 @@ features:
   - Commit is wrapped in a transaction.
   status: implemented_this_pass
   implemented_tool: commit_filter_preview
-  current_state_note: Commit/discard for temporary preview layers is implemented; commit is
-    transaction-wrapped and action-specific generated code avoids accidental preview removal.
+  current_state_note: Commit/discard for temporary preview layers is implemented;
+    commit is transaction-wrapped and action-specific generated code avoids accidental
+    preview removal.
   verification:
   - tests/test_edit_safety_tools.py::test_commit_filter_preview_commit_wraps_transaction_and_promotes_preview
   - tests/test_edit_safety_tools.py::test_commit_filter_preview_discard_removes_temporary_layer
@@ -525,8 +536,8 @@ features:
   name: edit_text_layer
   category: edit
   priority: P1
-  summary: Inspect and update text-layer content, font, size, alignment, spacing, and color
-    where supported.
+  summary: Inspect and update text-layer content, font, size, alignment, spacing,
+    and color where supported.
   agent_value: Text edits are common and should not require raw Python snippets.
   proposed_tool_shape:
     input:
@@ -569,8 +580,8 @@ features:
   - Places the layer predictably within canvas bounds.
   status: implemented_this_pass
   implemented_tool: create_text_box
-  current_state_note: Bounded text-box creation is implemented through the public drawing
-    tool surface.
+  current_state_note: Bounded text-box creation is implemented through the public
+    drawing tool surface.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[create_text_box]
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[create_text_box]
@@ -621,14 +632,16 @@ features:
   - Does not silently overwrite channels.
   status: implemented_this_pass
   implemented_tool: edit_channels
-  current_state_note: Implemented as `edit_channels` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[edit_channels]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[edit_channels]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - edit_channels
+  target_file: src/gimp_mcp_pro/tools/layer_tools.py
 - id: FEAT-023
   name: edit_paths
   category: edit
@@ -649,20 +662,22 @@ features:
   - Reports unsupported path data clearly.
   status: implemented_this_pass
   implemented_tool: edit_paths
-  current_state_note: Implemented as `edit_paths` with bounded typed inputs, structured OperationResult
-    output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[edit_paths]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[edit_paths]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - edit_paths
+  target_file: src/gimp_mcp_pro/tools/path_tools.py
 - id: FEAT-024
   name: align_and_distribute_layers
   category: edit
   priority: P1
-  summary: Align or distribute selected layers relative to canvas, selection, guides, or another
-    layer.
+  summary: Align or distribute selected layers relative to canvas, selection, guides,
+    or another layer.
   agent_value: Supports layout cleanups that agents often need for designs.
   proposed_tool_shape:
     input:
@@ -677,8 +692,8 @@ features:
   - Returns old and new bounds for verification.
   status: implemented_this_pass
   implemented_tool: align_and_distribute_layers
-  current_state_note: Layer alignment/distribution is implemented with dry-run old/new bounds
-    and lock-position checks.
+  current_state_note: Layer alignment/distribution is implemented with dry-run old/new
+    bounds and lock-position checks.
   verification:
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[align_and_distribute_layers]
   - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[align_and_distribute_layers]
@@ -705,8 +720,9 @@ features:
   - Supports dry-run mode.
   status: implemented_this_pass
   implemented_tool: smart_crop_or_resize
-  current_state_note: Dry-run-aware smart crop/pad/resize is implemented with anchor handling,
-    clipping warnings, layer-preservation intent, and background fill for padding.
+  current_state_note: Dry-run-aware smart crop/pad/resize is implemented with anchor
+    handling, clipping warnings, layer-preservation intent, and background fill for
+    padding.
   verification:
   - tests/test_edit_safety_tools.py::test_smart_crop_or_resize_dry_run_reports_clip_without_mutation
   - tests/test_edit_safety_tools.py::test_smart_crop_or_resize_pad_sets_background_and_preserves_layers
@@ -743,8 +759,8 @@ features:
   name: brush_inventory
   category: asset
   priority: P1
-  summary: List available brushes, dynamics, patterns, gradients, palettes, fonts, and tool
-    presets.
+  summary: List available brushes, dynamics, patterns, gradients, palettes, fonts,
+    and tool presets.
   agent_value: Lets the agent choose from real resources instead of inventing names.
   proposed_tool_shape:
     input:
@@ -758,8 +774,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - brush_inventory
-  current_state_note: Implemented as `brush_inventory` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Implemented as `brush_inventory` with bounded typed inputs,
+    structured OperationResult output, and offline invocation coverage.
   verification:
   - tests/test_big_remaining_feature_chunk.py
   - tests/test_missing_roadmap_tools.py
@@ -770,8 +786,8 @@ features:
   name: set_paint_context
   category: asset
   priority: P1
-  summary: Set brush, size, opacity, dynamics, pattern, gradient, foreground, and background
-    colors.
+  summary: Set brush, size, opacity, dynamics, pattern, gradient, foreground, and
+    background colors.
   agent_value: Makes drawing tools predictable and reproducible.
   proposed_tool_shape:
     input:
@@ -789,8 +805,9 @@ features:
   - Returns previous and new context.
   status: implemented_this_pass
   implemented_tool: set_paint_context
-  current_state_note: Paint context update is implemented with resource validation for brush/pattern/gradient,
-    color setting, size/opacity validation, and previous/new context read-back.
+  current_state_note: Paint context update is implemented with resource validation
+    for brush/pattern/gradient, color setting, size/opacity validation, and previous/new
+    context read-back.
   verification:
   - tests/test_asset_context_tools.py::test_set_paint_context_sets_multiple_validated_context_fields
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[set_paint_context]
@@ -813,19 +830,22 @@ features:
   - Preserves color names when provided.
   status: implemented_this_pass
   implemented_tool: palette_create_or_update
-  current_state_note: Implemented as `palette_create_or_update` with bounded typed inputs,
-    structured OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[palette_create_or_update]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[palette_create_or_update]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - palette_create_or_update
+  target_file: src/gimp_mcp_pro/tools/color_tools.py
 - id: FEAT-030
   name: export_with_manifest
   category: asset
   priority: P1
-  summary: Export image/layers plus a JSON/YAML sidecar describing settings, layers, and provenance.
+  summary: Export image/layers plus a JSON/YAML sidecar describing settings, layers,
+    and provenance.
   agent_value: Lets an LLM produce reproducible deliverables and explain what changed.
   proposed_tool_shape:
     input:
@@ -867,20 +887,23 @@ features:
   - Reports dimensions and color profile.
   status: implemented_this_pass
   implemented_tool: import_as_layer_with_metadata
-  current_state_note: Import-as-layer wrapper with provenance metadata is exposed through
-    the roadmap tool surface.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[import_as_layer_with_metadata]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[import_as_layer_with_metadata]
+  - tests/test_roadmap_tool_review.py
+  - tests/test_missing_roadmap_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - import_as_layer_with_metadata
+  target_file: src/gimp_mcp_pro/tools/image_tools.py
 - id: FEAT-032
   name: dry_run_macro
   category: script
   priority: P0
   summary: Validate a proposed multi-step MCP macro without mutating GIMP.
-  agent_value: Lets the agent plan several operations and catch invalid targets or parameters
-    first.
+  agent_value: Lets the agent plan several operations and catch invalid targets or
+    parameters first.
   proposed_tool_shape:
     input:
       steps: list
@@ -933,7 +956,8 @@ features:
   category: script
   priority: P1
   summary: Return typed PDB procedure metadata suitable for generating safer wrappers.
-  agent_value: Lets the agent discover GIMP capabilities without blindly executing PDB calls.
+  agent_value: Lets the agent discover GIMP capabilities without blindly executing
+    PDB calls.
   proposed_tool_shape:
     input:
       query: string
@@ -948,13 +972,15 @@ features:
   status: implemented_this_pass
   current_tools:
   - pdb_introspect_typed
-  current_state_note: Implemented as `pdb_introspect_typed` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[pdb_introspect_typed]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[pdb_introspect_typed]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: pdb_introspect_typed
+  target_file: src/gimp_mcp_pro/tools/pdb_tools.py
 - id: FEAT-035
   name: execute_pdb_call
   category: script
@@ -976,13 +1002,15 @@ features:
   status: implemented_this_pass
   current_tools:
   - execute_pdb_call
-  current_state_note: Implemented as `execute_pdb_call` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[execute_pdb_call]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[execute_pdb_call]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: execute_pdb_call
+  target_file: src/gimp_mcp_pro/tools/pdb_tools.py
 - id: FEAT-036
   name: safe_python_eval
   category: script
@@ -1001,26 +1029,30 @@ features:
       result: object
   safety_notes:
   - Keep disabled unless debug settings explicitly enable it.
-  - Never expose shell, arbitrary file access, networking, or module imports beyond a small
-    allowlist.
+  - Never expose shell, arbitrary file access, networking, or module imports beyond
+    a small allowlist.
   - Prefer typed tools and PDB allowlists for production workflows.
   acceptance:
   - Unit tests prove disabled-by-default behavior.
   - Live smoke never depends on this feature.
   status: implemented_this_pass
   implemented_tool: safe_python_eval
-  current_state_note: Restricted diagnostic Python evaluation is exposed disabled-by-default
-    behind explicit debug confirmation.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[safe_python_eval]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[safe_python_eval]
+  - tests/test_roadmap_tool_review.py
+  - tests/test_missing_roadmap_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - safe_python_eval
+  target_file: src/gimp_mcp_pro/tools/pdb_tools.py
 - id: FEAT-037
   name: explain_current_context
   category: observe
   priority: P1
-  summary: Return an LLM-oriented textual and structured summary of the current canvas state.
+  summary: Return an LLM-oriented textual and structured summary of the current canvas
+    state.
   agent_value: Reduces prompt bloat by giving the model a concise working-memory packet.
   proposed_tool_shape:
     input:
@@ -1046,7 +1078,8 @@ features:
   name: create_visual_annotation_layer
   category: edit
   priority: P2
-  summary: Add temporary annotations such as boxes, arrows, labels, and measurement guides.
+  summary: Add temporary annotations such as boxes, arrows, labels, and measurement
+    guides.
   agent_value: Helps agents communicate planned edits or review findings without changing
     original content.
   proposed_tool_shape:
@@ -1094,8 +1127,8 @@ features:
   name: generate_layer_report
   category: verify
   priority: P1
-  summary: Produce a structured report of layers, dimensions, visibility, blend modes, masks,
-    and potential problems.
+  summary: Produce a structured report of layers, dimensions, visibility, blend modes,
+    masks, and potential problems.
   agent_value: Useful before exporting, flattening, or handing work to a human.
   proposed_tool_shape:
     input:
@@ -1120,8 +1153,8 @@ features:
   category: asset
   priority: P1
   summary: Validate readiness for export to PNG, JPEG, WebP, TIFF, PSD, or XCF.
-  agent_value: Prevents accidental flattening, alpha loss, color-profile surprises, or missing
-    sidecar data.
+  agent_value: Prevents accidental flattening, alpha loss, color-profile surprises,
+    or missing sidecar data.
   proposed_tool_shape:
     input:
       formats: list
@@ -1147,7 +1180,8 @@ features:
   name: measure_geometry
   category: verify
   priority: P2
-  summary: Measure distances, bounds, overlaps, alignment, and spacing between layers or selections.
+  summary: Measure distances, bounds, overlaps, alignment, and spacing between layers
+    or selections.
   agent_value: Lets agents perform precise layout and consistency checks.
   proposed_tool_shape:
     input:
@@ -1171,8 +1205,8 @@ features:
   name: content_bounds
   category: observe
   priority: P1
-  summary: Detect non-transparent or non-background content bounds for image, layer, group,
-    or region.
+  summary: Detect non-transparent or non-background content bounds for image, layer,
+    group, or region.
   agent_value: Helps crop/pad/layout tools avoid clipping meaningful content.
   proposed_tool_shape:
     input:
@@ -1199,8 +1233,8 @@ features:
   category: transaction
   priority: P2
   summary: Attach MCP metadata to layers or images describing operation provenance.
-  agent_value: Helps long-running agents remember why a layer exists and whether it is temporary,
-    generated, or user-authored.
+  agent_value: Helps long-running agents remember why a layer exists and whether it
+    is temporary, generated, or user-authored.
   proposed_tool_shape:
     input:
       target: target_ref
@@ -1225,7 +1259,8 @@ features:
   priority: P0
   summary: Report runtime capabilities, GIMP version, plug-in version, available procedures,
     export support, and safety mode.
-  agent_value: Lets the LLM adapt plans to what the current GIMP instance can actually do.
+  agent_value: Lets the LLM adapt plans to what the current GIMP instance can actually
+    do.
   proposed_tool_shape:
     input:
       include_pdb_probe: boolean
@@ -1249,8 +1284,10 @@ features:
   name: manage_layer_masks
   category: edit
   priority: P1
-  summary: Create, inspect, enable, disable, apply, and delete layer masks through typed calls.
-  agent_value: Lets the agent perform non-destructive masking instead of erasing pixels directly.
+  summary: Create, inspect, enable, disable, apply, and delete layer masks through
+    typed calls.
+  agent_value: Lets the agent perform non-destructive masking instead of erasing pixels
+    directly.
   proposed_tool_shape:
     input:
       layer_ref: target_ref
@@ -1292,13 +1329,15 @@ features:
   status: implemented_this_pass
   current_tools:
   - manage_channels
-  current_state_note: Implemented as `manage_channels` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[manage_channels]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[manage_channels]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: manage_channels
+  target_file: src/gimp_mcp_pro/tools/layer_tools.py
 - id: FEAT-048
   name: manage_guides_and_grid
   category: edit
@@ -1319,13 +1358,15 @@ features:
   status: implemented_this_pass
   current_tools:
   - manage_guides_and_grid
-  current_state_note: Implemented as `manage_guides_and_grid` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[manage_guides_and_grid]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[manage_guides_and_grid]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: manage_guides_and_grid
+  target_file: src/gimp_mcp_pro/tools/image_tools.py
 - id: FEAT-049
   name: create_and_edit_paths
   category: edit
@@ -1347,13 +1388,15 @@ features:
   status: implemented_this_pass
   current_tools:
   - create_and_edit_paths
-  current_state_note: Implemented as `create_and_edit_paths` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[create_and_edit_paths]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[create_and_edit_paths]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: create_and_edit_paths
+  target_file: src/gimp_mcp_pro/tools/path_tools.py
 - id: FEAT-050
   name: stroke_or_fill_path
   category: edit
@@ -1374,19 +1417,21 @@ features:
   status: implemented_this_pass
   current_tools:
   - stroke_or_fill_path
-  current_state_note: Implemented as `stroke_or_fill_path` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[stroke_or_fill_path]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[stroke_or_fill_path]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: stroke_or_fill_path
+  target_file: src/gimp_mcp_pro/tools/path_tools.py
 - id: FEAT-051
   name: text_layer_introspection
   category: observe
   priority: P1
-  summary: Extract editable text, font, size, color, transform, and bounds from text layers
-    where GIMP exposes them.
+  summary: Extract editable text, font, size, color, transform, and bounds from text
+    layers where GIMP exposes them.
   agent_value: Lets the agent preserve typography instead of rasterizing text unnecessarily.
   proposed_tool_shape:
     input:
@@ -1402,8 +1447,8 @@ features:
   - Does not rasterize or mutate the layer.
   status: implemented_this_pass
   implemented_tool: text_layer_introspection
-  current_state_note: Read-only text layer metadata inspection is implemented with structured
-    non-text fallback.
+  current_state_note: Read-only text layer metadata inspection is implemented with
+    structured non-text fallback.
   verification:
   - tests/test_content_text_inspect_tools.py::test_text_layer_introspection_uses_textlayer_api_without_mutation
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[text_layer_introspection]
@@ -1412,8 +1457,8 @@ features:
   name: resource_catalog
   category: asset
   priority: P1
-  summary: List brushes, fonts, gradients, palettes, patterns, dynamics, and tool presets
-    with compact metadata.
+  summary: List brushes, fonts, gradients, palettes, patterns, dynamics, and tool
+    presets with compact metadata.
   agent_value: Lets the agent choose available assets before attempting visual edits.
   proposed_tool_shape:
     input:
@@ -1429,8 +1474,8 @@ features:
   status: implemented_this_pass
   current_tools:
   - resource_catalog
-  current_state_note: Implemented as `resource_catalog` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Implemented as `resource_catalog` with bounded typed inputs,
+    structured OperationResult output, and offline invocation coverage.
   verification:
   - tests/test_missing_roadmap_tools.py
   - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[resource_catalog]
@@ -1440,8 +1485,8 @@ features:
   name: set_paint_resource
   category: asset
   priority: P1
-  summary: Set active brush, gradient, palette, pattern, font, and paint dynamics by validated
-    resource name.
+  summary: Set active brush, gradient, palette, pattern, font, and paint dynamics
+    by validated resource name.
   agent_value: Makes drawing and fill operations reproducible across sessions.
   proposed_tool_shape:
     input:
@@ -1455,8 +1500,8 @@ features:
   - Context read-back confirms the new active resource.
   status: implemented_this_pass
   implemented_tool: set_paint_resource
-  current_state_note: Validated single-resource activation is implemented for brush, pattern,
-    gradient, font, and palette with previous/active read-back.
+  current_state_note: Validated single-resource activation is implemented for brush,
+    pattern, gradient, font, and palette with previous/active read-back.
   verification:
   - tests/test_asset_context_tools.py::test_set_paint_resource_validates_resource_and_reads_back_context
   - tests/test_asset_context_tools.py::test_set_paint_resource_rejects_unsupported_resource_type_before_bridge_call
@@ -1466,9 +1511,10 @@ features:
   name: apply_gegl_operation
   category: edit
   priority: P1
-  summary: Apply an allow-listed GEGL operation through DrawableFilter with typed property
-    validation.
-  agent_value: Broadens filter coverage without adding one bespoke MCP tool per GEGL operation.
+  summary: Apply an allow-listed GEGL operation through DrawableFilter with typed
+    property validation.
+  agent_value: Broadens filter coverage without adding one bespoke MCP tool per GEGL
+    operation.
   proposed_tool_shape:
     input:
       target: target_ref
@@ -1484,18 +1530,21 @@ features:
   status: implemented_this_pass
   current_tools:
   - apply_gegl_operation
-  current_state_note: Implemented as `apply_gegl_operation` with bounded typed inputs, structured
-    OperationResult output, and offline invocation coverage.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
+  - tests/test_roadmap_tool_review.py
   - tests/test_missing_roadmap_tools.py
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[apply_gegl_operation]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[apply_gegl_operation]
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   implemented_tool: apply_gegl_operation
+  target_file: src/gimp_mcp_pro/tools/filter_tools.py
 - id: FEAT-055
   name: preview_gegl_operation
   category: verify
   priority: P2
-  summary: Render a bounded before/after preview for a GEGL operation without committing it.
+  summary: Render a bounded before/after preview for a GEGL operation without committing
+    it.
   agent_value: Lets the agent compare filter effects before making destructive changes.
   proposed_tool_shape:
     input:
@@ -1512,17 +1561,22 @@ features:
   - Returned payload obeys configured bitmap size limits.
   status: implemented_this_pass
   implemented_tool: preview_gegl_operation
-  current_state_note: GEGL preview operation wrapper is exposed through the roadmap tool surface.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[preview_gegl_operation]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[preview_gegl_operation]
+  - tests/test_roadmap_tool_review.py
+  - tests/test_missing_roadmap_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - preview_gegl_operation
+  target_file: src/gimp_mcp_pro/tools/filter_tools.py
 - id: FEAT-056
   name: color_management_profile
   category: asset
   priority: P2
-  summary: Inspect and set image color profile/rendering intent where GIMP exposes safe APIs.
+  summary: Inspect and set image color profile/rendering intent where GIMP exposes
+    safe APIs.
   agent_value: Helps agents avoid silent color shifts during import/export workflows.
   proposed_tool_shape:
     input:
@@ -1535,8 +1589,8 @@ features:
   - Inspect mode is read-only.
   - Conversion mode requires explicit confirmation/transaction.
   status: implemented_this_pass
-  current_state_note: Read-only color profile inspection plus guarded assign/convert entry
-    points are implemented.
+  current_state_note: Read-only color profile inspection plus guarded assign/convert
+    entry points are implemented.
   implemented_tool: color_management_profile
   current_tools:
   - color_management_profile
@@ -1547,8 +1601,8 @@ features:
   name: batch_export_variants
   category: asset
   priority: P2
-  summary: Export multiple bounded variants such as PNG/JPEG/WebP thumbnails from one image
-    state.
+  summary: Export multiple bounded variants such as PNG/JPEG/WebP thumbnails from
+    one image state.
   agent_value: Supports practical delivery workflows after the agent finishes an edit.
   proposed_tool_shape:
     input:
@@ -1563,12 +1617,16 @@ features:
   - Refuses unsupported formats with structured errors.
   status: implemented_this_pass
   implemented_tool: batch_export_variants
-  current_state_note: Batch export variant wrapper is exposed with format validation.
+  current_state_note: Promoted from temporary roadmap wrapper into its category module
+    and covered by native registry tests.
   verification:
-  - tests/test_tool_generated_code_paths.py::test_all_tools_have_fast_success_path[batch_export_variants]
-  - tests/test_tool_invocation_matrix.py::test_all_async_tools_have_offline_success_path[batch_export_variants]
+  - tests/test_roadmap_tool_review.py
+  - tests/test_missing_roadmap_tools.py
+  - tests/test_tool_generated_code_paths.py
+  - tests/test_tool_invocation_matrix.py
   current_tools:
   - batch_export_variants
+  target_file: src/gimp_mcp_pro/tools/image_tools.py
 implementation_groups:
   first_wave:
     rationale: Highest leverage for safe autonomous operation.
@@ -1588,8 +1646,8 @@ implementation_groups:
     - FEAT-033
     - FEAT-045
   second_wave:
-    rationale: Practical editing workflows once observation, validation, and rollback are
-      reliable.
+    rationale: Practical editing workflows once observation, validation, and rollback
+      are reliable.
     feature_ids:
     - FEAT-006
     - FEAT-017
@@ -1638,16 +1696,18 @@ implementation_groups:
     - FEAT-056
     - FEAT-057
 open_design_questions:
-- Should raw execute_python be deprecated, hidden behind debug mode, or retained as an expert-only
-  emergency tool?
+- Should raw execute_python be deprecated, hidden behind debug mode, or retained as
+  an expert-only emergency tool?
 - Should visual observations return base64 payloads directly, temporary resource handles,
   or both?
-- How much operation history should be stored in memory, and should it be persisted in image
-  metadata?
-- Should macro steps use MCP tool names directly or a smaller stable internal operation DSL?
-- Which export paths should be considered safe for automated agents, especially under Flatpak
-  sandboxing?
-- How should live smoke tests distinguish optional GIMP plug-ins from required core functionality?
+- How much operation history should be stored in memory, and should it be persisted
+  in image metadata?
+- Should macro steps use MCP tool names directly or a smaller stable internal operation
+  DSL?
+- Which export paths should be considered safe for automated agents, especially under
+  Flatpak sandboxing?
+- How should live smoke tests distinguish optional GIMP plug-ins from required core
+  functionality?
 current_registry:
   total_tools: 171
   new_this_pass: &id001
@@ -1675,8 +1735,8 @@ current_registry:
   - batch_export_variants
   - execute_pdb_call
   - apply_gegl_operation
-  remaining_feature_ids: []
+  remaining_feature_ids: &id002 []
 implementation_summary:
   total_tools: 171
   new_this_pass: *id001
-  remaining_feature_ids: []
+  remaining_feature_ids: *id002

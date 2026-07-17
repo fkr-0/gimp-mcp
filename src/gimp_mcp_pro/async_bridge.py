@@ -69,7 +69,8 @@ class AsyncGimpBridge:
 
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
-        self._lock = asyncio.Lock()
+        self._command_lock = asyncio.Lock()
+        self._connection_lock = asyncio.Lock()
         self._command_id = 0
         self._connected = False
 
@@ -80,29 +81,30 @@ class AsyncGimpBridge:
 
     async def connect(self) -> None:
         """Connect to the plug-in, retrying with configured backoff."""
-        if self.connected:
-            return
-
-        for delay in self.reconnect_delays:
-            try:
-                await self._do_connect()
+        async with self._connection_lock:
+            if self.connected:
                 return
+
+            for delay in self.reconnect_delays:
+                try:
+                    await self._do_connect_locked()
+                    return
+                except Exception as exc:
+                    logger.warning("Connection attempt failed: %s. Retrying in %ss...", exc, delay)
+                    await asyncio.sleep(delay)
+
+            try:
+                await self._do_connect_locked()
             except Exception as exc:
-                logger.warning("Connection attempt failed: %s. Retrying in %ss...", exc, delay)
-                await asyncio.sleep(delay)
+                raise GimpConnectionError(
+                    f"Could not connect to GIMP at {self.host}:{self.port} "
+                    f"after {len(self.reconnect_delays) + 1} attempts. "
+                    f"Ensure the GIMP MCP plugin is running. Last error: {exc}"
+                ) from exc
 
-        try:
-            await self._do_connect()
-        except Exception as exc:
-            raise GimpConnectionError(
-                f"Could not connect to GIMP at {self.host}:{self.port} "
-                f"after {len(self.reconnect_delays) + 1} attempts. "
-                f"Ensure the GIMP MCP plugin is running. Last error: {exc}"
-            ) from exc
-
-    async def _do_connect(self) -> None:
-        """Perform one async connection attempt."""
-        await self.disconnect()
+    async def _do_connect_locked(self) -> None:
+        """Perform one connection attempt while ``_connection_lock`` is held."""
+        await self._disconnect_stream()
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port),
@@ -119,7 +121,17 @@ class AsyncGimpBridge:
         logger.info("Connected to GIMP at %s:%s", self.host, self.port)
 
     async def disconnect(self) -> None:
-        """Close the stream connection."""
+        """Close the stream after any in-flight command has finished."""
+        async with self._command_lock, self._connection_lock:
+            await self._disconnect_stream()
+
+    async def _disconnect_after_command_failure(self) -> None:
+        """Reset the stream while the caller owns ``_command_lock``."""
+        async with self._connection_lock:
+            await self._disconnect_stream()
+
+    async def _disconnect_stream(self) -> None:
+        """Close the current stream pair without acquiring locks."""
         writer = self._writer
         self._reader = None
         self._writer = None
@@ -160,35 +172,56 @@ class AsyncGimpBridge:
             GimpCommandError: If the plug-in returns an error response.
             GimpTimeoutError: If the command exceeds the effective timeout.
         """
-        effective_timeout = timeout or self.timeout
-        async with self._lock:
-            await self.ensure_connected()
-            payload = {
-                "id": self._next_id(),
-                "type": command_type,
-                "params": params or {},
-            }
+        effective_timeout = self.timeout if timeout is None else timeout
+        if effective_timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
+
+        lock_acquired = False
+
+        async def execute_locked() -> PluginResponse:
+            nonlocal lock_acquired
+            await self._command_lock.acquire()
+            lock_acquired = True
             try:
-                response = await asyncio.wait_for(
-                    self._send_and_receive(payload),
-                    timeout=effective_timeout,
-                )
-            except TimeoutError as exc:
-                await self.disconnect()
-                raise GimpTimeoutError(
-                    f"Command '{command_type}' timed out after {effective_timeout}s",
-                    timeout_seconds=effective_timeout,
-                ) from exc
-            except (ConnectionError, OSError, asyncio.IncompleteReadError) as exc:
-                await self.disconnect()
-                raise GimpConnectionError(
-                    f"Connection lost while executing '{command_type}': {exc}"
-                ) from exc
-            except (json.JSONDecodeError, UnicodeDecodeError, struct.error) as exc:
-                await self.disconnect()
-                raise GimpConnectionError(
-                    f"Protocol error while executing '{command_type}': {exc}"
-                ) from exc
+                await self.ensure_connected()
+                payload = {
+                    "id": self._next_id(),
+                    "type": command_type,
+                    "params": params or {},
+                }
+                return await self._send_and_receive(payload)
+            finally:
+                self._command_lock.release()
+
+        try:
+            response = await asyncio.wait_for(execute_locked(), timeout=effective_timeout)
+        except TimeoutError as exc:
+            if lock_acquired:
+                await asyncio.shield(self._disconnect_after_command_failure())
+            raise GimpTimeoutError(
+                f"Command '{command_type}' timed out after {effective_timeout}s",
+                timeout_seconds=effective_timeout,
+            ) from exc
+        except (ConnectionError, OSError, asyncio.IncompleteReadError) as exc:
+            if lock_acquired:
+                await self._disconnect_after_command_failure()
+            raise GimpConnectionError(
+                f"Connection lost while executing '{command_type}': {exc}"
+            ) from exc
+        except (json.JSONDecodeError, UnicodeDecodeError, struct.error) as exc:
+            if lock_acquired:
+                await self._disconnect_after_command_failure()
+            raise GimpConnectionError(
+                f"Protocol error while executing '{command_type}': {exc}"
+            ) from exc
+        except GimpConnectionError:
+            if lock_acquired:
+                await self._disconnect_after_command_failure()
+            raise
+        except asyncio.CancelledError:
+            if lock_acquired:
+                await asyncio.shield(self._disconnect_after_command_failure())
+            raise
 
         if response.get("status") == "error":
             raise GimpCommandError(
@@ -207,6 +240,10 @@ class AsyncGimpBridge:
         if self._writer is None:
             raise GimpConnectionError("Not connected")
         data = json.dumps(payload).encode("utf-8")
+        if len(data) > self.max_message_size:
+            raise GimpConnectionError(
+                f"Request size {len(data)} exceeds maximum {self.max_message_size}"
+            )
         if self.use_length_prefix:
             self._writer.write(struct.pack(">I", len(data)) + data)
         else:
@@ -229,24 +266,36 @@ class AsyncGimpBridge:
                 f"Message size {length} exceeds maximum {self.max_message_size}"
             )
         data = await self._reader.readexactly(length)
-        return cast(PluginResponse, json.loads(data.decode("utf-8")))
+        return self._decode_response(data)
 
     async def _receive_json_boundary(self) -> PluginResponse:
         """Receive one raw JSON response by parsing until complete."""
         if self._reader is None:
             raise GimpConnectionError("Not connected")
-        buffer = b""
+        buffer = bytearray()
         while True:
             chunk = await self._reader.read(8192)
             if not chunk:
                 if buffer:
-                    return cast(PluginResponse, json.loads(buffer.decode("utf-8")))
+                    return self._decode_response(bytes(buffer))
                 raise GimpConnectionError("Connection closed by GIMP plugin")
-            buffer += chunk
+            buffer.extend(chunk)
+            if len(buffer) > self.max_message_size:
+                raise GimpConnectionError(f"Message size exceeds maximum {self.max_message_size}")
             try:
-                return cast(PluginResponse, json.loads(buffer.decode("utf-8")))
+                return self._decode_response(bytes(buffer))
             except (json.JSONDecodeError, UnicodeDecodeError):
                 continue
+
+    @staticmethod
+    def _decode_response(data: bytes) -> PluginResponse:
+        """Decode and structurally validate one plug-in response."""
+        decoded = json.loads(data.decode("utf-8"))
+        if not isinstance(decoded, dict):
+            raise GimpConnectionError(
+                f"Protocol response must be a JSON object, got {type(decoded).__name__}"
+            )
+        return cast(PluginResponse, decoded)
 
     async def execute_python(
         self,

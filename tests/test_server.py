@@ -16,8 +16,9 @@ class FakeFastMCP:
 
     instances: list[FakeFastMCP] = []
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, **kwargs: Any) -> None:
         self.name = name
+        self.lifespan = kwargs.get("lifespan")
         self.prompts: dict[str, Callable[[], str]] = {}
         self.prompt_descriptions: dict[str, str] = {}
         self.registered_tools: list[str] = []
@@ -36,9 +37,15 @@ class FakeAsyncGimpBridge:
     """Capture bridge construction kwargs without opening sockets."""
 
     last_kwargs: dict[str, Any] = {}
+    last_instance: FakeAsyncGimpBridge | None = None
 
     def __init__(self, **kwargs: Any) -> None:
         FakeAsyncGimpBridge.last_kwargs = kwargs
+        FakeAsyncGimpBridge.last_instance = self
+        self.disconnect_calls = 0
+
+    async def disconnect(self) -> None:
+        self.disconnect_calls += 1
 
 
 def patch_tool_registrars(monkeypatch: pytest.MonkeyPatch) -> list[str]:
@@ -135,3 +142,25 @@ def test_create_server_registers_prompt_fallbacks(
     assert "Golden Rule" in mcp.prompts["gimp_iterative_workflow"]()
     assert "Filter Catalog" in mcp.prompts["gimp_filter_catalog"]()
     assert "developer.gimp.org" in mcp.prompts["gimp_api_reference"]()
+
+
+@pytest.mark.asyncio
+async def test_server_lifespan_disconnects_persistent_bridge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    FakeFastMCP.instances.clear()
+    monkeypatch.setattr(server, "FastMCP", FakeFastMCP)
+    monkeypatch.setattr(server, "AsyncGimpBridge", FakeAsyncGimpBridge)
+    monkeypatch.setattr(server, "setup_logging", lambda **_kwargs: None)
+    patch_tool_registrars(monkeypatch)
+
+    mcp = server.create_server(ServerConfig())
+    assert mcp.lifespan is not None
+    bridge = FakeAsyncGimpBridge.last_instance
+    assert bridge is not None
+
+    async with mcp.lifespan(mcp) as state:
+        assert state["gimp_bridge"] is bridge
+        assert bridge.disconnect_calls == 0
+
+    assert bridge.disconnect_calls == 1

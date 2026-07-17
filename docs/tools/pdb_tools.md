@@ -6,13 +6,13 @@ Source module: `src/gimp_mcp_pro/tools/pdb_tools.py`
 |---|---|---:|
 | [`search_pdb`](#search-pdb) | Search GIMP's Procedure Database for available operations. | 2 |
 | [`execute_pdb_call`](#execute-pdb-call) | Validate and optionally execute an allowlisted typed PDB procedure call. | 5 |
-| [`execute_python`](#execute-python) | Execute raw Python code in GIMP's PyGObject console. | 2 |
+| [`execute_python`](#execute-python) | Execute raw Python code in GIMP's PyGObject console. | 4 |
 | [`pdb_introspect_typed`](#pdb-introspect-typed) | Return typed PDB procedure metadata for safer wrapper generation. | 3 |
 | [`safe_python_eval`](#safe-python-eval) | Run restricted diagnostic Python only when explicitly debug-enabled. | 4 |
 
 ## `search_pdb` {#search-pdb}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:86`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:87`
 
 ```python
 async def search_pdb(query: str, max_results: int = 20) -> ToolResult
@@ -52,7 +52,7 @@ Returns:
 
 ## `execute_pdb_call` {#execute-pdb-call}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:142`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:143`
 
 ```python
 async def execute_pdb_call(procedure: str, arguments: dict[str, Any] | None = None, allow_deprecated: bool = False, dry_run: bool = True, timeout: float = 30.0) -> ToolResult
@@ -95,10 +95,10 @@ Returns:
 
 ## `execute_python` {#execute-python}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:197`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:200`
 
 ```python
-async def execute_python(code: list[str], timeout_seconds: float = 30.0) -> ToolResult
+async def execute_python(code: list[str], timeout_seconds: float = 30.0, require_debug_enabled: bool = False, allow_dangerous_code: bool = False) -> ToolResult
 ```
 
 ## Parameters
@@ -107,6 +107,8 @@ async def execute_python(code: list[str], timeout_seconds: float = 30.0) -> Tool
 |---|---|
 | `code` | List of Python code strings to execute sequentially. |
 | `timeout_seconds` | Timeout for execution (default 30, use longer for heavy operations like filters) |
+| `require_debug_enabled` | Must be true to enable this diagnostic escape hatch. |
+| `allow_dangerous_code` | Must be true to confirm explicit operator intent. |
 | `Example` | ["x = 5", "print(x + 1)"] |
 
 ## Returns
@@ -142,13 +144,15 @@ Args:
           Example: ["x = 5", "print(x + 1)"]
     timeout_seconds: Timeout for execution (default 30, use longer for
                     heavy operations like filters)
+    require_debug_enabled: Must be true to enable this diagnostic escape hatch.
+    allow_dangerous_code: Must be true to confirm explicit operator intent.
 
 Returns:
     Result with stdout output from each line.
 
 ## `pdb_introspect_typed` {#pdb-introspect-typed}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:250`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:269`
 
 ```python
 async def pdb_introspect_typed(query: str, include_deprecated: bool = False, max_results: int = 25) -> ToolResult
@@ -187,7 +191,7 @@ Returns:
 
 ## `safe_python_eval` {#safe-python-eval}
 
-Source: `src/gimp_mcp_pro/tools/pdb_tools.py:282`
+Source: `src/gimp_mcp_pro/tools/pdb_tools.py:301`
 
 ```python
 async def safe_python_eval(code: str, mode: str = 'expression', timeout: float = 1.0, require_debug_enabled: bool = False) -> ToolResult

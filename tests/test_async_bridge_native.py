@@ -81,6 +81,42 @@ async def test_native_async_send_command_length_prefixed() -> None:
 
 
 @pytest.mark.asyncio
+async def test_native_async_timeout_includes_waiting_for_command_lock() -> None:
+    bridge = AsyncGimpBridge(reconnect_delays=[])
+    await bridge._command_lock.acquire()
+    try:
+        with pytest.raises(GimpTimeoutError, match="timed out"):
+            await bridge.send_command("queued", timeout=0.02)
+        assert not bridge.connected
+    finally:
+        bridge._command_lock.release()
+
+
+@pytest.mark.asyncio
+async def test_native_async_rejects_non_object_response_and_resets_stream() -> None:
+    server = AsyncMockGimpServer()
+    server.responses.append(["not", "an", "object"])  # type: ignore[arg-type]
+    await server.start()
+
+    bridge = AsyncGimpBridge(host="127.0.0.1", port=server.port, reconnect_delays=[])
+    try:
+        with pytest.raises(GimpConnectionError, match="JSON object"):
+            await bridge.send_command("invalid_response")
+        assert not bridge.connected
+    finally:
+        await bridge.disconnect()
+        await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_native_async_rejects_non_positive_timeout() -> None:
+    bridge = AsyncGimpBridge(reconnect_delays=[])
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        await bridge.send_command("invalid_timeout", timeout=0)
+
+
+@pytest.mark.asyncio
 async def test_native_async_json_fallback() -> None:
     server = AsyncMockGimpServer(use_length_prefix=False)
     server.queue_response({"status": "success", "results": "ok"})
@@ -201,3 +237,66 @@ async def test_native_async_concurrent_commands_are_serialized() -> None:
     assert [result["results"]["index"] for result in results] == [0, 1, 2]
     assert [request["id"] for request in server.received] == [1, 2, 3]
     assert [request["type"] for request in server.received] == ["cmd_a", "cmd_b", "cmd_c"]
+
+
+@pytest.mark.asyncio
+async def test_native_async_cancellation_discards_out_of_phase_stream() -> None:
+    server = AsyncMockGimpServer(hold_open=1.0)
+    server.queue_response({"status": "success", "results": {}})
+    await server.start()
+
+    bridge = AsyncGimpBridge(host="127.0.0.1", port=server.port, reconnect_delays=[])
+    task = asyncio.create_task(bridge.send_command("cancel_me"))
+    try:
+        for _ in range(100):
+            if server.received:
+                break
+            await asyncio.sleep(0.005)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert not bridge.connected
+    finally:
+        await bridge.disconnect()
+        await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_native_async_raw_json_enforces_message_size_limit() -> None:
+    server = AsyncMockGimpServer(use_length_prefix=False)
+    server.queue_response({"status": "success", "results": "x" * 256})
+    await server.start()
+
+    bridge = AsyncGimpBridge(
+        host="127.0.0.1",
+        port=server.port,
+        use_length_prefix=False,
+        max_message_size=64,
+        reconnect_delays=[],
+    )
+    try:
+        with pytest.raises(GimpConnectionError, match="maximum"):
+            await bridge.send_command("oversized_raw")
+    finally:
+        await bridge.disconnect()
+        await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_native_async_rejects_oversized_request_before_write() -> None:
+    server = AsyncMockGimpServer()
+    await server.start()
+
+    bridge = AsyncGimpBridge(
+        host="127.0.0.1",
+        port=server.port,
+        max_message_size=64,
+        reconnect_delays=[],
+    )
+    try:
+        with pytest.raises(GimpConnectionError, match="Request size"):
+            await bridge.send_command("large", {"value": "x" * 256})
+        assert server.received == []
+    finally:
+        await bridge.disconnect()
+        await server.stop()

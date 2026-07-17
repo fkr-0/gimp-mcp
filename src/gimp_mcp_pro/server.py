@@ -7,7 +7,10 @@ and registers all tools, resources, and prompts.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -43,11 +46,20 @@ def create_server(config: ServerConfig | None = None) -> FastMCP:
     setup_logging(level=config.log_level_value, debug=config.debug)
     logger.info(f"Initializing GIMP MCP Pro server (GIMP at {config.gimp_host}:{config.gimp_port})")
 
-    # Create FastMCP server
-    mcp = FastMCP("GIMP MCP Pro")
-
     # Create the asyncio-native bridge (lazy connect — connects on first awaited command).
     bridge = AsyncGimpBridge(**config.bridge_kwargs())
+
+    @asynccontextmanager
+    async def lifespan(_server: FastMCP) -> AsyncIterator[dict[str, Any]]:
+        """Own and reliably close the persistent GIMP bridge."""
+        try:
+            yield {"gimp_bridge": bridge}
+        finally:
+            await bridge.disconnect()
+
+    # The lifespan hook prevents a persistent socket from surviving server
+    # shutdown, transport cancellation, or an embedding application's teardown.
+    mcp = FastMCP("GIMP MCP Pro", lifespan=lifespan)
 
     # ------------------------------------------------------------------
     # Register tool modules

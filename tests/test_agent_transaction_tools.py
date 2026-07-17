@@ -113,9 +113,32 @@ class FailingTransactionBridge(TransactionBridge):
         raise GimpCommandError("transaction failed", command="execute_python")
 
 
-def registered_tools(bridge: TransactionBridge) -> dict[str, Tool]:
+class FailingSecondRollbackBridge(TransactionBridge):
+    """Bridge fake that fails the second generated rollback only."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.rollback_calls = 0
+
+    async def async_execute_python(
+        self,
+        code_lines: list[str],
+        timeout: float | None = None,
+    ) -> PluginResponse:
+        source = "\n".join(code_lines)
+        if "rollback_transaction" in source:
+            self.rollback_calls += 1
+            if self.rollback_calls == 2:
+                self.execute_calls.append(code_lines)
+                raise GimpCommandError("second rollback failed", command="execute_python")
+        return await super().async_execute_python(code_lines, timeout)
+
+
+def registered_tools(
+    bridge: TransactionBridge, *, max_open_transactions: int = 32
+) -> dict[str, Tool]:
     mcp = CaptureMCP()
-    register_agent_tools(mcp, bridge)
+    register_agent_tools(mcp, bridge, max_open_transactions=max_open_transactions)
     return mcp.tools
 
 
@@ -168,6 +191,7 @@ async def test_begin_then_end_transaction_tracks_known_transaction() -> None:
     assert end["data"]["undo_group_ended"] is True
     source = "\n".join(bridge.execute_calls[-1])
     assert "image.undo_group_end()" in source
+    assert "target_image_id = 42" in source
 
 
 @pytest.mark.asyncio
@@ -199,6 +223,7 @@ async def test_rollback_transaction_uses_generated_undo_fallback_and_tracks_id()
     source = "\n".join(bridge.execute_calls[-1])
     assert "image.undo()" in source
     assert "gimp-image-undo" in source
+    assert "target_image_id = 42" in source
 
 
 @pytest.mark.asyncio
@@ -227,11 +252,70 @@ async def test_rollback_transaction_can_recover_all_tracked_open_transactions() 
 
     assert recovered["success"] is True
     assert recovered["data"]["recovered_transaction_ids"] == [second_id, first_id]
+    assert recovered["data"]["failed_transaction_ids"] == []
     assert recovered["data"]["tracked"] is True
-    source = "\n".join(bridge.execute_calls[-1])
-    assert "image.undo_group_end()" in source
-    assert "gimp-image-undo" in source
+    assert len(bridge.execute_calls) == 4
+    for code_lines in bridge.execute_calls[-2:]:
+        source = "\n".join(code_lines)
+        assert "image.undo_group_end()" in source
+        assert "gimp-image-undo" in source
+        assert "target_image_id = 42" in source
 
     missing = await tools["end_edit_transaction"](first_id, require_known=True)
     assert missing["success"] is False
     assert "unknown" in missing["error"]
+
+
+@pytest.mark.asyncio
+async def test_recover_all_keeps_unrecovered_transactions_tracked() -> None:
+    bridge = FailingSecondRollbackBridge()
+    tools = registered_tools(bridge)
+
+    first = await tools["begin_edit_transaction"]("first")
+    second = await tools["begin_edit_transaction"]("second")
+    first_id = first["data"]["transaction_id"]
+    second_id = second["data"]["transaction_id"]
+
+    recovered = await tools["rollback_transaction"](recover_all=True)
+
+    assert recovered["success"] is False
+    assert recovered["data"]["recovered_transaction_ids"] == [second_id]
+    assert recovered["data"]["failed_transaction_ids"] == [first_id]
+    assert recovered["data"]["open_transaction_count"] == 1
+
+    remaining = await tools["end_edit_transaction"](first_id, require_known=True)
+    assert remaining["success"] is True
+    already_recovered = await tools["end_edit_transaction"](second_id, require_known=True)
+    assert already_recovered["success"] is False
+
+
+@pytest.mark.asyncio
+async def test_recover_all_without_open_transactions_is_non_destructive() -> None:
+    bridge = TransactionBridge()
+    tools = registered_tools(bridge)
+
+    result = await tools["rollback_transaction"](recover_all=True)
+
+    assert result["success"] is True
+    assert result["data"]["rolled_back"] is False
+    assert result["data"]["recovered_transaction_ids"] == []
+    assert bridge.execute_calls == []
+
+
+@pytest.mark.asyncio
+async def test_open_transaction_tracking_is_bounded_before_touching_gimp() -> None:
+    bridge = TransactionBridge()
+    tools = registered_tools(bridge, max_open_transactions=2)
+
+    first = await tools["begin_edit_transaction"]("first")
+    second = await tools["begin_edit_transaction"]("second")
+    rejected = await tools["begin_edit_transaction"]("unbounded")
+
+    assert first["success"] is True
+    assert second["success"] is True
+    assert rejected["success"] is False
+    assert rejected["data"] == {
+        "open_transaction_count": 2,
+        "max_open_transactions": 2,
+    }
+    assert len(bridge.execute_calls) == 2

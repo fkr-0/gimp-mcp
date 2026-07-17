@@ -6,11 +6,11 @@ Source module: `src/gimp_mcp_pro/tools/agent_tools.py`
 |---|---|---:|
 | [`begin_edit_transaction`](#begin-edit-transaction) | Begin a reversible edit transaction backed by a GIMP undo group. | 2 |
 | [`end_edit_transaction`](#end-edit-transaction) | End a tracked or best-effort GIMP undo transaction. | 2 |
-| [`rollback_transaction`](#rollback-transaction) | Rollback a transaction using GIMP undo where available. | 2 |
+| [`rollback_transaction`](#rollback-transaction) | Rollback a transaction using GIMP undo where available. | 3 |
 
 ## `begin_edit_transaction` {#begin-edit-transaction}
 
-Source: `src/gimp_mcp_pro/tools/agent_tools.py:104`
+Source: `src/gimp_mcp_pro/tools/agent_tools.py:151`
 
 ```python
 async def begin_edit_transaction(label: str = 'AI edit transaction', capture_before_state: bool = False) -> ToolResult
@@ -51,7 +51,7 @@ Returns:
 
 ## `end_edit_transaction` {#end-edit-transaction}
 
-Source: `src/gimp_mcp_pro/tools/agent_tools.py:162`
+Source: `src/gimp_mcp_pro/tools/agent_tools.py:225`
 
 ```python
 async def end_edit_transaction(transaction_id: str | None = None, require_known: bool = False) -> ToolResult
@@ -88,10 +88,10 @@ Returns:
 
 ## `rollback_transaction` {#rollback-transaction}
 
-Source: `src/gimp_mcp_pro/tools/agent_tools.py:210`
+Source: `src/gimp_mcp_pro/tools/agent_tools.py:274`
 
 ```python
-async def rollback_transaction(transaction_id: str | None = None, require_known: bool = False) -> ToolResult
+async def rollback_transaction(transaction_id: str | None = None, require_known: bool = False, recover_all: bool = False) -> ToolResult
 ```
 
 ## Parameters
@@ -100,6 +100,7 @@ async def rollback_transaction(transaction_id: str | None = None, require_known:
 |---|---|
 | `transaction_id` | Optional ID returned by begin_edit_transaction. |
 | `require_known` | Fail before touching GIMP when the transaction ID is not tracked. |
+| `recover_all` | Roll back and clear all tracked open transactions in LIFO order. |
 
 ## Returns
 
@@ -119,6 +120,7 @@ Rollback a transaction using GIMP undo where available.
 Args:
     transaction_id: Optional ID returned by begin_edit_transaction.
     require_known: Fail before touching GIMP when the transaction ID is not tracked.
+    recover_all: Roll back and clear all tracked open transactions in LIFO order.
 
 Returns:
     Operation result with tracking, undo-group, and rollback metadata.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -110,6 +111,124 @@ async def test_runner_rolls_back_failed_phase() -> None:
     assert result["status"] == "error"
     assert result["error"] == "boom"
     assert calls == ["begin", "fail", "rollback"]
+
+
+@pytest.mark.asyncio
+async def test_runner_fails_closed_when_transaction_cannot_start() -> None:
+    calls: list[str] = []
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def begin_edit_transaction(label: str) -> dict[str, object]:
+        calls.append("begin")
+        return {"status": "error", "error": "undo unavailable"}
+
+    @registry.tool()
+    async def record(payload: Any) -> dict[str, object]:
+        calls.append("step")
+        return {"status": "success"}
+
+    flow = make_flow({"tool": "record", "arguments": {"payload": "x"}})
+    result = await FlowRunner(registry).run(flow, {"name": "x"})
+
+    assert result["status"] == "error"
+    assert "failed to begin transaction" in result["error"]
+    assert calls == ["begin"]
+
+
+@pytest.mark.asyncio
+async def test_runner_rolls_back_when_commit_fails() -> None:
+    calls: list[str] = []
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def begin_edit_transaction(label: str) -> dict[str, object]:
+        calls.append("begin")
+        return {"status": "success", "data": {"transaction_id": "txn-commit"}}
+
+    @registry.tool()
+    async def record(payload: Any) -> dict[str, object]:
+        calls.append("step")
+        return {"status": "success"}
+
+    @registry.tool()
+    async def end_edit_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append("commit")
+        return {"status": "error", "error": "commit failed"}
+
+    @registry.tool()
+    async def rollback_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append("rollback")
+        return {"status": "success"}
+
+    flow = make_flow({"tool": "record", "arguments": {"payload": "x"}})
+    result = await FlowRunner(registry).run(flow, {"name": "x"})
+
+    assert result["status"] == "error"
+    assert result["error"] == "transaction commit failed: commit failed"
+    assert result["phases"][0]["status"] == "rolled-back"
+    assert calls == ["begin", "step", "commit", "rollback"]
+
+
+@pytest.mark.asyncio
+async def test_runner_rolls_back_when_step_is_cancelled() -> None:
+    calls: list[str] = []
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def begin_edit_transaction(label: str) -> dict[str, object]:
+        calls.append("begin")
+        return {"status": "success", "data": {"transaction_id": "txn-cancel"}}
+
+    @registry.tool()
+    async def cancelled_step() -> dict[str, object]:
+        calls.append("step")
+        raise asyncio.CancelledError
+
+    @registry.tool()
+    async def rollback_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append(f"rollback:{transaction_id}")
+        return {"status": "success"}
+
+    flow = make_flow({"tool": "cancelled_step", "arguments": {}})
+
+    with pytest.raises(asyncio.CancelledError):
+        await FlowRunner(registry).run(flow, {"name": "x"})
+
+    assert calls == ["begin", "step", "rollback:txn-cancel"]
+
+
+@pytest.mark.asyncio
+async def test_runner_rolls_back_when_commit_is_cancelled() -> None:
+    calls: list[str] = []
+    registry = OperationRegistry()
+
+    @registry.tool()
+    async def begin_edit_transaction(label: str) -> dict[str, object]:
+        calls.append("begin")
+        return {"status": "success", "data": {"transaction_id": "txn-commit-cancel"}}
+
+    @registry.tool()
+    async def record(payload: Any) -> dict[str, object]:
+        calls.append("step")
+        return {"status": "success"}
+
+    @registry.tool()
+    async def end_edit_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append("commit")
+        raise asyncio.CancelledError
+
+    @registry.tool()
+    async def rollback_transaction(transaction_id: str | None = None) -> dict[str, object]:
+        calls.append(f"rollback:{transaction_id}")
+        return {"status": "success"}
+
+    flow = make_flow({"tool": "record", "arguments": {"payload": "x"}})
+
+    with pytest.raises(asyncio.CancelledError):
+        await FlowRunner(registry).run(flow, {"name": "x"})
+
+    assert calls == ["begin", "step", "commit", "rollback:txn-commit-cancel"]
 
 
 @pytest.mark.asyncio

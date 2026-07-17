@@ -14,7 +14,7 @@ issues:
   - compatibility
   - plugin
   - contract
-  status: verified-local
+  status: verified-live-clean-profile
   spec: compat.yml
   goal: Verify and certify support for GIMP 3.2.4 through the dedicated compatibility contract
     in compat.yml. The contract is now the normative source for API/interface checks, smoke
@@ -69,7 +69,7 @@ issues:
   acceptance:
   - Async bridge tests pass without requiring GIMP.
   - Sync bridge behavior remains covered and unchanged.
-  - All 75 registered MCP tools are coroutine functions.
+  - All 183 registered MCP tools are coroutine functions.
   - Static tests reject direct sync bridge calls inside tool modules.
   - Public API documentation shows sync and async usage patterns.
   - Full uv-backed project quality gate passes.
@@ -140,41 +140,24 @@ issues:
   completed_this_pass:
   - feature_id: FEAT-004
     tool: create_contact_sheet
+  - feature_id: FEAT-005
+    tool: sample_pixels
   - feature_id: FEAT-006
     tool: analyze_color_palette
+  - feature_id: FEAT-009
+    tool: find_similar_regions
   - feature_id: FEAT-013
     tool: create_checkpoint
+  - feature_id: FEAT-014
+    tool: compare_snapshots
+  - feature_id: FEAT-015
+    tool: assert_image_state
   - feature_id: FEAT-016
     tool: get_operation_log
   - feature_id: FEAT-017
     tool: preview_filter
-  - feature_id: FEAT-040
-    tool: generate_layer_report
-  - feature_id: FEAT-041
-    tool: prepare_export_checklist
-  - feature_id: FEAT-043
-    tool: content_bounds
-  - feature_id: FEAT-051
-    tool: text_layer_introspection
-  - feature_id: FEAT-037
-    tool: explain_current_context
-  - feature_id: FEAT-042
-    tool: measure_geometry
-  - feature_id: FEAT-027
-    tool: brush_inventory
-  - feature_id: FEAT-028
-    tool: set_paint_context
-  - feature_id: FEAT-053
-    tool: set_paint_resource
-  - feature_id: FEAT-027
-    tool: brush_inventory
-    status: partial
   - feature_id: FEAT-018
     tool: commit_filter_preview
-  - feature_id: FEAT-025
-    tool: smart_crop_or_resize
-  - feature_id: FEAT-009
-    tool: find_similar_regions
   - feature_id: FEAT-020
     tool: create_text_box
   - feature_id: FEAT-022
@@ -183,20 +166,42 @@ issues:
     tool: edit_paths
   - feature_id: FEAT-024
     tool: align_and_distribute_layers
+  - feature_id: FEAT-025
+    tool: smart_crop_or_resize
+  - feature_id: FEAT-027
+    tool: brush_inventory
+  - feature_id: FEAT-028
+    tool: set_paint_context
   - feature_id: FEAT-029
     tool: palette_create_or_update
   - feature_id: FEAT-030
     tool: export_with_manifest
   - feature_id: FEAT-031
     tool: import_as_layer_with_metadata
+  - feature_id: FEAT-032
+    tool: dry_run_macro
+  - feature_id: FEAT-033
+    tool: run_macro_transaction
   - feature_id: FEAT-034
     tool: pdb_introspect_typed
+  - feature_id: FEAT-035
+    tool: execute_pdb_call
   - feature_id: FEAT-036
     tool: safe_python_eval
+  - feature_id: FEAT-037
+    tool: explain_current_context
   - feature_id: FEAT-038
     tool: create_visual_annotation_layer
   - feature_id: FEAT-039
     tool: remove_visual_annotations
+  - feature_id: FEAT-040
+    tool: generate_layer_report
+  - feature_id: FEAT-041
+    tool: prepare_export_checklist
+  - feature_id: FEAT-042
+    tool: measure_geometry
+  - feature_id: FEAT-043
+    tool: content_bounds
   - feature_id: FEAT-044
     tool: layer_version_stamp
   - feature_id: FEAT-047
@@ -207,48 +212,20 @@ issues:
     tool: create_and_edit_paths
   - feature_id: FEAT-050
     tool: stroke_or_fill_path
+  - feature_id: FEAT-051
+    tool: text_layer_introspection
   - feature_id: FEAT-052
     tool: resource_catalog
-  - feature_id: FEAT-055
-    tool: preview_gegl_operation
-  - feature_id: FEAT-057
-    tool: batch_export_variants
-  - feature_id: FEAT-056
-    tool: color_management_profile
-    status: partial
-  - feature_id: FEAT-056
-    tool: color_management_profile
-  - feature_id: FEAT-022
-    tool: edit_channels
-    status: partial
-  - feature_id: FEAT-023
-    tool: edit_paths
-    status: partial
-  - feature_id: FEAT-029
-    tool: palette_create_or_update
-    status: partial
-  - feature_id: FEAT-034
-    tool: pdb_introspect_typed
-    status: partial
-  - feature_id: FEAT-047
-    tool: manage_channels
-    status: partial
-  - feature_id: FEAT-048
-    tool: manage_guides_and_grid
-    status: partial
-  - feature_id: FEAT-049
-    tool: create_and_edit_paths
-    status: partial
-  - feature_id: FEAT-050
-    tool: stroke_or_fill_path
-    status: partial
-  - feature_id: FEAT-052
-    tool: resource_catalog
-    status: partial
-  - feature_id: FEAT-035
-    tool: execute_pdb_call
+  - feature_id: FEAT-053
+    tool: set_paint_resource
   - feature_id: FEAT-054
     tool: apply_gegl_operation
+  - feature_id: FEAT-055
+    tool: preview_gegl_operation
+  - feature_id: FEAT-056
+    tool: color_management_profile
+  - feature_id: FEAT-057
+    tool: batch_export_variants
   remaining_open_features: []
   checklist:
   - Reconcile implemented/partial/planned feature statuses against registered MCP tools.
@@ -262,4 +239,8 @@ issues:
   - features.yml and tasks.issues.yml are YAML-parseable and reflect current registry state.
   - New feature work follows RED/GREEN verification.
   - Focused, matrix, static, and full offline test suites pass before completion.
-  registry_total: 171
+  registry_total: 183
+  notes:
+  - No remaining roadmap feature tools are registered from roadmap_tools.py.
+  - Finished and tested roadmap tools are promoted into category modules and tracked by feature
+    verification entries.

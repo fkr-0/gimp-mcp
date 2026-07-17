@@ -14,6 +14,7 @@ Source module: `src/gimp_mcp_pro/tools/color_tools.py`
 | [`apply_threshold`](#apply-threshold) | Apply threshold — convert to pure black and white. | 4 |
 | [`posterize`](#posterize) | Reduce the number of color levels (posterization effect). | 3 |
 | [`color_to_alpha`](#color-to-alpha) | Make a specific color transparent (color to alpha). | 3 |
+| [`replace_color`](#replace-color) | Replace pixels matching a source color with a replacement color. | 7 |
 | [`auto_white_balance`](#auto-white-balance) | Automatically adjust white balance (stretch colors). | 2 |
 | [`brush_inventory`](#brush-inventory) | List paint resources with current-context markers. | 4 |
 | [`set_paint_resource`](#set-paint-resource) | Set one active paint resource by validated name. | 2 |
@@ -23,13 +24,15 @@ Source module: `src/gimp_mcp_pro/tools/color_tools.py`
 | [`get_colors`](#get-colors) | Get the current foreground and background colors. | 0 |
 | [`swap_colors`](#swap-colors) | Swap foreground and background colors. | 0 |
 | [`analyze_color_palette`](#analyze-color-palette) | Extract a deterministic approximate color palette for a layer or region. | 5 |
+| [`dominant_colors`](#dominant-colors) | Return dominant colors for a layer or region. | 5 |
+| [`analyze_color_histogram`](#analyze-color-histogram) | Analyze channel histogram summary statistics for a layer. | 5 |
 | [`sample_pixels`](#sample-pixels) | Sample colors at multiple points or over a rectangular grid. | 7 |
 | [`sample_color`](#sample-color) | Pick/sample a color from a pixel in the image. | 3 |
 | [`palette_create_or_update`](#palette-create-or-update) | Create, inspect, or update a palette from provided colors. | 4 |
 
 ## `adjust_brightness_contrast` {#adjust-brightness-contrast}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:482`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:34`
 
 ```python
 async def adjust_brightness_contrast(brightness: int = 0, contrast: int = 0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -70,7 +73,7 @@ Returns:
 
 ## `adjust_hue_saturation` {#adjust-hue-saturation}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:519`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:72`
 
 ```python
 async def adjust_hue_saturation(hue: float = 0.0, saturation: float = 0.0, lightness: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -113,7 +116,7 @@ Returns:
 
 ## `adjust_color_balance` {#adjust-color-balance}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:560`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:114`
 
 ```python
 async def adjust_color_balance(range: str = 'midtones', cyan_red: float = 0.0, magenta_green: float = 0.0, yellow_blue: float = 0.0, preserve_luminosity: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -160,7 +163,7 @@ Returns:
 
 ## `adjust_levels` {#adjust-levels}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:629`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:184`
 
 ```python
 async def adjust_levels(input_low: int = 0, input_high: int = 255, gamma: float = 1.0, output_low: int = 0, output_high: int = 255, channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -213,7 +216,7 @@ Returns:
 
 ## `adjust_curves` {#adjust-curves}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:692`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:248`
 
 ```python
 async def adjust_curves(control_points: list[float], channel: str = 'value', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -261,7 +264,7 @@ Returns:
 
 ## `desaturate` {#desaturate}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:746`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:301`
 
 ```python
 async def desaturate(method: str = 'luminosity', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -304,7 +307,7 @@ Returns:
 
 ## `invert_colors` {#invert-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:790`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:344`
 
 ```python
 async def invert_colors(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -343,7 +346,7 @@ Returns:
 
 ## `apply_threshold` {#apply-threshold}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:818`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:371`
 
 ```python
 async def apply_threshold(low: int = 128, high: int = 255, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -386,7 +389,7 @@ Returns:
 
 ## `posterize` {#posterize}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:853`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:407`
 
 ```python
 async def posterize(levels: int = 4, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -425,7 +428,7 @@ Returns:
 
 ## `color_to_alpha` {#color-to-alpha}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:885`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:438`
 
 ```python
 async def color_to_alpha(color: str = 'white', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -466,9 +469,56 @@ Args:
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.
 
+## `replace_color` {#replace-color}
+
+Source: `src/gimp_mcp_pro/tools/color_tools.py:504`
+
+```python
+async def replace_color(source_color: str, replacement_color: str, threshold: float = 15.0, sample_merged: bool = False, layer_name: str | None = None, layer_index: int | None = None, preserve_selection: bool = True) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `source_color` | Color to replace, for example "#ffffff" or "white". |
+| `replacement_color` | Color to fill into the selected source-color pixels. |
+| `threshold` | Color similarity threshold 0-255. |
+| `sample_merged` | If True, use GIMP's sample-merged context while selecting. |
+| `layer_name` | Target layer by name. Uses active layer if omitted. |
+| `layer_index` | Target layer by index. Uses active layer if omitted. |
+| `preserve_selection` | Restore the previous selection after replacement. |
+
+## Returns
+
+Operation result dictionary with replacement metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Replace pixels matching a source color with a replacement color.
+
+Args:
+    source_color: Color to replace, for example "#ffffff" or "white".
+    replacement_color: Color to fill into the selected source-color pixels.
+    threshold: Color similarity threshold 0-255.
+    sample_merged: If True, use GIMP's sample-merged context while selecting.
+    layer_name: Target layer by name. Uses active layer if omitted.
+    layer_index: Target layer by index. Uses active layer if omitted.
+    preserve_selection: Restore the previous selection after replacement.
+
+Returns:
+    Operation result dictionary with replacement metadata.
+
 ## `auto_white_balance` {#auto-white-balance}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:928`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:583`
 
 ```python
 async def auto_white_balance(layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -507,7 +557,7 @@ Returns:
 
 ## `brush_inventory` {#brush-inventory}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:957`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:611`
 
 ```python
 async def brush_inventory(asset_types: list[str] | None = None, filter: str | None = None, limit: int = 100, include_current: bool = True) -> ToolResult
@@ -548,7 +598,7 @@ Returns:
 
 ## `set_paint_resource` {#set-paint-resource}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1005`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:659`
 
 ```python
 async def set_paint_resource(resource_type: str, name: str) -> ToolResult
@@ -585,7 +635,7 @@ Returns:
 
 ## `set_paint_context` {#set-paint-context}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1038`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:692`
 
 ```python
 async def set_paint_context(brush: str | None = None, size: float | None = None, opacity: float | None = None, dynamics: str | None = None, pattern: str | None = None, gradient: str | None = None, foreground: str | None = None, background: str | None = None) -> ToolResult
@@ -634,7 +684,7 @@ Returns:
 
 ## `resource_catalog` {#resource-catalog}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1099`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:753`
 
 ```python
 async def resource_catalog(resource_type: str, query: str | None = None, limit: int = 50, include_optional: bool = True) -> ToolResult
@@ -675,7 +725,7 @@ Returns:
 
 ## `list_gimp_resources` {#list-gimp-resources}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1148`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:802`
 
 ```python
 async def list_gimp_resources(resource_type: str = 'all', limit: int = 100) -> ToolResult
@@ -712,7 +762,7 @@ Returns:
 
 ## `get_colors` {#get-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1229`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:883`
 
 ```python
 async def get_colors() -> ToolResult
@@ -742,7 +792,7 @@ Returns:
 
 ## `swap_colors` {#swap-colors}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1276`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:930`
 
 ```python
 async def swap_colors() -> ToolResult
@@ -768,7 +818,7 @@ Returns:
 
 ## `analyze_color_palette` {#analyze-color-palette}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1296`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:950`
 
 ```python
 async def analyze_color_palette(max_colors: int = 8, ignore_transparent: bool = True, region: dict[str, Any] | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -812,9 +862,95 @@ Returns:
 Contract:
     The generated sampler is deterministic for the same pixels and region.
 
+## `dominant_colors` {#dominant-colors}
+
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1023`
+
+```python
+async def dominant_colors(max_colors: int = 8, ignore_transparent: bool = True, region: dict[str, Any] | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `max_colors` | Maximum number of dominant colors to return. |
+| `ignore_transparent` | Skip fully transparent samples. |
+| `region` | Optional x/y/width/height rectangle in layer coordinates. |
+| `layer_name` | Target layer by name. |
+| `layer_index` | Target layer by index. |
+
+## Returns
+
+Operation result with dominant color entries and coverage metadata.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Return dominant colors for a layer or region.
+
+Args:
+    max_colors: Maximum number of dominant colors to return.
+    ignore_transparent: Skip fully transparent samples.
+    region: Optional x/y/width/height rectangle in layer coordinates.
+    layer_name: Target layer by name.
+    layer_index: Target layer by index.
+
+Returns:
+    Operation result with dominant color entries and coverage metadata.
+
+## `analyze_color_histogram` {#analyze-color-histogram}
+
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1065`
+
+```python
+async def analyze_color_histogram(channels: list[str] | None = None, start_range: float = 0.0, end_range: float = 1.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
+```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `channels` | Channels to inspect: value, red, green, blue, alpha. Defaults to all common channels. |
+| `start_range` | Lower histogram range bound from 0.0 to 1.0. |
+| `end_range` | Upper histogram range bound from 0.0 to 1.0. |
+| `layer_name` | Target layer by name. Uses active layer if omitted. |
+| `layer_index` | Target layer by index. Uses active layer if omitted. |
+
+## Returns
+
+Operation result with mean, standard deviation, median, pixel count, selected count, and percentile per channel.
+
+## Contract
+
+- Return shape: `ToolResult` / `OperationResult` with structured status, message, data, and error fields.
+- Compatibility contract: `compat.yml` tracks this public MCP registry surface.
+- Generated-code smoke: `tests/test_tool_generated_code_paths.py` exercises fast handler success paths.
+- Invocation matrix: `tests/test_tool_invocation_matrix.py` keeps public arguments covered.
+
+## Docstring
+
+Analyze channel histogram summary statistics for a layer.
+
+Args:
+    channels: Channels to inspect: value, red, green, blue, alpha. Defaults to all common channels.
+    start_range: Lower histogram range bound from 0.0 to 1.0.
+    end_range: Upper histogram range bound from 0.0 to 1.0.
+    layer_name: Target layer by name. Uses active layer if omitted.
+    layer_index: Target layer by index. Uses active layer if omitted.
+
+Returns:
+    Operation result with mean, standard deviation, median, pixel count, selected count, and percentile per channel.
+
 ## `sample_pixels` {#sample-pixels}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1369`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1116`
 
 ```python
 async def sample_pixels(points: list[dict[str, Any]] | None = None, grid: dict[str, Any] | None = None, sample_merged: bool = False, sample_average: bool = False, average_radius: float = 0.0, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -861,7 +997,7 @@ Returns:
 
 ## `sample_color` {#sample-color}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1442`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1183`
 
 ```python
 async def sample_color(x: int, y: int, sample_merged: bool = False) -> ToolResult
@@ -901,7 +1037,7 @@ Returns:
 
 ## `palette_create_or_update` {#palette-create-or-update}
 
-Source: `src/gimp_mcp_pro/tools/color_tools.py:1497`
+Source: `src/gimp_mcp_pro/tools/color_tools.py:1211`
 
 ```python
 async def palette_create_or_update(action: str, palette_name: str, colors: list[dict[str, Any]] | None = None, overwrite: bool = False) -> ToolResult

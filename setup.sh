@@ -25,19 +25,17 @@ echo "Installing GIMP MCP Pro..."
 pip install -e . --quiet 2>&1 | tail -3
 echo "  ✓ MCP server installed"
 
-# Determine GIMP plugin directory
+# Determine GIMP plugin target
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    PLUG_DIR="$HOME/Library/Application Support/GIMP/3.0/plug-ins/gimp-mcp-pro"
+    PLUG_TARGET="$HOME/Library/Application Support/GIMP/3.0/plug-ins/gimp-mcp-pro/gimp-mcp-pro"
 else
-    PLUG_DIR="$HOME/.config/GIMP/3.0/plug-ins/gimp-mcp-pro"
+    PLUG_TARGET="$HOME/.config/GIMP/3.0/plug-ins/gimp-mcp-pro/gimp-mcp-pro"
 fi
 
 # Install GIMP plugin
 echo ""
-echo "Installing GIMP plugin to: $PLUG_DIR"
-mkdir -p "$PLUG_DIR"
-cp gimp_plugin/gimp_mcp_plugin.py "$PLUG_DIR/gimp-mcp-pro"
-chmod +x "$PLUG_DIR/gimp-mcp-pro"
+echo "Installing GIMP plugin to: $PLUG_TARGET"
+$PYTHON scripts/install_gimp_plugin.py --target "$PLUG_TARGET"
 echo "  ✓ GIMP plugin installed"
 
 # Verify

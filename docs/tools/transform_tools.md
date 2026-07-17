@@ -22,7 +22,7 @@ Source module: `src/gimp_mcp_pro/tools/transform_tools.py`
 
 ## `align_and_distribute_layers` {#align-and-distribute-layers}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:235`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:310`
 
 ```python
 async def align_and_distribute_layers(layers: list[dict[str, object]], align: str | None = None, distribute: str | None = None, reference: str = 'canvas', dry_run: bool = False) -> ToolResult
@@ -65,7 +65,7 @@ Returns:
 
 ## `scale_image` {#scale-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:296`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:371`
 
 ```python
 async def scale_image(new_width: int, new_height: int, interpolation: str = 'cubic') -> ToolResult
@@ -109,7 +109,7 @@ Returns:
 
 ## `scale_layer` {#scale-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:347`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:422`
 
 ```python
 async def scale_layer(new_width: int, new_height: int, interpolation: str = 'cubic', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -156,7 +156,7 @@ Returns:
 
 ## `rotate_image` {#rotate-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:399`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:474`
 
 ```python
 async def rotate_image(angle: int) -> ToolResult
@@ -191,7 +191,7 @@ Returns:
 
 ## `rotate_layer` {#rotate-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:434`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:509`
 
 ```python
 async def rotate_layer(angle_degrees: float, auto_resize: bool = True, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -232,7 +232,7 @@ Returns:
 
 ## `perspective_layer` {#perspective-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:479`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:557`
 
 ```python
 async def perspective_layer(x0: float, y0: float, x1: float, y1: float, x2: float, y2: float, x3: float, y3: float, interpolation: str = 'cubic', resize: str = 'adjust', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -285,7 +285,7 @@ Returns:
 
 ## `shear_layer` {#shear-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:539`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:615`
 
 ```python
 async def shear_layer(direction: str = 'horizontal', magnitude: float = 0.0, interpolation: str = 'cubic', resize: str = 'adjust', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -330,7 +330,7 @@ Returns:
 
 ## `flip_image` {#flip-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:597`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:669`
 
 ```python
 async def flip_image(direction: str = 'horizontal') -> ToolResult
@@ -365,7 +365,7 @@ Returns:
 
 ## `flip_layer` {#flip-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:633`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:705`
 
 ```python
 async def flip_layer(direction: str = 'horizontal', layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -404,7 +404,7 @@ Returns:
 
 ## `crop_to_selection` {#crop-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:678`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:750`
 
 ```python
 async def crop_to_selection() -> ToolResult
@@ -434,7 +434,7 @@ Returns:
 
 ## `smart_crop_or_resize` {#smart-crop-or-resize}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:703`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:777`
 
 ```python
 async def smart_crop_or_resize(mode: str, target_size: dict[str, int], anchor: str = 'center', preserve_layers: bool = True, background: str | None = None, dry_run: bool = True) -> ToolResult
@@ -483,7 +483,7 @@ Contract:
 
 ## `crop_image` {#crop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:782`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:856`
 
 ```python
 async def crop_image(x: int, y: int, width: int, height: int) -> ToolResult
@@ -524,7 +524,7 @@ Returns:
 
 ## `autocrop_image` {#autocrop-image}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:819`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:893`
 
 ```python
 async def autocrop_image() -> ToolResult
@@ -553,7 +553,7 @@ Returns:
 
 ## `resize_canvas` {#resize-canvas}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:847`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:949`
 
 ```python
 async def resize_canvas(new_width: int, new_height: int, offset_x: int = 0, offset_y: int = 0) -> ToolResult
@@ -597,7 +597,7 @@ Returns:
 
 ## `offset_layer` {#offset-layer}
 
-Source: `src/gimp_mcp_pro/tools/transform_tools.py:889`
+Source: `src/gimp_mcp_pro/tools/transform_tools.py:993`
 
 ```python
 async def offset_layer(offset_x: int, offset_y: int, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult

@@ -5,12 +5,12 @@ This section is generated from the nested `@mcp.tool()` handler docstrings in `s
 !!! info "Generated documentation"
     Regenerate with `uv run python scripts/docs.py generate` before building or publishing docs.
 
-Total tools: **171**
+Total tools: **183**
 
 | Category | Tools | Page |
 |---|---:|---|
 | Agent Tools | 3 | [agent_tools](agent_tools.md) |
-| Color Adjustments | 22 | [color_tools](color_tools.md) |
+| Color Adjustments | 25 | [color_tools](color_tools.md) |
 | Drawing and Text | 13 | [drawing_tools](drawing_tools.md) |
 | Filters and Effects | 13 | [filter_tools](filter_tools.md) |
 | Repeatable Flows and Macros | 11 | [flow_tools](flow_tools.md) |
@@ -18,10 +18,10 @@ Total tools: **171**
 | History | 6 | [history_tools](history_tools.md) |
 | Image Management | 15 | [image_tools](image_tools.md) |
 | Inspection | 17 | [inspect_tools](inspect_tools.md) |
-| Layer Operations | 24 | [layer_tools](layer_tools.md) |
+| Layer Operations | 30 | [layer_tools](layer_tools.md) |
 | Vector Paths | 8 | [path_tools](path_tools.md) |
 | PDB and Escape Hatch | 5 | [pdb_tools](pdb_tools.md) |
-| Selections | 14 | [selection_tools](selection_tools.md) |
+| Selections | 17 | [selection_tools](selection_tools.md) |
 | Target Resolution | 3 | [target_tools](target_tools.md) |
 | Transforms | 15 | [transform_tools](transform_tools.md) |
 
@@ -45,6 +45,7 @@ Total tools: **171**
 - [`apply_threshold`](color_tools.md#apply-threshold) — Apply threshold — convert to pure black and white.
 - [`posterize`](color_tools.md#posterize) — Reduce the number of color levels (posterization effect).
 - [`color_to_alpha`](color_tools.md#color-to-alpha) — Make a specific color transparent (color to alpha).
+- [`replace_color`](color_tools.md#replace-color) — Replace pixels matching a source color with a replacement color.
 - [`auto_white_balance`](color_tools.md#auto-white-balance) — Automatically adjust white balance (stretch colors).
 - [`brush_inventory`](color_tools.md#brush-inventory) — List paint resources with current-context markers.
 - [`set_paint_resource`](color_tools.md#set-paint-resource) — Set one active paint resource by validated name.
@@ -54,6 +55,8 @@ Total tools: **171**
 - [`get_colors`](color_tools.md#get-colors) — Get the current foreground and background colors.
 - [`swap_colors`](color_tools.md#swap-colors) — Swap foreground and background colors.
 - [`analyze_color_palette`](color_tools.md#analyze-color-palette) — Extract a deterministic approximate color palette for a layer or region.
+- [`dominant_colors`](color_tools.md#dominant-colors) — Return dominant colors for a layer or region.
+- [`analyze_color_histogram`](color_tools.md#analyze-color-histogram) — Analyze channel histogram summary statistics for a layer.
 - [`sample_pixels`](color_tools.md#sample-pixels) — Sample colors at multiple points or over a rectangular grid.
 - [`sample_color`](color_tools.md#sample-color) — Pick/sample a color from a pixel in the image.
 - [`palette_create_or_update`](color_tools.md#palette-create-or-update) — Create, inspect, or update a palette from provided colors.
@@ -138,23 +141,23 @@ Total tools: **171**
 
 ### Inspection
 
+- [`create_contact_sheet`](inspect_tools.md#create-contact-sheet) — Render contact-sheet metadata for visible or selected layers.
+- [`observe_region`](inspect_tools.md#observe-region) — Return a bounded visual observation and metadata for a rectangular region.
+- [`get_image_bitmap`](inspect_tools.md#get-image-bitmap) — Get the current image as a viewable bitmap (PNG).
 - [`explain_current_context`](inspect_tools.md#explain-current-context) — Explain the current canvas state as an LLM-oriented context packet.
+- [`session_capabilities`](inspect_tools.md#session-capabilities) — Report GIMP runtime capabilities and safety-relevant environment state.
+- [`compare_snapshots`](inspect_tools.md#compare-snapshots) — Compare two supplied snapshot, thumbnail, or region payloads.
+- [`observe_document_state`](inspect_tools.md#observe-document-state) — Return a compact snapshot of the active GIMP document state.
+- [`get_image_metadata`](inspect_tools.md#get-image-metadata) — Get detailed metadata about the active image without bitmap data.
+- [`assert_image_state`](inspect_tools.md#assert-image-state) — Evaluate typed postconditions against supplied or active document state.
+- [`get_layer_tree_detailed`](inspect_tools.md#get-layer-tree-detailed) — Return detailed layer, group, visibility, lock, and bounds metadata.
 - [`measure_geometry`](inspect_tools.md#measure-geometry) — Measure bounds, distance, overlap, alignment, and spacing for targets.
+- [`get_context_state`](inspect_tools.md#get-context-state) — Get current GIMP context state (colors, brush, opacity, settings).
 - [`generate_layer_report`](inspect_tools.md#generate-layer-report) — Generate a read-only structured report of layers and export-relevant warnings.
+- [`get_gimp_info`](inspect_tools.md#get-gimp-info) — Get GIMP environment info (version, paths, capabilities).
 - [`prepare_export_checklist`](inspect_tools.md#prepare-export-checklist) — Prepare a read-only export readiness checklist for common image formats.
 - [`content_bounds`](inspect_tools.md#content-bounds) — Inspect non-transparent content bounds for a layer without mutation.
 - [`text_layer_introspection`](inspect_tools.md#text-layer-introspection) — Read text-layer metadata without rasterizing or mutating the layer.
-- [`create_contact_sheet`](inspect_tools.md#create-contact-sheet) — Render contact-sheet metadata for visible or selected layers.
-- [`compare_snapshots`](inspect_tools.md#compare-snapshots) — Compare two supplied snapshot, thumbnail, or region payloads.
-- [`assert_image_state`](inspect_tools.md#assert-image-state) — Evaluate typed postconditions against supplied or active document state.
-- [`session_capabilities`](inspect_tools.md#session-capabilities) — Report GIMP runtime capabilities and safety-relevant environment state.
-- [`observe_document_state`](inspect_tools.md#observe-document-state) — Return a compact snapshot of the active GIMP document state.
-- [`get_layer_tree_detailed`](inspect_tools.md#get-layer-tree-detailed) — Return detailed layer, group, visibility, lock, and bounds metadata.
-- [`observe_region`](inspect_tools.md#observe-region) — Return a bounded visual observation and metadata for a rectangular region.
-- [`get_image_bitmap`](inspect_tools.md#get-image-bitmap) — Get the current image as a viewable bitmap (PNG).
-- [`get_image_metadata`](inspect_tools.md#get-image-metadata) — Get detailed metadata about the active image without bitmap data.
-- [`get_context_state`](inspect_tools.md#get-context-state) — Get current GIMP context state (colors, brush, opacity, settings).
-- [`get_gimp_info`](inspect_tools.md#get-gimp-info) — Get GIMP environment info (version, paths, capabilities).
 
 ### Layer Operations
 
@@ -165,8 +168,14 @@ Total tools: **171**
 - [`set_layer_opacity`](layer_tools.md#set-layer-opacity) — Set a layer's opacity.
 - [`set_layer_visibility`](layer_tools.md#set-layer-visibility) — Show or hide a layer.
 - [`set_layer_mode`](layer_tools.md#set-layer-mode) — Set a layer's blend mode (normal, multiply, screen, overlay, etc.).
+- [`set_layer_blend_mode`](layer_tools.md#set-layer-blend-mode) — Alias for set_layer_mode with discoverable blend-mode naming.
 - [`duplicate_layer`](layer_tools.md#duplicate-layer) — Duplicate a layer.
 - [`merge_visible_layers`](layer_tools.md#merge-visible-layers) — Merge all visible layers into one.
+- [`new_layer_from_visible`](layer_tools.md#new-layer-from-visible) — Create a new layer from the current visible composite without merging originals.
+- [`merge_down`](layer_tools.md#merge-down) — Merge a layer down into the layer below it.
+- [`copy_layer_alpha_to_mask`](layer_tools.md#copy-layer-alpha-to-mask) — Copy a source layer's alpha silhouette into the target layer mask.
+- [`selection_to_layer_mask`](layer_tools.md#selection-to-layer-mask) — Create or replace a layer mask from the current selection.
+- [`create_mask_from_color`](layer_tools.md#create-mask-from-color) — Create a layer mask from an explicit color or sampled color selection.
 - [`add_layer_mask`](layer_tools.md#add-layer-mask) — Add a layer mask to a layer.
 - [`get_layer_mask_info`](layer_tools.md#get-layer-mask-info) — Get layer mask status for a layer.
 - [`set_layer_mask_state`](layer_tools.md#set-layer-mask-state) — Set layer mask editing/display/apply flags.
@@ -211,6 +220,9 @@ Total tools: **171**
 - [`select_none`](selection_tools.md#select-none) — Clear all selections.
 - [`select_invert`](selection_tools.md#select-invert) — Invert the current selection (select everything NOT currently selected).
 - [`select_by_color`](selection_tools.md#select-by-color) — Select all pixels similar in color to the sampled point.
+- [`select_layer_alpha`](selection_tools.md#select-layer-alpha) — Select a layer's alpha channel using GIMP's image.select_item API.
+- [`fuzzy_select`](selection_tools.md#fuzzy-select) — Select the connected fuzzy/magic-wand region touching a sampled point.
+- [`select_color`](selection_tools.md#select-color) — Globally select pixels matching an explicit color value.
 - [`feather_selection`](selection_tools.md#feather-selection) — Feather the current selection by a radius in pixels.
 - [`border_selection`](selection_tools.md#border-selection) — Replace the current selection with its border.
 - [`stroke_selection`](selection_tools.md#stroke-selection) — Stroke the current selection onto a layer.

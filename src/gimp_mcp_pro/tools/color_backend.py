@@ -39,6 +39,58 @@ def _color_preamble(layer_name: str | None, layer_index: int | None) -> list[str
     return code
 
 
+def _color_histogram_code(
+    channels: list[str],
+    start_range: float,
+    end_range: float,
+    layer_name: str | None,
+    layer_index: int | None,
+) -> list[str]:
+    """Return generated code for bounded per-channel histogram summaries."""
+    channel_expr = {
+        "value": "Gimp.HistogramChannel.VALUE",
+        "red": "Gimp.HistogramChannel.RED",
+        "green": "Gimp.HistogramChannel.GREEN",
+        "blue": "Gimp.HistogramChannel.BLUE",
+        "alpha": "Gimp.HistogramChannel.ALPHA",
+    }
+    lines = _color_preamble(layer_name, layer_index) + ["import json", "stats = {}"]
+    for channel in channels:
+        lines += [
+            f"ok, mean, std_dev, median, pixels, count, percentile = drawable.histogram({channel_expr[channel]}, {start_range}, {end_range})",
+            f"stats[{channel!r}] = {{'ok': bool(ok), 'mean': mean, 'std_dev': std_dev, 'median': median, 'pixels': pixels, 'count': count, 'percentile': percentile}}",
+        ]
+    lines.append(
+        "print(json.dumps({'channels': stats, 'range': {'start': "
+        f"{start_range!r}, 'end': {end_range!r}" + "}}))"
+    )
+    return lines
+
+
+def _sample_color_code(x: int, y: int, sample_merged: bool) -> list[str]:
+    """Return generated code for one active-layer or merged color sample."""
+    return [
+        "import json",
+        "from gi.repository import Gimp",
+        "images = Gimp.get_images()",
+        "if not images: raise RuntimeError('No images are open')",
+        "image = images[0]",
+        "sel = image.get_selected_layers()",
+        "if not sel: raise RuntimeError('No active layer')",
+        "drawable = sel[0]",
+        (
+            f"picked = image.pick_color([drawable], {x}, {y}, True, False, 0.0)\n"
+            "color = picked[-1] if isinstance(picked, tuple) else picked\n"
+            "if color is None: raise RuntimeError('No color returned')"
+            if sample_merged
+            else f"color = drawable.get_pixel({x}, {y})"
+        ),
+        "rgba = color.get_rgba()",
+        "result = {'r': round(rgba.red, 4), 'g': round(rgba.green, 4), 'b': round(rgba.blue, 4), 'a': round(rgba.alpha, 4)}",
+        "print(json.dumps(result))",
+    ]
+
+
 def _color_adjustment_lifecycle(mutation_lines: list[str]) -> list[str]:
     """Wrap mutating color adjustments in one explicit GIMP undo group."""
     lifecycle = [

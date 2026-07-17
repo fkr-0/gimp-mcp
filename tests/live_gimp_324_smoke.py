@@ -42,12 +42,14 @@ except ImportError as exc:  # pragma: no cover - live utility guard
     raise SystemExit("PyYAML is required. Run: uv sync --extra dev") from exc
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from gimp_mcp_pro.async_bridge import AsyncGimpBridge  # noqa: E402
 from gimp_mcp_pro.bridge import GimpBridge  # noqa: E402
 from gimp_mcp_pro.config import ServerConfig  # noqa: E402
 from gimp_mcp_pro.utils.errors import GimpCommandError, GimpConnectionError  # noqa: E402
+from scripts.install_gimp_plugin import DEFAULT_GIMP_VERSION, gimp_profile_dir  # noqa: E402
 
 GIMP_CANDIDATES = ("gimp-3.2", "gimp-3", "gimp", "gimp-3.0")
 PLUGIN_SOURCE = PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py"
@@ -122,7 +124,11 @@ def _sanitize_child_path(path_value: str | None, *, project_root: Path) -> str:
 
 def install_plugin_to_profile(xdg_config_home: Path, source: Path = PLUGIN_SOURCE) -> Path:
     """Install the bundled plug-in into a clean XDG-backed GIMP profile."""
-    plugin_dir = xdg_config_home / "GIMP" / "3.0" / "plug-ins" / source.stem
+    plugin_dir = (
+        gimp_profile_dir(xdg_config_home, gimp_version=DEFAULT_GIMP_VERSION)
+        / "plug-ins"
+        / source.stem
+    )
     plugin_dir.mkdir(parents=True, exist_ok=True)
     target = plugin_dir / source.name
     shutil.copy2(source, target)
@@ -149,7 +155,9 @@ def build_spawn_env(
     env.pop("PYTHONHOME", None)
     env["PATH"] = _sanitize_child_path(env.get("PATH"), project_root=PROJECT_ROOT)
     env["XDG_CONFIG_HOME"] = str(xdg_config_home)
-    env["GIMP3_DIRECTORY"] = str(xdg_config_home / "GIMP" / "3.0")
+    env["GIMP3_DIRECTORY"] = str(
+        gimp_profile_dir(xdg_config_home, gimp_version=DEFAULT_GIMP_VERSION)
+    )
     env["GIMP_MCP_PORT"] = str(port)
     env["GIMP_MCP_AUTO_START"] = "0"
     env["GIMP_MCP_PRO_AUTOSTART"] = "0"
@@ -1027,7 +1035,7 @@ if missing:
 
 def _registry_total_check(tools: dict[str, Any]) -> dict[str, Any]:
     """Check live captured MCP tool registry count."""
-    expected = 169
+    expected = 183
     names = sorted(tools)
     return make_check(
         "mcp-tools",
@@ -1123,11 +1131,11 @@ def run_smoke(
             ],
         )
         registry_evidence = {
-            "expected_total": 169,
+            "expected_total": 183,
             "actual_total": len(tools),
             "tools": sorted(tools),
         }
-        if len(tools) != 169:
+        if len(tools) != 183:
             image_check["status"] = "fail"
             image_check["evidence"]["failed_tools"].append("registry-count")
         image_check["evidence"]["registry"] = registry_evidence
@@ -1319,8 +1327,15 @@ if missing:
                 tool_call(
                     "execute_python",
                     ["_compat_persistent_value = 41", "print(_compat_persistent_value + 1)"],
+                    require_debug_enabled=True,
+                    allow_dangerous_code=True,
                 ),
-                tool_call("execute_python", ["print(_compat_persistent_value)"]),
+                tool_call(
+                    "execute_python",
+                    ["print(_compat_persistent_value)"],
+                    require_debug_enabled=True,
+                    allow_dangerous_code=True,
+                ),
             ],
         )
         if pdb_probe["status"] == "pass" and tool_probe["status"] == "pass":
@@ -1482,7 +1497,9 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
                 "spawned_gimp": True,
                 "xvfb": bool(args.xvfb),
                 "xdg_config_home": str(xdg_config_home),
-                "gimp3_directory": str(xdg_config_home / "GIMP" / "3.0"),
+                "gimp3_directory": str(
+                    gimp_profile_dir(xdg_config_home, gimp_version=DEFAULT_GIMP_VERSION)
+                ),
                 "mcp_port": config.gimp_port,
             }
         )
@@ -1504,7 +1521,9 @@ def run_spawned_smoke(args: argparse.Namespace, config: ServerConfig) -> dict[st
                     "xvfb": bool(args.xvfb),
                     "plugin_path": str(plugin_path),
                     "xdg_config_home": str(xdg_config_home),
-                    "gimp3_directory": str(xdg_config_home / "GIMP" / "3.0"),
+                    "gimp3_directory": str(
+                        gimp_profile_dir(xdg_config_home, gimp_version=DEFAULT_GIMP_VERSION)
+                    ),
                     "mcp_port": config.gimp_port,
                 },
             )

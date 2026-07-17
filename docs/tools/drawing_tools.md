@@ -20,7 +20,7 @@ Source module: `src/gimp_mcp_pro/tools/drawing_tools.py`
 
 ## `set_foreground_color` {#set-foreground-color}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:124`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:212`
 
 ```python
 async def set_foreground_color(color: str) -> ToolResult
@@ -59,7 +59,7 @@ Returns:
 
 ## `set_background_color` {#set-background-color}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:154`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:242`
 
 ```python
 async def set_background_color(color: str) -> ToolResult
@@ -94,7 +94,7 @@ Returns:
 
 ## `fill_selection` {#fill-selection}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:180`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:268`
 
 ```python
 async def fill_selection(fill_type: str = 'foreground', color: str | None = None) -> ToolResult
@@ -141,7 +141,7 @@ Returns:
 
 ## `draw_line` {#draw-line}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:227`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:331`
 
 ```python
 async def draw_line(x1: float, y1: float, x2: float, y2: float, color: str | None = None, brush_size: float = 2.0) -> ToolResult
@@ -184,7 +184,7 @@ Returns:
 
 ## `draw_brush_stroke` {#draw-brush-stroke}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:266`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:395`
 
 ```python
 async def draw_brush_stroke(points: list[float], tool: str = 'pencil', color: str | None = None, brush_size: float = 2.0) -> ToolResult
@@ -231,7 +231,7 @@ Returns:
 
 ## `draw_rectangle` {#draw-rectangle}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:322`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:476`
 
 ```python
 async def draw_rectangle(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
@@ -280,7 +280,7 @@ Returns:
 
 ## `draw_ellipse` {#draw-ellipse}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:381`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:524`
 
 ```python
 async def draw_ellipse(x: float, y: float, width: float, height: float, filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
@@ -327,7 +327,7 @@ Returns:
 
 ## `draw_polygon` {#draw-polygon}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:436`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:570`
 
 ```python
 async def draw_polygon(points: list[float], filled: bool = True, color: str | None = None, line_width: float = 2.0) -> ToolResult
@@ -373,7 +373,7 @@ Returns:
 
 ## `create_text_box` {#create-text-box}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:497`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:622`
 
 ```python
 async def create_text_box(text: str, rectangle: dict[str, int], style: dict[str, object] | None = None, name: str | None = None) -> ToolResult
@@ -414,7 +414,7 @@ Returns:
 
 ## `add_text` {#add-text}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:545`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:670`
 
 ```python
 async def add_text(text: str, x: float = 0.0, y: float = 0.0, font_name: str = 'Sans', font_size: float = 24.0, color: str | None = None, layer_name: str = 'Text') -> ToolResult
@@ -463,7 +463,7 @@ Returns:
 
 ## `gradient_fill` {#gradient-fill}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:615`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:772`
 
 ```python
 async def gradient_fill(x1: float, y1: float, x2: float, y2: float, gradient_type: str = 'linear', foreground_color: str | None = None, background_color: str | None = None, offset: float = 0.0, dither: bool = True, supersample: bool = False, supersample_max_depth: int = 3, supersample_threshold: float = 0.2) -> ToolResult
@@ -520,7 +520,7 @@ Returns:
 
 ## `edit_text_layer` {#edit-text-layer}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:701`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:896`
 
 ```python
 async def edit_text_layer(text: str | None = None, layer_name: str | None = None, layer_index: int | None = None, font_name: str | None = None, font_size: float | None = None, color: str | None = None, justification: str | None = None) -> ToolResult
@@ -567,7 +567,7 @@ Returns:
 
 ## `edit_clear` {#edit-clear}
 
-Source: `src/gimp_mcp_pro/tools/drawing_tools.py:819`
+Source: `src/gimp_mcp_pro/tools/drawing_tools.py:1014`
 
 ```python
 async def edit_clear() -> ToolResult

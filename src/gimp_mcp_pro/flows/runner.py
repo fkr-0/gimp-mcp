@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import re
 import time
@@ -68,7 +69,18 @@ class FlowRunner:
             "capabilities": flow.capabilities,
         }
         for phase_index, phase in enumerate(flow.phases):
-            transaction_id = await self._begin_transaction(flow, phase.id)
+            try:
+                transaction_id = await self._begin_transaction(flow, phase.id)
+            except Exception as exc:
+                log["phases"].append(
+                    {"id": phase.id, "transaction_id": None, "status": "transaction-error"}
+                )
+                log.update(
+                    status="error",
+                    error=f"failed to begin transaction: {exc}",
+                    duration_ms=round((time.monotonic() - started) * 1000, 3),
+                )
+                return log
             phase_log = {"id": phase.id, "transaction_id": transaction_id, "status": "active"}
             log["phases"].append(phase_log)
             for index, step in enumerate(phase.steps):
@@ -81,6 +93,9 @@ class FlowRunner:
                 step_started = time.monotonic()
                 try:
                     result = await self.operations.get(step.tool)(**arguments)
+                except asyncio.CancelledError:
+                    await self._rollback_after_cancellation(transaction_id)
+                    raise
                 except Exception as exc:
                     result = {"status": "error", "error": str(exc)}
                 step_log = {
@@ -94,13 +109,15 @@ class FlowRunner:
                 }
                 log["steps"].append(step_log)
                 if not _result_succeeded(result):
-                    await self._rollback(transaction_id)
-                    phase_log["status"] = "rolled-back"
+                    rollback_error = await self._try_rollback(transaction_id)
+                    phase_log["status"] = "rollback-failed" if rollback_error else "rolled-back"
                     log.update(
                         status="error",
                         error=result.get("error", f"tool failed: {step.tool}"),
                         duration_ms=round((time.monotonic() - started) * 1000, 3),
                     )
+                    if rollback_error:
+                        log["rollback_error"] = rollback_error
                     return log
 
             is_final_phase = phase_index == len(flow.phases) - 1
@@ -110,15 +127,35 @@ class FlowRunner:
                 or (flow.review_policy == "final" and is_final_phase)
             )
             if should_review and checkpoint_decision == "rollback":
-                await self._rollback(transaction_id)
-                phase_log["status"] = "rolled-back"
+                rollback_error = await self._try_rollback(transaction_id)
+                phase_log["status"] = "rollback-failed" if rollback_error else "rolled-back"
                 log.update(
-                    status="rolled-back",
+                    status="error" if rollback_error else "rolled-back",
                     review={"policy": flow.review_policy, "decision": "rollback"},
                     duration_ms=round((time.monotonic() - started) * 1000, 3),
                 )
+                if rollback_error:
+                    log.update(
+                        error="transaction rollback failed",
+                        rollback_error=rollback_error,
+                    )
                 return log
-            await self._commit(transaction_id)
+            try:
+                await self._commit(transaction_id)
+            except asyncio.CancelledError:
+                await self._rollback_after_cancellation(transaction_id)
+                raise
+            except Exception as exc:
+                rollback_error = await self._try_rollback(transaction_id)
+                phase_log["status"] = "rollback-failed" if rollback_error else "rolled-back"
+                log.update(
+                    status="error",
+                    error=f"transaction commit failed: {exc}",
+                    duration_ms=round((time.monotonic() - started) * 1000, 3),
+                )
+                if rollback_error:
+                    log["rollback_error"] = rollback_error
+                return log
             phase_log["status"] = "committed"
 
         if flow.review_policy == "final":
@@ -145,16 +182,47 @@ class FlowRunner:
         result = await self.operations.get("begin_edit_transaction")(
             label=f"Repeatable Flow: {flow.title} / {phase_id}"
         )
+        if not _result_succeeded(result):
+            raise RuntimeError(_result_error(result, "begin_edit_transaction failed"))
         data = result.get("data", {})
         return data.get("transaction_id") if isinstance(data, dict) else None
 
     async def _commit(self, transaction_id: str | None) -> None:
         if "end_edit_transaction" in self.operations.names():
-            await self.operations.get("end_edit_transaction")(transaction_id=transaction_id)
+            result = await self.operations.get("end_edit_transaction")(
+                transaction_id=transaction_id
+            )
+            if not _result_succeeded(result):
+                raise RuntimeError(_result_error(result, "end_edit_transaction failed"))
 
     async def _rollback(self, transaction_id: str | None) -> None:
         if "rollback_transaction" in self.operations.names():
-            await self.operations.get("rollback_transaction")(transaction_id=transaction_id)
+            result = await self.operations.get("rollback_transaction")(
+                transaction_id=transaction_id
+            )
+            if not _result_succeeded(result):
+                raise RuntimeError(_result_error(result, "rollback_transaction failed"))
+        elif transaction_id is not None:
+            raise RuntimeError("rollback_transaction is not registered")
+
+    async def _try_rollback(self, transaction_id: str | None) -> str | None:
+        try:
+            await self._rollback(transaction_id)
+        except Exception as exc:
+            return str(exc)
+        return None
+
+    async def _rollback_after_cancellation(self, transaction_id: str | None) -> None:
+        """Finish rollback cleanup even while the caller is being cancelled."""
+        rollback_task = asyncio.create_task(self._rollback(transaction_id))
+        try:
+            await asyncio.shield(rollback_task)
+        except asyncio.CancelledError:
+            # A second cancellation must not orphan the GIMP undo group.
+            await rollback_task
+        except Exception:
+            # Preserve cancellation as the primary failure.
+            return
 
 
 def _resolve(value: Any, parameters: dict[str, Any]) -> Any:
@@ -192,3 +260,11 @@ def _result_succeeded(result: dict[str, Any]) -> bool:
     if "success" in result:
         return bool(result["success"])
     return result.get("status", "success") in {"success", "ok"}
+
+
+def _result_error(result: dict[str, Any], default: str) -> str:
+    error = result.get("error")
+    if error:
+        return str(error)
+    message = result.get("message")
+    return str(message) if message else default

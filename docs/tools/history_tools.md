@@ -9,11 +9,11 @@ Source module: `src/gimp_mcp_pro/tools/history_tools.py`
 | [`undo`](#undo) | Undo the last operation(s). | 1 |
 | [`redo`](#redo) | Redo previously undone operation(s). | 1 |
 | [`begin_undo_group`](#begin-undo-group) | Start an undo group — all subsequent operations will be grouped | 1 |
-| [`end_undo_group`](#end-undo-group) | End the current undo group. | 0 |
+| [`end_undo_group`](#end-undo-group) | End the current undo group. | 2 |
 
 ## `create_checkpoint` {#create-checkpoint}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:51`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:52`
 
 ```python
 async def create_checkpoint(label: str = 'checkpoint', include_xcf_copy: bool = False) -> ToolResult
@@ -54,7 +54,7 @@ Contract:
 
 ## `get_operation_log` {#get-operation-log}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:112`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:134`
 
 ```python
 async def get_operation_log(limit: int = 20, include_snapshots: bool = False, redact_paths: bool = True) -> ToolResult
@@ -96,7 +96,7 @@ Contract:
 
 ## `undo` {#undo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:152`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:174`
 
 ```python
 async def undo(steps: int = 1) -> ToolResult
@@ -131,7 +131,7 @@ Returns:
 
 ## `redo` {#redo}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:195`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:217`
 
 ```python
 async def redo(steps: int = 1) -> ToolResult
@@ -166,7 +166,7 @@ Returns:
 
 ## `begin_undo_group` {#begin-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:238`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:260`
 
 ```python
 async def begin_undo_group(name: str = 'AI Operation') -> ToolResult
@@ -209,11 +209,18 @@ Returns:
 
 ## `end_undo_group` {#end-undo-group}
 
-Source: `src/gimp_mcp_pro/tools/history_tools.py:272`
+Source: `src/gimp_mcp_pro/tools/history_tools.py:296`
 
 ```python
-async def end_undo_group() -> ToolResult
+async def end_undo_group(group_id: str | None = None, close_all: bool = False) -> ToolResult
 ```
+
+## Parameters
+
+| Parameter | Description |
+|---|---|
+| `group_id` | Optional tracked undo-group ID returned by begin_undo_group. |
+| `close_all` | Close all tracked open undo groups in reverse start order. |
 
 ## Returns
 
@@ -232,6 +239,10 @@ End the current undo group.
 
 Must be called after begin_undo_group. All operations between
 begin and end will be treated as one undo step.
+
+Args:
+    group_id: Optional tracked undo-group ID returned by begin_undo_group.
+    close_all: Close all tracked open undo groups in reverse start order.
 
 Returns:
     Operation result dictionary with status, message, and tool-specific data or error details.

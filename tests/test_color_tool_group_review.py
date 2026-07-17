@@ -61,8 +61,10 @@ def test_color_tools_uses_extracted_backend_helpers() -> None:
     extracted_helpers = {
         "_color_preamble",
         "_color_adjustment_lifecycle",
+        "_color_histogram_code",
         "_normalise_sample_points",
         "_sample_pixels_code",
+        "_sample_color_code",
         "_palette_analysis_code",
         "_resource_common_code",
         "_set_paint_context_code",

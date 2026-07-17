@@ -540,19 +540,8 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 operation="export_with_manifest", error=unsafe_reason
             ).model_dump()
         settings = export_settings or {}
-        code = [
-            "from gi.repository import Gimp, Gio",
-            "import gc, json, os, time",
-            "# __gimp_mcp_export_with_manifest__",
+        lifecycle_lines = [
             "# __gimp_mcp_export_with_manifest_lifecycle__",
-            f"format_name = {py_literal(format_name)}",
-            f"destination = {py_literal(destination)}",
-            f"include_sidecar = {include_sidecar!r}",
-            f"export_settings = {py_literal(settings)}",
-            f"procedure_name = {py_literal(procedures[format_name])}",
-            "images = Gimp.get_images()",
-            "if not images: raise RuntimeError('No images are open in GIMP')",
-            "image = images[0]",
             "file_obj = None",
             "export_proc = None",
             "config = None",
@@ -570,7 +559,9 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "            config.set_property(key, value)\n"
             "        except Exception:\n"
             "            pass",
-            "    export_proc.run(config)",
+            "    export_result = export_proc.run(config)",
+            "    export_status = export_result.index(0)",
+            "    if export_status != Gimp.PDBStatusType.SUCCESS: raise RuntimeError(f'Export failed with status {export_status}')",
             "    manifest = {'format': format_name, 'destination': destination, 'procedure': procedure_name, 'settings': export_settings, 'image': {'width': image.get_width(), 'height': image.get_height()}, 'timestamp': time.time()}",
             "    manifest_path = destination + '.manifest.json'",
             "    if include_sidecar:\n"
@@ -602,6 +593,20 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "    except Exception:",
             "        pass",
             "    gc.collect()",
+        ]
+        code = [
+            "from gi.repository import Gimp, Gio",
+            "import gc, json, os, time",
+            "# __gimp_mcp_export_with_manifest__",
+            f"format_name = {py_literal(format_name)}",
+            f"destination = {py_literal(destination)}",
+            f"include_sidecar = {include_sidecar!r}",
+            f"export_settings = {py_literal(settings)}",
+            f"procedure_name = {py_literal(procedures[format_name])}",
+            "images = Gimp.get_images()",
+            "if not images: raise RuntimeError('No images are open in GIMP')",
+            "image = images[0]",
+            "\n".join(lifecycle_lines),
             "print(json.dumps(result, sort_keys=True))",
         ]
         try:
@@ -656,9 +661,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             else None
         )
 
-        code = _get_active_image_code() + [
-            "from gi.repository import Gio",
-            "import gc",
+        lifecycle_lines = [
             "# __gimp_mcp_image_export_lifecycle__",
             "file_obj = None",
             "export_proc = None",
@@ -667,7 +670,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             f"    file_obj = Gio.File.new_for_path({py_literal(params.file_path)})",
         ]
         if procedure_name is not None:
-            code += [
+            lifecycle_lines += [
                 f"    export_proc = Gimp.get_pdb().lookup_procedure({py_literal(procedure_name)})",
                 f"    if not export_proc: raise RuntimeError({py_literal(procedure_name + ' procedure not found')})",
                 "    config = export_proc.create_config()",
@@ -676,13 +679,19 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
                 "    try:\n        config.set_property('drawables', image.get_layers())\n    except Exception:\n        pass",
             ]
             if fmt in ("jpeg", "jpg"):
-                code.append(
+                lifecycle_lines.append(
                     f"    try:\n        config.set_property('quality', {params.quality / 100.0})\n    except Exception:\n        pass"
                 )
-            code.append("    export_proc.run(config)")
+            lifecycle_lines += [
+                "    export_result = export_proc.run(config)",
+                "    export_status = export_result.index(0)",
+                "    if export_status != Gimp.PDBStatusType.SUCCESS: raise RuntimeError(f'Export failed with status {export_status}')",
+            ]
         else:
-            code.append("    Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, image, file_obj)")
-        code += [
+            lifecycle_lines.append(
+                "    Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, image, file_obj)"
+            )
+        lifecycle_lines += [
             "finally:",
             "    try:",
             "        del config",
@@ -697,6 +706,11 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "    except Exception:",
             "        pass",
             "    gc.collect()",
+        ]
+        code = _get_active_image_code() + [
+            "from gi.repository import Gio",
+            "import gc",
+            "\n".join(lifecycle_lines),
             f"print({py_literal(f'Exported to {params.file_path}')})",
         ]
 
@@ -758,8 +772,7 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
         Returns:
             Operation result with info about the new image.
         """
-        code = _get_active_image_code() + [
-            "import gc",
+        lifecycle_lines = [
             "# __gimp_mcp_duplicate_image_lifecycle__",
             "new_image = None",
             "display = None",
@@ -777,6 +790,10 @@ def register_image_tools(mcp: MCPToolRegistrar, bridge: AsyncToolBridge) -> None
             "    except Exception:",
             "        pass",
             "    gc.collect()",
+        ]
+        code = _get_active_image_code() + [
+            "import gc",
+            "\n".join(lifecycle_lines),
         ]
         try:
             await bridge.async_execute_python(code)

@@ -1,11 +1,25 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 from gimp_mcp_pro.config import ServerConfig
 from tests import live_gimp_324_smoke as live
+
+
+def test_live_smoke_script_is_directly_executable_from_project_root() -> None:
+    result = subprocess.run(
+        [sys.executable, "tests/live_gimp_324_smoke.py", "--help"],
+        cwd=live.PROJECT_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Run live GIMP 3.2.4 bridge smoke checks." in result.stdout
 
 
 def test_install_plugin_to_clean_xdg_profile(tmp_path: Path) -> None:
@@ -16,6 +30,7 @@ def test_install_plugin_to_clean_xdg_profile(tmp_path: Path) -> None:
 
     assert target.name == "gimp_mcp_plugin.py"
     assert target.parent.name == "gimp_mcp_plugin"
+    assert target.parent.parent.parent.name == live.DEFAULT_GIMP_VERSION
     assert target.stat().st_mode & 0o111
 
 
@@ -36,7 +51,7 @@ def test_spawn_environment_is_clean_profile_and_runs_plugin_procedure(tmp_path: 
     assert env["GIMP_MCP_AUTO_START"] == "0"
     assert env["GIMP_MCP_BLOCKING_AUTOSTART"] == "0"
     assert env["GIMP_MCP_BLOCKING_RUN"] == "1"
-    assert env["GIMP3_DIRECTORY"] == str(tmp_path / "config" / "GIMP" / "3.0")
+    assert env["GIMP3_DIRECTORY"] == str(tmp_path / "config" / "GIMP" / live.DEFAULT_GIMP_VERSION)
     assert "VIRTUAL_ENV" not in env
     assert "PYTHONHOME" not in env
     assert str(repo_venv) not in env["PATH"]
@@ -155,6 +170,7 @@ def test_shell_profile_helper_exists() -> None:
     assert "XDG_CONFIG_HOME" in text
     assert "GIMP_MCP_AUTO_START" in text
     assert "gimp_mcp_plugin" in text
+    assert "${GIMP_MCP_GIMP_VERSION:-3.2}" in text
 
 
 def test_static_checks_do_not_duplicate_live_docs_contract(
@@ -329,6 +345,9 @@ def test_existing_server_mode_controls_static_checks(
     ) -> dict[str, Any]:
         return live.make_check("C-020-transport", "pass", {})
 
+    def async_transport_check_stub(_config: ServerConfig) -> dict[str, Any]:
+        return live.make_check("C-025-async-transport", "pass", {})
+
     def env_introspection_check_stub(_bridge: FakeBridge, _env: dict[str, Any]) -> dict[str, Any]:
         return live.make_check("C-001-env-introspection", "pass", {})
 
@@ -339,6 +358,7 @@ def test_existing_server_mode_controls_static_checks(
         return {}
 
     monkeypatch.setattr(live, "_transport_check", transport_check_stub)
+    monkeypatch.setattr(live, "_async_transport_check", async_transport_check_stub)
     monkeypatch.setattr(live, "_env_introspection_check", env_introspection_check_stub)
     monkeypatch.setattr(live, "_plugin_registration_check", plugin_registration_check_stub)
     monkeypatch.setattr(live, "build_registered_tools", build_registered_tools_stub)
@@ -354,6 +374,61 @@ def test_existing_server_mode_controls_static_checks(
 
     assert "S-001-yaml-validity" not in [check["id"] for check in smoke_only["checks"]]
     assert "S-001-yaml-validity" in [check["id"] for check in full["checks"]]
+
+
+def test_static_check_toggle_never_needs_live_async_transport(
+    monkeypatch: Any,
+) -> None:
+    """The static-check toggle test must not depend on a live bridge socket."""
+
+    class FakeBridge:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            del args, kwargs
+
+        def connect(self) -> None:
+            return None
+
+        def send_command(self, command: str) -> dict[str, Any]:
+            assert command == "get_gimp_info"
+            return {"status": "success", "results": {"command": command}}
+
+        def disconnect(self) -> None:
+            return None
+
+    monkeypatch.setattr(live, "GimpBridge", FakeBridge)
+    monkeypatch.setattr(
+        live,
+        "_transport_check",
+        lambda _bridge, _config, _info: live.make_check("C-020-transport", "pass", {}),
+    )
+    monkeypatch.setattr(
+        live,
+        "_env_introspection_check",
+        lambda _bridge, _env: live.make_check("C-001-env-introspection", "pass", {}),
+    )
+    monkeypatch.setattr(
+        live,
+        "_plugin_registration_check",
+        lambda _bridge: live.make_check("C-010-plugin-registration", "pass", {}),
+    )
+    monkeypatch.setattr(live, "build_registered_tools", lambda _bridge: {})
+    monkeypatch.setattr(
+        live, "run_docs_check", lambda: live.make_check("C-130-docs-contract", "pass", {})
+    )
+    monkeypatch.setattr(
+        live, "run_static_checks", lambda: [live.make_check("S-001-yaml-validity", "pass", {})]
+    )
+
+    def async_transport_check_stub(_config: ServerConfig) -> dict[str, Any]:
+        return live.make_check("C-025-async-transport", "pass", {"stubbed": True})
+
+    monkeypatch.setattr(live, "_async_transport_check", async_transport_check_stub)
+
+    result = live.run_smoke(ServerConfig(reconnect_delays=()), include_static_checks=True)
+
+    check_map = {check["id"]: check for check in result["checks"]}
+    assert check_map["C-025-async-transport"]["evidence"] == {"stubbed": True}
+    assert check_map["S-001-yaml-validity"]["status"] == "pass"
 
 
 def test_optional_tool_failures_are_accepted_only_when_expected() -> None:

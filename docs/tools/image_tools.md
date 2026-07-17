@@ -22,7 +22,7 @@ Source module: `src/gimp_mcp_pro/tools/image_tools.py`
 
 ## `create_image` {#create-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:69`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:87`
 
 ```python
 async def create_image(width: int, height: int, color_mode: str = 'rgb', fill: str = 'white') -> ToolResult
@@ -66,7 +66,7 @@ Returns:
 
 ## `add_guide` {#add-guide}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:142`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:187`
 
 ```python
 async def add_guide(orientation: str = 'horizontal', position: int = 0) -> ToolResult
@@ -103,7 +103,7 @@ Returns:
 
 ## `delete_guide` {#delete-guide}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:178`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:223`
 
 ```python
 async def delete_guide(guide_id: int) -> ToolResult
@@ -138,7 +138,7 @@ Returns:
 
 ## `list_guides` {#list-guides}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:205`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:250`
 
 ```python
 async def list_guides() -> ToolResult
@@ -164,7 +164,7 @@ Returns:
 
 ## `set_image_grid` {#set-image-grid}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:246`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:291`
 
 ```python
 async def set_image_grid(xspacing: float = 10.0, yspacing: float = 10.0, xoffset: float = 0.0, yoffset: float = 0.0, style: str = 'intersections') -> ToolResult
@@ -207,7 +207,7 @@ Returns:
 
 ## `color_management_profile` {#color-management-profile}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:306`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:359`
 
 ```python
 async def color_management_profile(action: str = 'inspect', profile_ref: str | None = None, rendering_intent: str = 'perceptual', confirm: bool = False) -> ToolResult
@@ -248,7 +248,7 @@ Returns:
 
 ## `list_images` {#list-images}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:361`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:414`
 
 ```python
 async def list_images() -> ToolResult
@@ -278,7 +278,7 @@ Returns:
 
 ## `get_image_info` {#get-image-info}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:417`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:470`
 
 ```python
 async def get_image_info() -> ToolResult
@@ -314,7 +314,7 @@ Returns:
 
 ## `export_with_manifest` {#export-with-manifest}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:450`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:503`
 
 ```python
 async def export_with_manifest(format: str, destination: str, include_sidecar: bool = True, export_settings: dict[str, Any] | None = None) -> ToolResult
@@ -355,7 +355,7 @@ Returns:
 
 ## `export_image` {#export-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:529`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:623`
 
 ```python
 async def export_image(file_path: str, format: str | None = None, quality: int = 85) -> ToolResult
@@ -398,7 +398,7 @@ Returns:
 
 ## `flatten_image` {#flatten-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:605`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:728`
 
 ```python
 async def flatten_image() -> ToolResult
@@ -432,7 +432,7 @@ Returns:
 
 ## `duplicate_image` {#duplicate-image}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:634`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:765`
 
 ```python
 async def duplicate_image() -> ToolResult
@@ -462,7 +462,7 @@ Returns:
 
 ## `import_as_layer_with_metadata` {#import-as-layer-with-metadata}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:660`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:808`
 
 ```python
 async def import_as_layer_with_metadata(source: str, layer_name: str | None = None, placement: dict[str, int] | None = None) -> ToolResult
@@ -501,7 +501,7 @@ Returns:
 
 ## `batch_export_variants` {#batch-export-variants}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:691`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:844`
 
 ```python
 async def batch_export_variants(variants: list[dict[str, Any]], base_path: str, overwrite: bool = False) -> ToolResult
@@ -540,7 +540,7 @@ Returns:
 
 ## `manage_guides_and_grid` {#manage-guides-and-grid}
 
-Source: `src/gimp_mcp_pro/tools/image_tools.py:728`
+Source: `src/gimp_mcp_pro/tools/image_tools.py:886`
 
 ```python
 async def manage_guides_and_grid(action: str = 'list', orientation: str | None = None, position: float | None = None, guide_id: int | None = None, grid: dict[str, Any] | None = None) -> ToolResult

@@ -8,6 +8,12 @@ from gimp_mcp_pro.tools.image_tools import register_image_tools
 from tests.test_tool_generated_code_paths import CaptureMCP, ScriptedBridge
 
 
+def assert_generated_blocks_compile(blocks: list[str]) -> None:
+    """Each bridge item is executed as an independent Python script."""
+    for index, block in enumerate(blocks):
+        compile(block, f"<generated-block-{index}>", "exec")
+
+
 @pytest.mark.asyncio
 async def test_export_image_releases_pdb_config_and_file_refs() -> None:
     mcp = CaptureMCP()
@@ -32,6 +38,8 @@ async def test_export_image_releases_pdb_config_and_file_refs() -> None:
     assert "del export_proc" in generated
     assert "del file_obj" in generated
     assert "gc.collect()" in generated
+    assert "export_status != Gimp.PDBStatusType.SUCCESS" in generated
+    assert_generated_blocks_compile(bridge.calls[-1][1])
 
 
 @pytest.mark.asyncio
@@ -61,6 +69,8 @@ async def test_export_with_manifest_releases_export_config_and_sidecar_refs() ->
     assert "del export_proc" in generated
     assert "del file_obj" in generated
     assert "gc.collect()" in generated
+    assert "export_status != Gimp.PDBStatusType.SUCCESS" in generated
+    assert_generated_blocks_compile(bridge.calls[-1][1])
 
 
 @pytest.mark.asyncio
@@ -80,6 +90,7 @@ async def test_duplicate_image_releases_display_reference_without_deleting_dupli
     assert "del display" in generated
     assert "gc.collect()" in generated
     assert "delete(new_image)" not in generated
+    assert_generated_blocks_compile(bridge.calls[-1][1])
 
 
 @pytest.mark.asyncio

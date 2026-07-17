@@ -23,6 +23,7 @@ class FakeMCP:
 class MacroRecorder:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
+        self.assertions_succeed = True
 
 
 def macro_registry_factory(recorder: MacroRecorder) -> OperationRegistry:
@@ -71,6 +72,13 @@ def macro_registry_factory(recorder: MacroRecorder) -> OperationRegistry:
     async def execute_python(code: list[str]) -> dict[str, object]:
         recorder.calls.append(("execute_python", {"code": code}))
         return {"status": "success"}
+
+    @registry.tool()
+    async def assert_image_state(assertions: list[dict[str, Any]]) -> dict[str, object]:
+        recorder.calls.append(("assert_image_state", {"assertions": assertions}))
+        if recorder.assertions_succeed:
+            return {"success": True, "data": {"assertions": assertions}}
+        return {"success": False, "error": "image assertion failed"}
 
     return registry
 
@@ -208,5 +216,44 @@ async def test_run_macro_transaction_rolls_back_on_step_failure() -> None:
         "begin_edit_transaction",
         "scale_image",
         "fail_step",
+        "rollback_transaction",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_macro_transaction_checks_preconditions_before_mutation() -> None:
+    recorder = MacroRecorder()
+    recorder.assertions_succeed = False
+    tools = register_macro_tools(recorder)
+
+    result = await tools["run_macro_transaction"](
+        [{"tool": "scale_image", "arguments": {"width": 640, "height": 480}}],
+        preconditions=[{"path": "dimensions.width", "equals": 320}],
+    )
+
+    assert result["success"] is False
+    assert result["data"]["validation_stage"] == "preconditions"
+    assert [name for name, _args in recorder.calls] == ["assert_image_state"]
+
+
+@pytest.mark.asyncio
+async def test_run_macro_transaction_rolls_back_failed_postconditions() -> None:
+    recorder = MacroRecorder()
+    tools = register_macro_tools(recorder)
+    original_assert = recorder.assertions_succeed
+    recorder.assertions_succeed = False
+
+    result = await tools["run_macro_transaction"](
+        [{"tool": "scale_image", "arguments": {"width": 640, "height": 480}}],
+        postconditions=[{"path": "dimensions.width", "equals": 640}],
+    )
+
+    recorder.assertions_succeed = original_assert
+    assert result["success"] is False
+    assert result["data"]["rolled_back"] is True
+    assert [name for name, _args in recorder.calls] == [
+        "begin_edit_transaction",
+        "scale_image",
+        "assert_image_state",
         "rollback_transaction",
     ]

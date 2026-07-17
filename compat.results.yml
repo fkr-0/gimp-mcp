@@ -1,9 +1,9 @@
 schema: gimp-mcp.compat.results.v1
 project: gimp-mcp
 contract: compat.yml
-run_id: live-smoke-1782383538
-run_started_at: '2026-06-25T10:30:02+00:00'
-run_finished_at: '2026-06-25T10:32:18+00:00'
+run_id: live-smoke-1784065667
+run_started_at: '2026-07-14T21:46:40+00:00'
+run_finished_at: '2026-07-14T21:47:47+00:00'
 tester: archlinux
 environment:
   os: Linux-7.0.12-arch1-1-x86_64-with-glibc2.43
@@ -16,33 +16,33 @@ environment:
   libgimp_api_version: '3.0'
   libgimp_library_version: 3.2.4
   gegl_version: 0.4.70
-  plugin_install_path: /tmp/gimp-mcp-live-hoe7h8ec/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-  plugin_sha256: 467ed2d84d61a890f6528822500523eeb10753548f4ed09434564261df557556
-  mcp_server_revision: 148972e6349e0225b6aec4ca904b59bb2dc563ca
+  plugin_install_path: /tmp/gimp-mcp-live-x6p3lzbn/config/GIMP/3.2/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+  plugin_sha256: cb327b65478ba0a3396724f4ca31aa7123f63446fc43955cf54768d4c73d5961
+  mcp_server_revision: a83af38100062c0f1cc406f65429b38f73e8595c
   mcp_server_command: uv run gimp-mcp-pro serve
   spawned_gimp: true
   xvfb: true
-  xdg_config_home: /tmp/gimp-mcp-live-hoe7h8ec/config
-  gimp3_directory: /tmp/gimp-mcp-live-hoe7h8ec/config/GIMP/3.0
-  mcp_port: 40075
+  xdg_config_home: /tmp/gimp-mcp-live-x6p3lzbn/config
+  gimp3_directory: /tmp/gimp-mcp-live-x6p3lzbn/config/GIMP/3.2
+  mcp_port: 44861
 checks:
 - id: C-000-spawn-gimp
   status: pass
   evidence:
-    pid: 2515821
+    pid: 2600426
     gimp: gimp-3.2
     xvfb: true
-    plugin_path: /tmp/gimp-mcp-live-hoe7h8ec/config/GIMP/3.0/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
-    xdg_config_home: /tmp/gimp-mcp-live-hoe7h8ec/config
-    gimp3_directory: /tmp/gimp-mcp-live-hoe7h8ec/config/GIMP/3.0
-    mcp_port: 40075
+    plugin_path: /tmp/gimp-mcp-live-x6p3lzbn/config/GIMP/3.2/plug-ins/gimp_mcp_plugin/gimp_mcp_plugin.py
+    xdg_config_home: /tmp/gimp-mcp-live-x6p3lzbn/config
+    gimp3_directory: /tmp/gimp-mcp-live-x6p3lzbn/config/GIMP/3.2
+    mcp_port: 44861
 - id: C-005-autostart-server
   status: pass
   evidence:
     detail: connected
     startup_timeout: 45.0
     socket_host: localhost
-    socket_port: 40075
+    socket_port: 44861
     derived_from: C-020-transport
 - id: C-020-transport
   status: pass
@@ -126,7 +126,7 @@ checks:
           persistent_connections: true
           reports_version: true
           reports_resources_loaded: true
-    registered_tool_total: 146
+    registered_tool_total: 183
     tool_calls:
     - tool: create_image
       success: true
@@ -140,7 +140,7 @@ checks:
           height: 64
           color_mode: rgb
           fill: white
-        timestamp: 1782383418.4966054
+        timestamp: 1784065616.6431608
     - tool: create_layer
       success: true
       result:
@@ -153,7 +153,8 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383418.5396254
+          active: true
+        timestamp: 1784065616.690683
     - tool: get_image_info
       success: true
       result:
@@ -187,7 +188,7 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782383418.6715052
+        timestamp: 1784065616.82516
     - tool: get_image_bitmap
       success: true
       result:
@@ -196,14 +197,14 @@ checks:
         message: 'Image captured: 64x42 pixels'
         error: null
         data:
-          image_data: iVBORw0KGgoAAAANSUhEUgAAAEAAAAAqCAIAAACMZMq1AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGGQoeEvM1tLAAAAA8SURBVFjD7c8BEQAABAQw9O/8cjhbg3WSumzqOAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGBX4EF8GMDUU6sHawAAAAASUVORK5CYII=
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAEAAAAAqCAIAAACMZMq1AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oHDhUuOWcb2dgAAAA8SURBVFjD7c8BEQAABAQw9O/8cjhbg3WSumzqOAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGBX4EF8GMDUU6sHawAAAAASUVORK5CYII=
           format: png
           width: 64
           height: 42
           original_width: 96
           original_height: 64
           encoding: base64
-        timestamp: 1782383418.9639735
+        timestamp: 1784065617.1143339
     failed_tools: []
 - id: C-001-env-introspection
   status: pass
@@ -229,8 +230,8 @@ checks:
     data:
       procedure_exists: true
       lookup_non_null: true
-      procedure_repr: <__gi__.GimpPDBProcedure object at 0x7fb4a1f780c0 (GimpPDBProcedure
-        at 0x7fb498007ac0)>
+      procedure_repr: <__gi__.GimpPDBProcedure object at 0x7f6dda3a1700 (GimpPDBProcedure
+        at 0x7f6dcc017230)>
       menu_path_static: <Image>/Tools/
       menu_label_static: Start MCP Pro Server
       activation_model: spawned GIMP invokes persistent procedure through python-fu-eval;
@@ -251,7 +252,7 @@ checks:
           height: 240
           color_mode: rgb
           fill: white
-        timestamp: 1782383418.9834616
+        timestamp: 1784065617.134916
     - tool: list_images
       success: true
       result:
@@ -272,7 +273,7 @@ checks:
             num_layers: 2
             is_dirty: true
           count: 2
-        timestamp: 1782383418.9856057
+        timestamp: 1784065617.1363714
     - tool: get_image_info
       success: true
       result:
@@ -299,7 +300,7 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782383418.9866652
+        timestamp: 1784065617.1372883
     - tool: create_layer
       success: true
       result:
@@ -312,7 +313,8 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383418.9904385
+          active: true
+        timestamp: 1784065617.1458585
     - tool: duplicate_image
       success: true
       result:
@@ -321,7 +323,7 @@ checks:
         message: Image duplicated
         error: null
         data: null
-        timestamp: 1782383419.0135741
+        timestamp: 1784065617.1696708
     - tool: flatten_image
       success: true
       result:
@@ -330,7 +332,7 @@ checks:
         message: All layers flattened into one
         error: null
         data: null
-        timestamp: 1782383419.0230727
+        timestamp: 1784065617.177358
     - tool: get_image_info
       success: true
       result:
@@ -357,11 +359,11 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782383419.02397
+        timestamp: 1784065617.1783283
     failed_tools: []
     registry:
-      expected_total: 146
-      actual_total: 146
+      expected_total: 183
+      actual_total: 183
       tools:
       - activate_flow
       - add_alpha_channel
@@ -373,11 +375,14 @@ checks:
       - adjust_curves
       - adjust_hue_saturation
       - adjust_levels
+      - align_and_distribute_layers
+      - analyze_color_histogram
       - analyze_color_palette
       - apply_drop_shadow
       - apply_edge_detect
       - apply_emboss
       - apply_gaussian_blur
+      - apply_gegl_operation
       - apply_median
       - apply_motion_blur
       - apply_noise
@@ -387,27 +392,36 @@ checks:
       - assert_image_state
       - auto_white_balance
       - autocrop_image
+      - batch_export_variants
       - begin_edit_transaction
       - begin_undo_group
       - border_selection
       - brush_inventory
       - bucket_fill
       - channel_to_selection
+      - color_management_profile
       - color_to_alpha
+      - commit_filter_preview
       - compare_snapshots
       - content_bounds
+      - copy_layer_alpha_to_mask
+      - create_and_edit_paths
       - create_checkpoint
       - create_contact_sheet
       - create_image
       - create_layer
       - create_layer_group
+      - create_mask_from_color
       - create_path
+      - create_text_box
+      - create_visual_annotation_layer
       - crop_image
       - crop_to_selection
       - deactivate_flow
       - delete_guide
       - delete_layer
       - desaturate
+      - dominant_colors
       - draw_brush_stroke
       - draw_ellipse
       - draw_line
@@ -416,18 +430,24 @@ checks:
       - dry_run_macro
       - duplicate_image
       - duplicate_layer
+      - edit_channels
       - edit_clear
+      - edit_paths
       - edit_text_layer
       - end_edit_transaction
       - end_undo_group
+      - execute_pdb_call
       - execute_python
       - explain_current_context
       - export_image
+      - export_with_manifest
       - feather_selection
       - fill_selection
+      - find_similar_regions
       - flatten_image
       - flip_image
       - flip_layer
+      - fuzzy_select
       - generate_layer_report
       - get_colors
       - get_context_state
@@ -443,7 +463,9 @@ checks:
       - gimp_dev_plugin_catalog
       - gimp_dev_status
       - gradient_fill
+      - import_as_layer_with_metadata
       - invert_colors
+      - layer_version_stamp
       - list_channels
       - list_flows
       - list_gimp_resources
@@ -451,29 +473,40 @@ checks:
       - list_images
       - list_layers
       - list_paths
+      - manage_channels
+      - manage_guides_and_grid
       - measure_geometry
+      - merge_down
       - merge_visible_layers
       - move_layer_to_group
+      - new_layer_from_visible
       - observe_document_state
       - observe_region
       - offset_layer
+      - palette_create_or_update
       - path_to_selection
+      - pdb_introspect_typed
       - perspective_layer
       - pin_flow
       - posterize
       - prepare_export_checklist
       - preview_filter
+      - preview_gegl_operation
       - propose_flow
       - redo
       - remove_layer_mask
       - remove_path
+      - remove_visual_annotations
+      - replace_color
       - resize_canvas
       - resolve_target
+      - resource_catalog
       - rollback_transaction
       - rotate_image
       - rotate_layer
       - run_flow
       - run_macro_transaction
+      - safe_python_eval
       - sample_color
       - sample_pixels
       - save_selection_to_channel
@@ -482,18 +515,22 @@ checks:
       - search_pdb
       - select_all
       - select_by_color
+      - select_color
       - select_ellipse
       - select_grow
       - select_invert
+      - select_layer_alpha
       - select_none
       - select_polygon
       - select_rectangle
       - select_shrink
+      - selection_to_layer_mask
       - session_capabilities
       - set_active_layer
       - set_background_color
       - set_foreground_color
       - set_image_grid
+      - set_layer_blend_mode
       - set_layer_mask_state
       - set_layer_mode
       - set_layer_opacity
@@ -501,6 +538,8 @@ checks:
       - set_paint_context
       - set_paint_resource
       - shear_layer
+      - smart_crop_or_resize
+      - stroke_or_fill_path
       - stroke_path
       - stroke_selection
       - swap_colors
@@ -525,7 +564,7 @@ checks:
           height: 180
           color_mode: rgb
           fill: white
-        timestamp: 1782383419.0413184
+        timestamp: 1784065617.2011476
     - tool: create_layer
       success: true
       result:
@@ -538,7 +577,8 @@ checks:
           opacity: 80.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383419.0462575
+          active: true
+        timestamp: 1784065617.2110596
     - tool: list_layers
       success: true
       result:
@@ -565,7 +605,7 @@ checks:
             has_alpha: false
             blend_mode: '28'
           count: 2
-        timestamp: 1782383419.0502818
+        timestamp: 1784065617.2166862
     - tool: set_active_layer
       success: true
       result:
@@ -575,7 +615,7 @@ checks:
         error: null
         data:
           layer_name: layer-contract
-        timestamp: 1782383419.0512445
+        timestamp: 1784065617.2241244
     - tool: set_layer_opacity
       success: true
       result:
@@ -585,7 +625,7 @@ checks:
         error: null
         data:
           opacity: 55.0
-        timestamp: 1782383419.053032
+        timestamp: 1784065617.2328682
     - tool: set_layer_visibility
       success: true
       result:
@@ -595,7 +635,7 @@ checks:
         error: null
         data:
           visible: false
-        timestamp: 1782383419.0544426
+        timestamp: 1784065617.2344177
     - tool: set_layer_visibility
       success: true
       result:
@@ -605,7 +645,7 @@ checks:
         error: null
         data:
           visible: true
-        timestamp: 1782383419.055348
+        timestamp: 1784065617.2354348
     - tool: duplicate_layer
       success: true
       result:
@@ -614,7 +654,7 @@ checks:
         message: Layer duplicated
         error: null
         data: null
-        timestamp: 1782383419.059017
+        timestamp: 1784065617.2449741
     - tool: add_alpha_channel
       success: true
       result:
@@ -623,7 +663,7 @@ checks:
         message: Alpha channel added
         error: null
         data: null
-        timestamp: 1782383419.0597897
+        timestamp: 1784065617.2527838
     - tool: add_layer_mask
       success: true
       result:
@@ -634,7 +674,7 @@ checks:
         data:
           layer_name: layer-contract
           mask_type: white
-        timestamp: 1782383419.0969715
+        timestamp: 1784065617.3098676
     - tool: get_layer_mask_info
       success: true
       result:
@@ -649,7 +689,7 @@ checks:
           edit_mask: true
           show_mask: false
           apply_mask: true
-        timestamp: 1782383419.098085
+        timestamp: 1784065617.3113189
     - tool: set_layer_mask_state
       success: true
       result:
@@ -661,7 +701,7 @@ checks:
           edit_mask: true
           show_mask: false
           apply_mask: true
-        timestamp: 1782383419.098595
+        timestamp: 1784065617.3123763
     - tool: remove_layer_mask
       success: true
       result:
@@ -671,7 +711,7 @@ checks:
         error: null
         data:
           applied: false
-        timestamp: 1782383419.0999627
+        timestamp: 1784065617.3147085
     - tool: create_layer
       success: true
       result:
@@ -684,7 +724,8 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383419.1039138
+          active: true
+        timestamp: 1784065617.3229115
     - tool: delete_layer
       success: true
       result:
@@ -693,7 +734,7 @@ checks:
         message: Layer deleted
         error: null
         data: null
-        timestamp: 1782383419.104943
+        timestamp: 1784065617.3264256
     - tool: merge_visible_layers
       success: true
       result:
@@ -702,7 +743,7 @@ checks:
         message: Visible layers merged
         error: null
         data: null
-        timestamp: 1782383419.1108675
+        timestamp: 1784065617.3378983
     - tool: list_layers
       success: true
       result:
@@ -721,7 +762,7 @@ checks:
             has_alpha: true
             blend_mode: '28'
           count: 1
-        timestamp: 1782383419.112222
+        timestamp: 1784065617.3387005
     failed_tools: []
 - id: C-050-selection-drawing-contract
   status: pass
@@ -739,7 +780,7 @@ checks:
           height: 180
           color_mode: rgb
           fill: white
-        timestamp: 1782383419.127592
+        timestamp: 1784065617.3534331
     - tool: create_layer
       success: true
       result:
@@ -752,7 +793,8 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383419.132819
+          active: true
+        timestamp: 1784065617.3596551
     - tool: set_active_layer
       success: true
       result:
@@ -762,7 +804,7 @@ checks:
         error: null
         data:
           layer_name: draw-contract
-        timestamp: 1782383419.1346333
+        timestamp: 1784065617.3643878
     - tool: set_foreground_color
       success: true
       result:
@@ -772,7 +814,7 @@ checks:
         error: null
         data:
           color: red
-        timestamp: 1782383419.13533
+        timestamp: 1784065617.3651059
     - tool: set_background_color
       success: true
       result:
@@ -782,7 +824,7 @@ checks:
         error: null
         data:
           color: blue
-        timestamp: 1782383419.1355808
+        timestamp: 1784065617.3654
     - tool: select_rectangle
       success: true
       result:
@@ -791,7 +833,7 @@ checks:
         message: Selected rectangle (10,10) 40x30
         error: null
         data: null
-        timestamp: 1782383419.151059
+        timestamp: 1784065617.381309
     - tool: fill_selection
       success: true
       result:
@@ -800,7 +842,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782383419.1546798
+        timestamp: 1784065617.3911307
     - tool: select_ellipse
       success: true
       result:
@@ -809,7 +851,7 @@ checks:
         message: Selected ellipse at (60,10) 40x30
         error: null
         data: null
-        timestamp: 1782383419.155541
+        timestamp: 1784065617.3928022
     - tool: fill_selection
       success: true
       result:
@@ -818,7 +860,7 @@ checks:
         message: Filled with background
         error: null
         data: null
-        timestamp: 1782383419.1569324
+        timestamp: 1784065617.3995945
     - tool: select_polygon
       success: true
       result:
@@ -827,7 +869,7 @@ checks:
         message: Selected polygon with 3 vertices
         error: null
         data: null
-        timestamp: 1782383419.157952
+        timestamp: 1784065617.4023392
     - tool: fill_selection
       success: true
       result:
@@ -836,7 +878,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782383419.1594517
+        timestamp: 1784065617.4132116
     - tool: select_all
       success: true
       result:
@@ -845,7 +887,7 @@ checks:
         message: Selected all
         error: null
         data: null
-        timestamp: 1782383419.1603992
+        timestamp: 1784065617.4173577
     - tool: select_invert
       success: true
       result:
@@ -854,7 +896,7 @@ checks:
         message: Selection inverted
         error: null
         data: null
-        timestamp: 1782383419.1607034
+        timestamp: 1784065617.4180565
     - tool: select_none
       success: true
       result:
@@ -863,7 +905,7 @@ checks:
         message: Selection cleared
         error: null
         data: null
-        timestamp: 1782383419.1609385
+        timestamp: 1784065617.4186516
     - tool: select_rectangle
       success: true
       result:
@@ -872,7 +914,7 @@ checks:
         message: Selected rectangle (20,70) 60x40
         error: null
         data: null
-        timestamp: 1782383419.161484
+        timestamp: 1784065617.419382
     - tool: get_selection_info
       success: true
       result:
@@ -891,7 +933,7 @@ checks:
           image_size:
             width: 260
             height: 180
-        timestamp: 1782383419.1624515
+        timestamp: 1784065617.4204798
     - tool: select_grow
       success: true
       result:
@@ -900,7 +942,7 @@ checks:
         message: Selection grown by 2px
         error: null
         data: null
-        timestamp: 1782383419.1630924
+        timestamp: 1784065617.4216244
     - tool: select_shrink
       success: true
       result:
@@ -909,7 +951,7 @@ checks:
         message: Selection shrunk by 1px
         error: null
         data: null
-        timestamp: 1782383419.1640158
+        timestamp: 1784065617.4227664
     - tool: feather_selection
       success: true
       result:
@@ -919,7 +961,7 @@ checks:
         error: null
         data:
           radius: 2.0
-        timestamp: 1782383419.1646667
+        timestamp: 1784065617.4234464
     - tool: border_selection
       success: true
       result:
@@ -929,7 +971,7 @@ checks:
         error: null
         data:
           radius: 2
-        timestamp: 1782383419.1652164
+        timestamp: 1784065617.4244585
     - tool: stroke_selection
       success: true
       result:
@@ -940,7 +982,7 @@ checks:
         data:
           color: blue
           brush_size: 2.0
-        timestamp: 1782383419.1697814
+        timestamp: 1784065617.4409256
     - tool: bucket_fill
       success: true
       result:
@@ -954,7 +996,7 @@ checks:
           color: red
           threshold: 40.0
           sample_merged: true
-        timestamp: 1782383419.2022774
+        timestamp: 1784065617.4892557
     - tool: select_by_color
       success: true
       result:
@@ -967,9 +1009,10 @@ checks:
           bounds:
             x: 10
             y: 10
-            width: 40
-            height: 30
-        timestamp: 1782383419.2039816
+            width: 149
+            height: 34
+          contiguous: false
+        timestamp: 1784065617.4951153
     - tool: fill_selection
       success: true
       result:
@@ -978,7 +1021,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782383419.2060058
+        timestamp: 1784065617.5004587
     - tool: draw_line
       success: true
       result:
@@ -987,7 +1030,7 @@ checks:
         message: Drew line from (5,5) to (120,80)
         error: null
         data: null
-        timestamp: 1782383419.2092035
+        timestamp: 1784065617.5124674
     - tool: draw_brush_stroke
       success: true
       result:
@@ -996,7 +1039,7 @@ checks:
         message: Drew pencil stroke with 3 points
         error: null
         data: null
-        timestamp: 1782383419.2133634
+        timestamp: 1784065617.5196686
     - tool: draw_rectangle
       success: true
       result:
@@ -1005,7 +1048,7 @@ checks:
         message: Drew filled rectangle at (130,70) size 40x30
         error: null
         data: null
-        timestamp: 1782383419.2172813
+        timestamp: 1784065617.5255852
     - tool: draw_ellipse
       success: true
       result:
@@ -1014,7 +1057,7 @@ checks:
         message: Drew filled ellipse at (180,70) size 40x30
         error: null
         data: null
-        timestamp: 1782383419.2226882
+        timestamp: 1784065617.5356002
     - tool: draw_polygon
       success: true
       result:
@@ -1023,7 +1066,7 @@ checks:
         message: Drew filled polygon with 3 vertices
         error: null
         data: null
-        timestamp: 1782383419.228352
+        timestamp: 1784065617.5449054
     - tool: add_text
       success: true
       result:
@@ -1037,7 +1080,7 @@ checks:
           y: 140
           font: Sans
           size: 18
-        timestamp: 1782383419.3034565
+        timestamp: 1784065617.607752
     - tool: select_all
       success: true
       result:
@@ -1046,7 +1089,7 @@ checks:
         message: Selected all
         error: null
         data: null
-        timestamp: 1782383419.3039653
+        timestamp: 1784065617.608758
     - tool: edit_clear
       success: true
       result:
@@ -1055,7 +1098,7 @@ checks:
         message: Selection cleared
         error: null
         data: null
-        timestamp: 1782383419.3142517
+        timestamp: 1784065617.619224
     - tool: select_none
       success: true
       result:
@@ -1064,7 +1107,7 @@ checks:
         message: Selection cleared
         error: null
         data: null
-        timestamp: 1782383419.3149736
+        timestamp: 1784065617.6196938
     failed_tools: []
 - id: C-055-path-contract
   status: pass
@@ -1082,7 +1125,7 @@ checks:
           height: 160
           color_mode: rgb
           fill: white
-        timestamp: 1782383419.3308852
+        timestamp: 1784065617.639933
     - tool: create_layer
       success: true
       result:
@@ -1095,7 +1138,8 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383419.3356235
+          active: true
+        timestamp: 1784065617.6464074
     - tool: set_active_layer
       success: true
       result:
@@ -1105,7 +1149,7 @@ checks:
         error: null
         data:
           layer_name: path-contract
-        timestamp: 1782383419.3382049
+        timestamp: 1784065617.6535883
     - tool: set_foreground_color
       success: true
       result:
@@ -1115,7 +1159,7 @@ checks:
         error: null
         data:
           color: red
-        timestamp: 1782383419.3389754
+        timestamp: 1784065617.6541283
     - tool: create_path
       success: true
       result:
@@ -1127,7 +1171,7 @@ checks:
           name: triangle-path
           vertices: 3
           closed: true
-        timestamp: 1782383419.3410594
+        timestamp: 1784065617.6580963
     - tool: list_paths
       success: true
       result:
@@ -1141,7 +1185,7 @@ checks:
             name: triangle-path
             stroke_count: 1
           count: 1
-        timestamp: 1782383419.3418317
+        timestamp: 1784065617.6586986
     - tool: path_to_selection
       success: true
       result:
@@ -1151,7 +1195,7 @@ checks:
         error: null
         data:
           operation: replace
-        timestamp: 1782383419.3546944
+        timestamp: 1784065617.6713417
     - tool: fill_selection
       success: true
       result:
@@ -1160,7 +1204,7 @@ checks:
         message: Filled with foreground
         error: null
         data: null
-        timestamp: 1782383419.3581202
+        timestamp: 1784065617.6787715
     - tool: stroke_path
       success: true
       result:
@@ -1171,7 +1215,7 @@ checks:
         data:
           path_name: triangle-path
           path_index: null
-        timestamp: 1782383419.3616364
+        timestamp: 1784065617.6851106
     - tool: remove_path
       success: true
       result:
@@ -1181,7 +1225,7 @@ checks:
         error: null
         data:
           name: triangle-path
-        timestamp: 1782383419.3622007
+        timestamp: 1784065617.6864188
     - tool: list_paths
       success: true
       result:
@@ -1192,7 +1236,7 @@ checks:
         data:
           paths: []
           count: 0
-        timestamp: 1782383419.3625011
+        timestamp: 1784065617.687177
     failed_tools: []
 - id: C-060-export-bitmap-contract
   status: pass
@@ -1210,7 +1254,7 @@ checks:
           height: 90
           color_mode: rgb
           fill: white
-        timestamp: 1782383419.3741906
+        timestamp: 1784065617.704447
     - tool: draw_rectangle
       success: true
       result:
@@ -1219,7 +1263,7 @@ checks:
         message: Drew filled rectangle at (10,10) size 40x30
         error: null
         data: null
-        timestamp: 1782383419.3828769
+        timestamp: 1784065617.7143397
     - tool: get_image_bitmap
       success: true
       result:
@@ -1228,14 +1272,14 @@ checks:
         message: 'Image captured: 80x60 pixels'
         error: null
         data:
-          image_data: iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGGQoeE4QyhCYAAACRSURBVGje7dmxDYQwEEXBD7oAd0AI7dIkqUsgwjRA6JO4Y17oZDWWI+/QWsubGvOygIGBf7vPzdlxpNaeQ+Y50/RgcK1Z155D9j3L4kkDAwMDAwMDAwMDAwMDAwMDf6m7L55Ssm0ZO93FeaaU54AHqxZgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg4H/sAusWEb/SUzduAAAAAElFTkSuQmCC
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oHDhUuOWcb2dgAAACRSURBVGje7dmxDYQwEEXBD7oAd0AI7dIkqUsgwjRA6JO4Y17oZDWWI+/QWsubGvOygIGBf7vPzdlxpNaeQ+Y50/RgcK1Z155D9j3L4kkDAwMDAwMDAwMDAwMDAwMDf6m7L55Ssm0ZO93FeaaU54AHqxZgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg4H/sAusWEb/SUzduAAAAAElFTkSuQmCC
           format: png
           width: 80
           height: 60
           original_width: 120
           original_height: 90
           encoding: base64
-        timestamp: 1782383419.5456457
+        timestamp: 1784065617.881102
     - tool: get_image_bitmap
       success: true
       result:
@@ -1244,14 +1288,14 @@ checks:
         message: 'Image captured: 30x30 pixels'
         error: null
         data:
-          image_data: iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAIAAAC0Ujn1AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oGGQoeE4QyhCYAAAAwSURBVEjH7dAhDgAACMNARvj/l4fHT5C0cuLEZLsydcWCPs0dJL6GhoaGhoaG/k4vR/YDPbv2HgMAAAAASUVORK5CYII=
+          image_data: iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAIAAAC0Ujn1AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oHDhUuOv4SiGIAAAAwSURBVEjH7dAhDgAACMNARvj/l4fHT5C0cuLEZLsydcWCPs0dJL6GhoaGhoaG/k4vR/YDPbv2HgMAAAAASUVORK5CYII=
           format: png
           width: 30
           height: 30
           original_width: 120
           original_height: 90
           encoding: base64
-        timestamp: 1782383419.7013767
+        timestamp: 1784065618.0500777
     - tool: export_image
       success: true
       result:
@@ -1262,7 +1306,7 @@ checks:
         data:
           file_path: /tmp/gimp-mcp-compat.png
           format: png
-        timestamp: 1782383419.8566446
+        timestamp: 1784065618.2618108
     - tool: export_image
       success: true
       result:
@@ -1273,7 +1317,7 @@ checks:
         data:
           file_path: /tmp/gimp-mcp-compat.jpg
           format: jpeg
-        timestamp: 1782383420.049119
+        timestamp: 1784065618.549906
     failed_tools: []
 - id: C-070-transform-contract
   status: pass
@@ -1291,7 +1335,7 @@ checks:
           height: 140
           color_mode: rgb
           fill: white
-        timestamp: 1782383420.0593672
+        timestamp: 1784065618.5820954
     - tool: create_layer
       success: true
       result:
@@ -1304,7 +1348,8 @@ checks:
           opacity: 100.0
           blend_mode: normal
           position: 0
-        timestamp: 1782383420.0630054
+          active: true
+        timestamp: 1784065618.5934522
     - tool: set_active_layer
       success: true
       result:
@@ -1314,7 +1359,7 @@ checks:
         error: null
         data:
           layer_name: transform-layer
-        timestamp: 1782383420.0646963
+        timestamp: 1784065618.6079583
     - tool: scale_layer
       success: true
       result:
@@ -1325,7 +1370,7 @@ checks:
         data:
           width: 120
           height: 80
-        timestamp: 1782383420.1270673
+        timestamp: 1784065618.6823003
     - tool: offset_layer
       success: true
       result:
@@ -1336,7 +1381,7 @@ checks:
         data:
           offset_x: 5
           offset_y: 7
-        timestamp: 1782383420.1280627
+        timestamp: 1784065618.6868722
     - tool: rotate_layer
       success: true
       result:
@@ -1346,7 +1391,7 @@ checks:
         error: null
         data:
           angle_degrees: 10.0
-        timestamp: 1782383420.1335819
+        timestamp: 1784065618.695018
     - tool: flip_layer
       success: true
       result:
@@ -1356,7 +1401,7 @@ checks:
         error: null
         data:
           direction: horizontal
-        timestamp: 1782383420.1346972
+        timestamp: 1784065618.7008922
     - tool: scale_image
       success: true
       result:
@@ -1367,7 +1412,7 @@ checks:
         data:
           width: 160
           height: 120
-        timestamp: 1782383420.1400015
+        timestamp: 1784065618.71523
     - tool: rotate_image
       success: true
       result:
@@ -1377,7 +1422,7 @@ checks:
         error: null
         data:
           angle: 90
-        timestamp: 1782383420.158113
+        timestamp: 1784065618.7330902
     - tool: flip_image
       success: true
       result:
@@ -1387,7 +1432,7 @@ checks:
         error: null
         data:
           direction: vertical
-        timestamp: 1782383420.1626158
+        timestamp: 1784065618.7396543
     - tool: resize_canvas
       success: true
       result:
@@ -1400,7 +1445,7 @@ checks:
           height: 170
           offset_x: 10
           offset_y: 10
-        timestamp: 1782383420.1659977
+        timestamp: 1784065618.7531936
     - tool: select_rectangle
       success: true
       result:
@@ -1409,7 +1454,7 @@ checks:
         message: Selected rectangle (20,20) 80x60
         error: null
         data: null
-        timestamp: 1782383420.1670985
+        timestamp: 1784065618.7558534
     - tool: crop_to_selection
       success: true
       result:
@@ -1418,7 +1463,7 @@ checks:
         message: Image cropped to selection
         error: null
         data: null
-        timestamp: 1782383420.168763
+        timestamp: 1784065618.7641304
     - tool: crop_image
       success: true
       result:
@@ -1431,7 +1476,7 @@ checks:
           y: 0
           width: 50
           height: 40
-        timestamp: 1782383420.1700733
+        timestamp: 1784065618.7691257
     - tool: autocrop_image
       success: true
       result:
@@ -1440,7 +1485,7 @@ checks:
         message: Image auto-cropped
         error: null
         data: null
-        timestamp: 1782383420.1717772
+        timestamp: 1784065618.773198
     - tool: get_image_info
       success: true
       result:
@@ -1474,7 +1519,7 @@ checks:
               has_alpha: false
               blend_mode: '28'
           file: {}
-        timestamp: 1782383420.1727707
+        timestamp: 1784065618.773882
     failed_tools: []
 - id: C-080-color-contract
   status: pass
@@ -1492,7 +1537,7 @@ checks:
           height: 90
           color_mode: rgb
           fill: white
-        timestamp: 1782383420.1870837
+        timestamp: 1784065618.7957048
     - tool: draw_rectangle
       success: true
       result:
@@ -1501,7 +1546,7 @@ checks:
         message: Drew filled rectangle at (0,0) size 120x90
         error: null
         data: null
-        timestamp: 1782383420.193441
+        timestamp: 1784065618.8056607
     - tool: set_foreground_color
       success: true
       result:
@@ -1511,7 +1556,7 @@ checks:
         error: null
         data:
           color: green
-        timestamp: 1782383420.1940844
+        timestamp: 1784065618.806671
     - tool: set_background_color
       success: true
       result:
@@ -1521,7 +1566,7 @@ checks:
         error: null
         data:
           color: blue
-        timestamp: 1782383420.1949449
+        timestamp: 1784065618.8073971
     - tool: get_colors
       success: true
       result:
@@ -1540,7 +1585,7 @@ checks:
             g: 0.0
             b: 1.0
             a: 1.0
-        timestamp: 1782383420.21077
+        timestamp: 1784065618.8156292
     - tool: swap_colors
       success: true
       result:
@@ -1549,7 +1594,7 @@ checks:
         message: Foreground and background colors swapped
         error: null
         data: null
-        timestamp: 1782383420.211746
+        timestamp: 1784065618.8166492
     - tool: sample_color
       success: true
       result:
@@ -1562,7 +1607,7 @@ checks:
           g: 0.0
           b: 0.0
           a: 1.0
-        timestamp: 1782383420.2700303
+        timestamp: 1784065618.8725028
     - tool: adjust_brightness_contrast
       success: true
       result:
@@ -1573,7 +1618,7 @@ checks:
         data:
           brightness: 5
           contrast: 5
-        timestamp: 1782383420.273227
+        timestamp: 1784065618.876895
     - tool: adjust_hue_saturation
       success: true
       result:
@@ -1585,7 +1630,7 @@ checks:
           hue: 5.0
           saturation: 5.0
           lightness: 0.0
-        timestamp: 1782383420.316935
+        timestamp: 1784065618.9228718
     - tool: adjust_levels
       success: true
       result:
@@ -1600,7 +1645,7 @@ checks:
           gamma: 1.0
           output_low: 0
           output_high: 255
-        timestamp: 1782383420.3203464
+        timestamp: 1784065618.9263575
     - tool: adjust_curves
       success: true
       result:
@@ -1611,7 +1656,7 @@ checks:
         data:
           channel: value
           num_points: 3
-        timestamp: 1782383420.3485422
+        timestamp: 1784065618.955843
     - tool: desaturate
       success: true
       result:
@@ -1621,7 +1666,7 @@ checks:
         error: null
         data:
           method: luminosity
-        timestamp: 1782383420.4137352
+        timestamp: 1784065619.0210962
     - tool: invert_colors
       success: true
       result:
@@ -1630,7 +1675,7 @@ checks:
         message: Colors inverted
         error: null
         data: null
-        timestamp: 1782383420.417128
+        timestamp: 1784065619.024832
     - tool: apply_threshold
       success: true
       result:
@@ -1641,7 +1686,7 @@ checks:
         data:
           low: 64
           high: 255
-        timestamp: 1782383420.4195
+        timestamp: 1784065619.0284317
     - tool: posterize
       success: true
       result:
@@ -1651,7 +1696,7 @@ checks:
         error: null
         data:
           levels: 4
-        timestamp: 1782383420.4218633
+        timestamp: 1784065619.032051
     - tool: color_to_alpha
       success: true
       result:
@@ -1661,7 +1706,7 @@ checks:
         error: null
         data:
           color: white
-        timestamp: 1782383420.4274392
+        timestamp: 1784065619.0470443
     - tool: auto_white_balance
       success: true
       result:
@@ -1670,7 +1715,7 @@ checks:
         message: Auto white balance applied
         error: null
         data: null
-        timestamp: 1782383420.4315515
+        timestamp: 1784065619.0543945
     failed_tools: []
 - id: C-090-filter-contract
   status: pass
@@ -1688,7 +1733,7 @@ checks:
           height: 100
           color_mode: rgb
           fill: white
-        timestamp: 1782383420.444684
+        timestamp: 1784065619.0835438
     - tool: draw_rectangle
       success: true
       result:
@@ -1697,7 +1742,7 @@ checks:
         message: Drew filled rectangle at (10,10) size 80x60
         error: null
         data: null
-        timestamp: 1782383420.4546642
+        timestamp: 1784065619.1031053
     - tool: apply_gaussian_blur
       success: true
       result:
@@ -1708,7 +1753,7 @@ checks:
         data:
           radius_x: 1.0
           radius_y: 1.0
-        timestamp: 1782383420.5234709
+        timestamp: 1784065619.1744695
     - tool: apply_unsharp_mask
       success: true
       result:
@@ -1720,7 +1765,7 @@ checks:
           amount: 0.2
           radius: 1.0
           threshold: 0.0
-        timestamp: 1782383420.5315032
+        timestamp: 1784065619.1846287
     - tool: apply_pixelize
       success: true
       result:
@@ -1731,7 +1776,7 @@ checks:
         data:
           block_width: 4
           block_height: 4
-        timestamp: 1782383420.546202
+        timestamp: 1784065619.2040546
     - tool: apply_edge_detect
       success: true
       result:
@@ -1742,7 +1787,7 @@ checks:
         data:
           method: sobel
           amount: 1.0
-        timestamp: 1782383420.580357
+        timestamp: 1784065619.2481163
     - tool: apply_emboss
       success: true
       result:
@@ -1751,7 +1796,7 @@ checks:
         message: Emboss applied (azimuth=315.0°, depth=1)
         error: null
         data: null
-        timestamp: 1782383420.609934
+        timestamp: 1784065619.313917
     - tool: apply_noise
       success: true
       result:
@@ -1761,7 +1806,7 @@ checks:
         error: null
         data:
           amount: 0.05
-        timestamp: 1782383420.62499
+        timestamp: 1784065619.331276
     - tool: apply_median
       success: true
       result:
@@ -1771,7 +1816,7 @@ checks:
         error: null
         data:
           radius: 1
-        timestamp: 1782383420.6355348
+        timestamp: 1784065619.3499506
     - tool: apply_drop_shadow
       success: true
       result:
@@ -1785,7 +1830,7 @@ checks:
           blur_radius: 2.0
           color: black
           opacity: 0.5
-        timestamp: 1782383420.6580005
+        timestamp: 1784065619.3859558
     failed_tools: []
 - id: C-100-pdb-contract
   status: pass
@@ -1813,7 +1858,7 @@ checks:
             - file-png-export
             - file-png-load
             - file-apng-load
-          timestamp: 1782383420.6649103
+          timestamp: 1784065619.3926818
       - tool: execute_python
         success: true
         result:
@@ -1823,12 +1868,12 @@ checks:
           error: null
           data:
             outputs:
-            - ''
             - '42
 
               '
             lines_executed: 2
-          timestamp: 1782383420.6658733
+            script_executed: true
+          timestamp: 1784065619.3936074
       - tool: execute_python
         success: true
         result:
@@ -1842,7 +1887,8 @@ checks:
 
               '
             lines_executed: 1
-          timestamp: 1782383420.6666167
+            script_executed: true
+          timestamp: 1784065619.3944373
       failed_tools: []
 - id: C-110-history-contract
   status: pass
@@ -1860,7 +1906,7 @@ checks:
           height: 90
           color_mode: rgb
           fill: white
-        timestamp: 1782383420.6882205
+        timestamp: 1784065619.4227538
     - tool: begin_undo_group
       success: true
       result:
@@ -1870,7 +1916,9 @@ checks:
         error: null
         data:
           name: compat-history
-        timestamp: 1782383420.692183
+          group_id: undo-a05de7224a83
+          open_group_count: 1
+        timestamp: 1784065619.424651
     - tool: draw_line
       success: true
       result:
@@ -1879,7 +1927,7 @@ checks:
         message: Drew line from (5,5) to (90,70)
         error: null
         data: null
-        timestamp: 1782383420.697796
+        timestamp: 1784065619.441708
     - tool: end_undo_group
       success: true
       result:
@@ -1887,8 +1935,12 @@ checks:
         operation: end_undo_group
         message: Undo group ended
         error: null
-        data: null
-        timestamp: 1782383420.6991787
+        data:
+          group_id: null
+          closed_group_ids: []
+          closed_count: 1
+          open_group_count: 1
+        timestamp: 1784065619.443417
     - tool: undo
       success: false
       result:
@@ -1903,7 +1955,7 @@ checks:
           capability: programmatic image undo
           procedure: gimp-image-undo
           recommendation: Use Ctrl+Z in GIMP directly or group changes with begin_undo_group/end_undo_group.
-        timestamp: 1782383420.7014716
+        timestamp: 1784065619.4464607
     - tool: redo
       success: false
       result:
@@ -1919,7 +1971,7 @@ checks:
           procedure: gimp-image-redo
           recommendation: Use Ctrl+Y in GIMP directly after verifying the active image
             state.
-        timestamp: 1782383420.7028716
+        timestamp: 1784065619.448774
     failed_tools: []
     accepted_optional_failures:
     - tool: undo
@@ -1950,7 +2002,7 @@ checks:
         message: null
         error: Layer 'does-not-exist' not found
         data: null
-        timestamp: 1782383420.7052858
+        timestamp: 1784065619.452018
     - tool: rotate_image
       success: false
       result:
@@ -1959,7 +2011,7 @@ checks:
         message: null
         error: angle must be 90, 180, or 270 (got 13)
         data: null
-        timestamp: 1782383420.7053113
+        timestamp: 1784065619.4520495
 - id: C-130-docs-contract
   status: pass
   evidence:
@@ -1998,34 +2050,40 @@ checks:
       asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None,
       asyncio_default_test_loop_scope=function
 
-      collected 583 items
+      collected 848 items
 
 
       tests/test_324_static_verification.py .........                          [  1%]
 
-      tests/test_agent_transaction_tools.py ......                             [  2%]
+      tests/test_agent_transaction_tools.py ..........                         [  2%]
 
-      tests/test_asset_context_tools.py ....                                   [  3%]
+      tests/test_asset_context_tools.py ....                                   [  2%]
 
-      tests/test_async_bridge.py ..                                            [  3%]
+      tests/test_async_bridge.py ..                                            [  2%]
 
-      tests/test_async_bridge_native.py .......                                [  4%]
+      tests/test_async_bridge_native.py .............                          [  4%]
 
-      tests/test_async_inspect_tools.py ...                                    [  5%]
+      tests/test_async_inspect_tools.py ........                               [  5%]
 
-      tests/test_async_tool_registry.py ............                           [  7%]
+      tests/test_async_tool_registry.py ............                           [  6%]
+
+      tests/test_big_remaining_feature_chunk.py ......                         [  7%]
 
       tests/test_bridge.py .........                                           [  8%]
 
       tests/test_bridge_enhanced.py ....                                       [  9%]
 
-      tests/test_ci_workflow.py ....                                           [ 10%]
+      tests/test_ci_workflow.py ....                                           [  9%]
 
-      tests/test_cli.py ..........                                             [ 12%]
+      tests/test_cli.py ..........                                             [ 10%]
 
-      tests/test_color_resource_tools.py ..                                    [ 12%]
+      tests/test_color_lifecycle_tools.py ...........                          [ 12%]
 
-      tests/test_compat_contract.py .........                                  [ 13%]
+      tests/test_color_resource_tools.py .......                               [ 12%]
+
+      tests/test_color_tool_group_review.py ....                               [ 13%]
+
+      tests/test_compat_contract.py .........                                  [ 14%]
 
       tests/test_config.py .......                                             [ 15%]
 
@@ -2033,201 +2091,215 @@ checks:
 
       tests/test_context_geometry_tools.py ....                                [ 16%]
 
-      tests/test_docs.py ..........                                            [ 18%]
+      tests/test_docs.py ...........                                           [ 17%]
 
-      tests/test_docs_pdf.py .                                                 [ 18%]
+      tests/test_docs_pdf.py .                                                 [ 17%]
 
-      tests/test_features_roadmap.py .......                                   [ 19%]
+      tests/test_drawing_lifecycle_tools.py ..........                         [ 18%]
 
-      tests/test_flow_cli.py ....                                              [ 20%]
+      tests/test_edit_safety_tools.py ......                                   [ 19%]
 
-      tests/test_flow_models.py ........                                       [ 21%]
+      tests/test_export_annotation_version_tools.py ....                       [ 19%]
 
-      tests/test_flow_runner.py .......                                        [ 22%]
+      tests/test_features_roadmap.py .......                                   [ 20%]
 
-      tests/test_flow_store.py .....                                           [ 23%]
+      tests/test_filter_lifecycle_tools.py ........                            [ 21%]
 
-      tests/test_flow_tools.py ...                                             [ 24%]
+      tests/test_flow_cli.py ....                                              [ 22%]
 
-      tests/test_gimp_dev_integration.py .........                             [ 25%]
+      tests/test_flow_models.py ........                                       [ 22%]
 
-      tests/test_guide_grid_tools.py ..                                        [ 25%]
+      tests/test_flow_runner.py ...........                                    [ 24%]
 
-      tests/test_layer_group_channel_tools.py .....                            [ 26%]
+      tests/test_flow_store.py .....                                           [ 24%]
 
-      tests/test_layer_report_export_checklist_tools.py ...                    [ 27%]
+      tests/test_flow_tools.py ...                                             [ 25%]
 
-      tests/test_live_spawn_setup.py ...................                       [ 30%]
+      tests/test_gimp_dev_integration.py .........                             [ 26%]
 
-      tests/test_macro_tools.py ....                                           [ 31%]
+      tests/test_groups_followup_tools.py .............                        [ 27%]
 
-      tests/test_models/test_common.py ......................                  [ 34%]
+      tests/test_groups_review.py ...                                          [ 28%]
 
-      tests/test_motion_blur_tools.py ..                                       [ 35%]
+      tests/test_guide_grid_tools.py ..                                        [ 28%]
 
-      tests/test_perspective_shear_tools.py ..                                 [ 35%]
+      tests/test_image_lifecycle_tools.py .......                              [ 29%]
 
-      tests/test_phase2.py ......................................              [ 42%]
+      tests/test_inspect_backend_split.py ..                                   [ 29%]
 
-      tests/test_project_script.py ....                                        [ 42%]
+      tests/test_install_gimp_plugin_script.py ......                          [ 30%]
 
-      tests/test_remaining_feature_tools.py ......                             [ 43%]
+      tests/test_layer_group_channel_tools.py .....                            [ 30%]
 
-      tests/test_sample_pixels_tools.py ...                                    [ 44%]
+      tests/test_layer_lifecycle_tools.py .............                        [ 32%]
 
-      tests/test_server.py ..                                                  [ 44%]
+      tests/test_layer_report_export_checklist_tools.py ...                    [ 32%]
 
-      tests/test_snapshot_assertion_tools.py ....                              [ 45%]
+      tests/test_live_spawn_setup.py ......................                    [ 35%]
 
-      tests/test_stroke_bucket_selection_tools.py .......                      [ 46%]
+      tests/test_macro_tools.py ......                                         [ 35%]
 
-      tests/test_tool_generated_code_paths.py ................................ [ 52%]
+      tests/test_models/test_common.py ......................                  [ 38%]
 
-      ........................................................................ [ 64%]
+      tests/test_motion_blur_tools.py ..                                       [ 38%]
 
-      .......................................................                  [ 73%]
+      tests/test_native_backend_architecture.py ........                       [ 39%]
 
-      tests/test_tool_invocation_matrix.py ................................... [ 79%]
+      tests/test_native_backend_split.py ...                                   [ 40%]
 
-      ........................................................................ [ 92%]
+      tests/test_pdb_gegl_native_tools.py ....                                 [ 40%]
 
-      .............................................                            [100%]
+      tests/test_perspective_shear_tools.py ..                                 [ 40%]
+
+      tests/test_phase2.py ......................................              [ 45%]
+
+      tests/test_project_script.py ....                                        [ 45%]
+
+      tests/test_promoted_roadmap_native_backends.py ................          [ 47%]
+
+      tests/test_remaining_feature_tools.py ........                           [ 48%]
+
+      tests/test_roadmap_tool_review.py .....                                  [ 49%]
+
+      tests/test_sample_pixels_tools.py ......                                 [ 49%]
+
+      tests/test_selection_lifecycle_tools.py ........                         [ 50%]
+
+      tests/test_server.py ...                                                 [ 51%]
+
+      tests/test_snapshot_assertion_tools.py ....                              [ 51%]
+
+      tests/test_stroke_bucket_selection_tools.py .......                      [ 52%]
+
+      tests/test_tool_category_risk_review.py ...                              [ 52%]
+
+      tests/test_tool_generated_code_paths.py ................................ [ 56%]
+
+      ........................................................................ [ 65%]
+
+      ........................................................................ [ 73%]
+
+      ....................                                                     [ 75%]
+
+      tests/test_tool_invocation_matrix.py ................................... [ 80%]
+
+      ........................................................................ [ 88%]
+
+      ........................................................................ [ 97%]
+
+      ...........                                                              [ 98%]
+
+      tests/test_transform_lifecycle_tools.py ..............                   [100%]
 
 
-      ============================= 583 passed in 49.29s =============================
+      ============================= 848 passed in 20.58s =============================
 
       '
 - id: S-030-quality-gate
   status: pass
   evidence:
     command: uv run python scripts/project.py check
-    output: '+ uv run python scripts/docs.py audit
+    output: '                            [ 16%]
 
-      tool docstring audit ok
+      tests/test_docs.py ...........                                           [ 17%]
 
-      + uv run ruff format --check .
+      tests/test_docs_pdf.py .                                                 [ 17%]
 
-      94 files already formatted
+      tests/test_drawing_lifecycle_tools.py ..........                         [ 18%]
 
-      + uv run ruff check .
+      tests/test_edit_safety_tools.py ......                                   [ 19%]
 
-      All checks passed!
+      tests/test_export_annotation_version_tools.py ....                       [ 19%]
 
-      + uv run mypy
+      tests/test_features_roadmap.py .......                                   [ 20%]
 
-      Success: no issues found in 42 source files
+      tests/test_filter_lifecycle_tools.py ........                            [ 21%]
 
-      + uv run pytest
+      tests/test_flow_cli.py ....                                              [ 22%]
 
-      ============================= test session starts ==============================
+      tests/test_flow_models.py ........                                       [ 22%]
 
-      platform linux -- Python 3.13.11, pytest-9.1.1, pluggy-1.6.0
+      tests/test_flow_runner.py ...........                                    [ 24%]
 
-      rootdir: /home/user/code/gimp-mcp
+      tests/test_flow_store.py .....                                           [ 24%]
 
-      configfile: pyproject.toml
+      tests/test_flow_tools.py ...                                             [ 25%]
 
-      testpaths: tests
+      tests/test_gimp_dev_integration.py .........                             [ 26%]
 
-      plugins: asyncio-1.4.0, anyio-4.14.1, cov-7.1.0
+      tests/test_groups_followup_tools.py .............                        [ 27%]
 
-      asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None,
-      asyncio_default_test_loop_scope=function
+      tests/test_groups_review.py ...                                          [ 28%]
 
-      collected 583 items
+      tests/test_guide_grid_tools.py ..                                        [ 28%]
 
+      tests/test_image_lifecycle_tools.py .......                              [ 29%]
 
-      tests/test_324_static_verification.py .........                          [  1%]
+      tests/test_inspect_backend_split.py ..                                   [ 29%]
 
-      tests/test_agent_transaction_tools.py ......                             [  2%]
+      tests/test_install_gimp_plugin_script.py ......                          [ 30%]
 
-      tests/test_asset_context_tools.py ....                                   [  3%]
+      tests/test_layer_group_channel_tools.py .....                            [ 30%]
 
-      tests/test_async_bridge.py ..                                            [  3%]
+      tests/test_layer_lifecycle_tools.py .............                        [ 32%]
 
-      tests/test_async_bridge_native.py .......                                [  4%]
+      tests/test_layer_report_export_checklist_tools.py ...                    [ 32%]
 
-      tests/test_async_inspect_tools.py ...                                    [  5%]
+      tests/test_live_spawn_setup.py ......................                    [ 35%]
 
-      tests/test_async_tool_registry.py ............                           [  7%]
+      tests/test_macro_tools.py ......                                         [ 35%]
 
-      tests/test_bridge.py .........                                           [  8%]
+      tests/test_models/test_common.py ......................                  [ 38%]
 
-      tests/test_bridge_enhanced.py ....                                       [  9%]
+      tests/test_motion_blur_tools.py ..                                       [ 38%]
 
-      tests/test_ci_workflow.py ....                                           [ 10%]
+      tests/test_native_backend_architecture.py ........                       [ 39%]
 
-      tests/test_cli.py ..........                                             [ 12%]
+      tests/test_native_backend_split.py ...                                   [ 40%]
 
-      tests/test_color_resource_tools.py ..                                    [ 12%]
+      tests/test_pdb_gegl_native_tools.py ....                                 [ 40%]
 
-      tests/test_compat_contract.py .........                                  [ 13%]
+      tests/test_perspective_shear_tools.py ..                                 [ 40%]
 
-      tests/test_config.py .......                                             [ 15%]
+      tests/test_phase2.py ......................................              [ 45%]
 
-      tests/test_content_text_inspect_tools.py ...                             [ 15%]
+      tests/test_project_script.py ....                                        [ 45%]
 
-      tests/test_context_geometry_tools.py ....                                [ 16%]
+      tests/test_promoted_roadmap_native_backends.py ................          [ 47%]
 
-      tests/test_docs.py ..........                                            [ 18%]
+      tests/test_remaining_feature_tools.py ........                           [ 48%]
 
-      tests/test_docs_pdf.py .                                                 [ 18%]
+      tests/test_roadmap_tool_review.py .....                                  [ 49%]
 
-      tests/test_features_roadmap.py .......                                   [ 19%]
+      tests/test_sample_pixels_tools.py ......                                 [ 49%]
 
-      tests/test_flow_cli.py ....                                              [ 20%]
+      tests/test_selection_lifecycle_tools.py ........                         [ 50%]
 
-      tests/test_flow_models.py ........                                       [ 21%]
+      tests/test_server.py ...                                                 [ 51%]
 
-      tests/test_flow_runner.py .......                                        [ 22%]
+      tests/test_snapshot_assertion_tools.py ....                              [ 51%]
 
-      tests/test_flow_store.py .....                                           [ 23%]
+      tests/test_stroke_bucket_selection_tools.py .......                      [ 52%]
 
-      tests/test_flow_tools.py ...                                             [ 24%]
+      tests/test_tool_category_risk_review.py ...                              [ 52%]
 
-      tests/test_gimp_dev_integration.py .........                             [ 25%]
+      tests/test_tool_generated_code_paths.py ................................ [ 56%]
 
-      tests/test_guide_grid_tools.py ..                                        [ 25%]
+      ........................................................................ [ 65%]
 
-      tests/test_layer_group_channel_tools.py .....                            [ 26%]
+      ........................................................................ [ 73%]
 
-      tests/test_layer_report_export_checklist_tools.py ...                    [ 27%]
+      ....................                                                     [ 75%]
 
-      tests/test_live_spawn_setup.py ...................                       [ 30%]
+      tests/test_tool_invocation_matrix.py ................................... [ 80%]
 
-      tests/test_macro_tools.py ....                                           [ 31%]
+      ........................................................................ [ 88%]
 
-      tests/test_models/test_common.py ......................                  [ 34%]
+      ........................................................................ [ 97%]
 
-      tests/test_motion_blur_tools.py ..                                       [ 35%]
+      ...........                                                              [ 98%]
 
-      tests/test_perspective_shear_tools.py ..                                 [ 35%]
-
-      tests/test_phase2.py ......................................              [ 42%]
-
-      tests/test_project_script.py ....                                        [ 42%]
-
-      tests/test_remaining_feature_tools.py ......                             [ 43%]
-
-      tests/test_sample_pixels_tools.py ...                                    [ 44%]
-
-      tests/test_server.py ..                                                  [ 44%]
-
-      tests/test_snapshot_assertion_tools.py ....                              [ 45%]
-
-      tests/test_stroke_bucket_selection_tools.py .......                      [ 46%]
-
-      tests/test_tool_generated_code_paths.py ................................ [ 52%]
-
-      ........................................................................ [ 64%]
-
-      .......................................................                  [ 73%]
-
-      tests/test_tool_invocation_matrix.py ................................... [ 79%]
-
-      ........................................................................ [ 92%]
-
-      .............................................                            [100%]
+      tests/test_transform_lifecycle_tools.py ..............                   [100%]
 
 
       ================================ tests coverage ================================
@@ -2235,135 +2307,160 @@ checks:
       _______________ coverage: platform linux, python 3.13.11-final-0 _______________
 
 
-      Name                                        Stmts   Miss Branch BrPart  Cover   Missing
+      Name                                                 Stmts   Miss Branch BrPart  Cover   Missing
 
-      ---------------------------------------------------------------------------------------
+      ------------------------------------------------------------------------------------------------
 
-      src/gimp_mcp_pro/async_bridge.py              163     33     32      5    76%   84,
-      112, 183-184, 188-189, 208, 224, 237, 242-244, 248-249, 265, 285, 307-314, 318,
-      322, 335, 343, 351, 360, 364, 368, 372
+      src/gimp_mcp_pro/async_bridge.py                       200     44     50      9    74%   86,
+      92-99, 113-114, 206-208, 212-214, 218->220, 222->224, 241, 261, 265, 274, 279-281,
+      287-288, 314, 334, 356-363, 367, 371, 384, 392, 400, 409, 413, 417, 421
 
-      src/gimp_mcp_pro/bridge.py                    173     29     30      4    80%   107,
+      src/gimp_mcp_pro/bridge.py                             173     29     30      4    80%   107,
       148, 206-207, 266, 282, 291, 295, 299, 315, 332-339, 347, 351, 411-416, 423-424,
       435
 
-      src/gimp_mcp_pro/cli.py                       230     53     38      5    75%   26,
+      src/gimp_mcp_pro/cli.py                                230     53     38      5    75%   26,
       44, 180-182, 185, 212, 242-244, 255-257, 269, 285-286, 295-297, 304-343
 
-      src/gimp_mcp_pro/config.py                     59      5     14      5    86%   124,
+      src/gimp_mcp_pro/config.py                              59      5     14      5    86%   124,
       126, 130, 138, 155
 
-      src/gimp_mcp_pro/flows/models.py               89      1     24      2    97%   99,
+      src/gimp_mcp_pro/flows/models.py                        89      1     24      2    97%   99,
       143->146
 
-      src/gimp_mcp_pro/flows/operations.py           39      2      4      1    93%   66-68
+      src/gimp_mcp_pro/flows/operations.py                    39      2      4      1    93%   66-68
 
-      src/gimp_mcp_pro/flows/runner.py              128     16     60      5    85%   38->27,
-      54, 84-85, 136-139, 156->exit, 179-188
+      src/gimp_mcp_pro/flows/runner.py                       180     30     76     10    80%   39->28,
+      55, 99-100, 120, 138, 157, 173-176, 204-206, 211-212, 220-225, 247-256, 269-270
 
-      src/gimp_mcp_pro/flows/store.py                49      2     12      2    93%   52,
+      src/gimp_mcp_pro/flows/store.py                         49      2     12      2    93%   52,
       70
 
-      src/gimp_mcp_pro/gimp_dev_integration.py      137      7     38     11    90%   106->108,
+      src/gimp_mcp_pro/gimp_dev_integration.py               137      7     38     11    90%   106->108,
       205->207, 220, 253, 257->260, 263, 266->268, 270, 273, 315, 324
 
-      src/gimp_mcp_pro/models/common.py             121      0     20      2    99%   302->304,
+      src/gimp_mcp_pro/models/common.py                      121      0     20      2    99%   302->304,
       304->306
 
-      src/gimp_mcp_pro/models/drawing.py             68      2      8      2    95%   106,
+      src/gimp_mcp_pro/models/drawing.py                      68      2      8      2    95%   106,
       108
 
-      src/gimp_mcp_pro/models/selection.py           43      2      4      2    91%   76,
+      src/gimp_mcp_pro/models/selection.py                    43      2      4      2    91%   76,
       78
 
-      src/gimp_mcp_pro/server.py                     80      9     10      5    84%   41,
-      103, 123, 142, 152, 162-166
+      src/gimp_mcp_pro/server.py                              88      9     10      5    86%   44,
+      115, 135, 154, 164, 174-178
 
-      src/gimp_mcp_pro/tools/agent_tools.py          66      9     18      5    83%   68,
-      76, 79, 82, 206-207, 225, 268-269
+      src/gimp_mcp_pro/tools/agent_tools.py                  101     10     32      6    88%   70,
+      78, 81, 84, 147, 270-271, 356, 385-386
 
-      src/gimp_mcp_pro/tools/color_tools.py         410     64     96     34    81%   65,
-      67, 91-93, 269->268, 272-273, 274->268, 276, 323->327, 396->403, 403->410, 410->417,
-      418, 422->424, 424->426, 426->428, 428->431, 524-525, 595-596, 658-659, 686,
-      712-713, 756-757, 784-785, 819-820, 851-852, 894-895, 923-924, 950, 951->947,
-      954, 971-972, 1004-1005, 1034, 1039, 1065-1066, 1134->1133, 1146-1147, 1181->1188,
-      1182->1181, 1186-1187, 1193-1194, 1213-1214, 1240, 1244->1257, 1248-1249, 1253,
-      1267->1276, 1268->1267, 1271-1272, 1273->1267, 1284-1285, 1321-1322, 1340->1339,
-      1345->1339, 1359-1360, 1402->1409, 1403->1402, 1407-1408, 1414-1415
+      src/gimp_mcp_pro/tools/color_backend.py                146      7     62     20    87%   126,
+      128, 155-157, 333->332, 338->332, 387->391, 416, 494->500, 500->506, 506->512,
+      512->514, 514->517, 518->520, 520->522, 522->524, 525, 529->531, 531->533, 533->537,
+      537->542
 
-      src/gimp_mcp_pro/tools/drawing_tools.py       235     49     64     16    77%   40-50,
-      99-100, 125-126, 172-173, 211-212, 239, 246-247, 255, 267-268, 310, 381-382,
-      415-416, 425, 442-443, 512-513, 552, 557, 561, 566->572, 569-570, 572->579,
-      575-576, 598-599, 632, 637, 646, 655-656, 678, 688->691, 716-717, 742-743
+      src/gimp_mcp_pro/tools/color_tools.py                  352     67     54     21    78%   108-109,
+      180-181, 244-245, 272, 297-298, 340-341, 367-368, 403-404, 434-435, 500-501,
+      530-531, 579-580, 607-608, 634, 635->631, 638, 655-656, 688-689, 718, 723, 749-750,
+      782, 798-799, 867->866, 879-880, 914->921, 915->914, 919-920, 926-927, 946-947,
+      973, 977->990, 981-982, 986, 1000->1009, 1001->1000, 1004-1005, 1006->1000,
+      1017-1018, 1043, 1061-1062, 1088, 1093, 1110-1111, 1179-1180, 1207-1208, 1230,
+      1235
 
-      src/gimp_mcp_pro/tools/filter_tools.py        164     30     24      5    81%   123-126,
-      132-134, 170, 196-197, 286-292, 320-321, 363-364, 405-406, 432-433, 447-448,
-      487-488, 524-525, 559-560, 617-618
+      src/gimp_mcp_pro/tools/drawing_tools.py                243     48     46     13    78%   40-50,
+      238-239, 264-265, 327-328, 391-392, 419, 472-473, 566-567, 618-619, 640, 648-649,
+      654, 666-667, 768-769, 808, 813, 817, 823->829, 826-827, 829->836, 832-833,
+      892-893, 926, 931, 940, 949-950, 972, 982->985, 1010-1011, 1036-1037
 
-      src/gimp_mcp_pro/tools/flow_tools.py          202     33     62     13    83%   60,
-      64, 120, 126, 130, 149, 155-158, 196-197, 239-240, 268-269, 286, 295-296, 314-315,
-      332-333, 350-351, 374, 384, 390-391, 418-419, 449, 459, 498-499
+      src/gimp_mcp_pro/tools/filter_tools.py                 222     50     38      8    76%   72-76,
+      84-109, 218-221, 227-229, 316, 342-343, 372, 389-390, 481-487, 515-516, 558-559,
+      600-601, 627-628, 642-643, 682-683, 719-720, 754-755, 812-813, 834, 875
 
-      src/gimp_mcp_pro/tools/gimp_dev_tools.py       25      0      2      1    96%   73->75
+      src/gimp_mcp_pro/tools/flow_tools.py                   216     35     72     16    82%   60,
+      64, 120, 126, 130, 149, 155, 161-164, 202-203, 245-246, 274-275, 292, 301-302,
+      320-321, 338-339, 356-357, 380, 390, 396-397, 424-425, 459, 469, 477->490, 501,
+      542-543
 
-      src/gimp_mcp_pro/tools/history_tools.py        81     12     14      3    82%   32,
-      108-109, 132->137, 137->139, 225-235, 268-269, 293-294
+      src/gimp_mcp_pro/tools/gimp_dev_tools.py                25      0      2      1    96%   73->75
 
-      src/gimp_mcp_pro/tools/image_tools.py         143     25     18      6    78%   68-71,
-      138-139, 165-166, 195->194, 206-207, 266-267, 309->317, 310->309, 314-315, 322-323,
-      351, 405-418, 431-432, 460-461, 486-487
+      src/gimp_mcp_pro/tools/history_tools.py                 97     13     22      4    84%   32,
+      130-131, 154->159, 159->161, 247-257, 292-293, 335, 346-347
 
-      src/gimp_mcp_pro/tools/inspect_tools.py       441     74    138     37    79%   21,
-      23, 26, 29-30, 31->24, 33, 274, 277, 283, 295, 303-304, 317, 320, 323-324, 351,
-      354->356, 357->344, 406, 412, 415-418, 489->495, 492->495, 507-520, 598-604,
-      976-977, 1007, 1023-1024, 1057-1058, 1105-1106, 1139, 1162-1163, 1197-1198,
-      1225, 1230, 1246-1247, 1278, 1283, 1323, 1335, 1346, 1365-1366, 1398-1399, 1443,
-      1445, 1454-1455, 1490-1491, 1527, 1538, 1549, 1569-1570, 1603->1605, 1605->1608,
-      1684-1685
+      src/gimp_mcp_pro/tools/image_tools.py                  229     35     46     14    81%   31,
+      33, 75, 122-125, 219-220, 246-247, 276->275, 287-288, 355-356, 378, 388, 408-409,
+      453->461, 454->453, 458-459, 466-467, 495, 533, 619-620, 682, 691, 724-725,
+      761-762, 804-805, 907
 
-      src/gimp_mcp_pro/tools/layer_tools.py         281     54     64     19    78%   71,
-      91-98, 218->225, 219->218, 223-224, 230-231, 266->265, 273-274, 291, 306-307,
-      326, 341-342, 372-373, 397-399, 416-417, 452-453, 480-481, 501-502, 518->517,
-      525-526, 557->556, 568-569, 599->601, 601->603, 603->605, 613-614, 645-646,
-      667, 690->689, 702-703, 726, 731, 754-755, 785->784, 796-797, 824->823, 831-832,
-      854-855, 877-878, 907-908
+      src/gimp_mcp_pro/tools/inspect_bitmap_backend.py        98     19     42     12    78%   20,
+      22, 25, 28-29, 30->23, 32, 141, 157-158, 192, 203, 214, 234-235, 270, 286, 296,
+      369-370
 
-      src/gimp_mcp_pro/tools/path_tools.py          101     22     30     11    73%   32-39,
-      51, 56, 112->111, 119-120, 145->152, 146->145, 150-151, 157-158, 178-179, 194-195,
-      220, 224->230, 227-228, 232->234, 234->236, 247-248, 274->273, 281-282
+      src/gimp_mcp_pro/tools/inspect_context_backend.py      104     16     24      7    82%   23,
+      25, 28, 31-32, 33->26, 35, 289-290, 324-325, 369, 371, 380-381, 416-417
 
-      src/gimp_mcp_pro/tools/pdb_tools.py            35      0      6      1    98%   64->63
+      src/gimp_mcp_pro/tools/inspect_geometry_backend.py     120     22     26      8    78%   23,
+      25, 28, 31-32, 33->26, 35, 46-52, 413, 429-430, 463-464, 511-512, 545, 568-569,
+      603-604
 
-      src/gimp_mcp_pro/tools/selection_tools.py     195     43     44     18    74%   95,
-      104-105, 140, 149-150, 168-169, 193-194, 214-215, 269->268, 280-281, 294, 310-311,
-      324, 340-341, 362, 366->374, 369-370, 381-383, 388, 399->401, 401->403, 414-415,
-      442, 446->452, 449-450, 459, 464, 475->477, 497-498, 537->536, 546-547, 553-554,
-      577-578, 601-602
+      src/gimp_mcp_pro/tools/inspect_snapshot_backend.py     203     37     84     25    76%   21,
+      23, 26, 29-30, 31->24, 33, 45, 48, 54, 66, 74-75, 88, 91, 94-95, 122, 125->127,
+      128->115, 177, 183, 186-189, 260->266, 263->266, 278-291, 331, 336, 376, 388,
+      399, 418-419
 
-      src/gimp_mcp_pro/tools/target_tools.py         72     17     24     10    72%   20,
-      22, 25, 28-29, 30->23, 32, 39, 43, 197-198, 205, 215-216, 245, 254, 264-265
+      src/gimp_mcp_pro/tools/layer_tools.py                  441     85    106     33    78%   74,
+      94-101, 247->254, 248->247, 252-253, 259-260, 314->313, 321-322, 339, 357-358,
+      377, 410-411, 441-442, 485-486, 506-508, 525-526, 588-589, 634-635, 674->673,
+      681-682, 709, 724->723, 731-732, 755, 760, 805->804, 812-813, 847->846, 854-855,
+      892, 897->904, 900-901, 913->915, 928-939, 969->968, 982-983, 1005-1006, 1022->1021,
+      1029-1030, 1061->1060, 1072-1073, 1103->1105, 1105->1107, 1107->1109, 1117-1118,
+      1149-1150, 1171, 1194->1193, 1206-1207, 1230, 1235, 1258-1259, 1289->1288, 1300-1301,
+      1328->1327, 1335-1336, 1358-1359, 1381-1382, 1457-1458, 1513-1514, 1598-1599,
+      1641-1642, 1662, 1700
 
-      src/gimp_mcp_pro/tools/transform_tools.py     162     28     14      4    82%   104,
-      182-183, 217-218, 262-263, 322-323, 380-381, 395, 416-417, 437, 461-462, 486-487,
-      508, 523-524, 551-552, 593-594, 630-631
+      src/gimp_mcp_pro/tools/native_backend.py               110     16     24      8    81%   53-54,
+      72, 83, 90, 91->105, 94, 95->92, 98, 103->92, 193->195, 196-199, 218-222
 
-      src/gimp_mcp_pro/tools/types.py                27      8      0      0    70%   37,
+      src/gimp_mcp_pro/tools/native_context.py                18      0     10      1    96%   17->19
+
+      src/gimp_mcp_pro/tools/path_tools.py                   125     25     32     12    75%   34-41,
+      53, 58, 137->136, 144-145, 170->177, 171->170, 175-176, 182-183, 203-204, 219-220,
+      245, 249->255, 252-253, 296-297, 331->330, 338-339, 361, 402, 440
+
+      src/gimp_mcp_pro/tools/pdb_tools.py                     85     16     28      5    74%   33,
+      70-80, 127->126, 164, 176, 243, 325
+
+      src/gimp_mcp_pro/tools/selection_tools.py              244     47     52     17    78%   25,
+      117, 126-127, 162, 171-172, 190-191, 215-216, 236-237, 316->315, 327-328, 360->359,
+      371-372, 403->407, 433-434, 478->477, 489-490, 503, 519-520, 533, 549-550, 571,
+      575->583, 578-579, 597, 652-653, 680, 684->690, 687-688, 702, 770-771, 810->809,
+      819-820, 826-827, 850-851, 874-875
+
+      src/gimp_mcp_pro/tools/target_tools.py                  94     22     30     13    72%   20,
+      22, 25, 28-29, 30->23, 32, 39, 43, 265, 273, 280, 299-300, 329-330, 337, 347-348,
+      377, 386, 396-397
+
+      src/gimp_mcp_pro/tools/transform_tools.py              249     44     46     11    81%   227-233,
+      332, 336, 340, 345, 365-366, 392, 470-471, 505-506, 553-554, 611-612, 665-666,
+      680, 701-702, 722, 746-747, 773-774, 810, 817-818, 823, 852-853, 874, 889-890,
+      945-946, 989-990, 1028-1029
+
+      src/gimp_mcp_pro/tools/types.py                         27      8      0      0    70%   37,
       59, 75, 91, 109, 117, 125, 133
 
-      src/gimp_mcp_pro/utils/logging.py              15      1      4      1    89%   18
+      src/gimp_mcp_pro/utils/logging.py                       15      1      4      1    89%   18
 
-      ---------------------------------------------------------------------------------------
+      ------------------------------------------------------------------------------------------------
 
-      TOTAL                                        4171    630    920    235    82%
+      TOTAL                                                 5255    809   1214    316    81%
 
 
-      11 files skipped due to complete coverage.
+      18 files skipped due to complete coverage.
 
       Coverage XML written to file coverage.xml
 
-      Required test coverage of 20.0% reached. Total coverage: 81.91%
+      Required test coverage of 20.0% reached. Total coverage: 81.40%
 
-      ======================== 583 passed in 65.21s (0:01:05) ========================
+      ============================= 848 passed in 25.21s =============================
 
       '
 - id: S-040-doc-claim-gate

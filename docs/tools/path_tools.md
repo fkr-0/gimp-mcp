@@ -15,7 +15,7 @@ Source module: `src/gimp_mcp_pro/tools/path_tools.py`
 
 ## `create_path` {#create-path}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:73`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:74`
 
 ```python
 async def create_path(points: list[float], name: str = 'Path', closed: bool = False, position: int = 0) -> ToolResult
@@ -56,7 +56,7 @@ Returns:
 
 ## `list_paths` {#list-paths}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:124`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:148`
 
 ```python
 async def list_paths() -> ToolResult
@@ -82,7 +82,7 @@ Returns:
 
 ## `path_to_selection` {#path-to-selection}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:162`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:186`
 
 ```python
 async def path_to_selection(path_name: str | None = None, path_index: int | None = None, operation: str = 'replace') -> ToolResult
@@ -121,7 +121,7 @@ Returns:
 
 ## `stroke_path` {#stroke-path}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:199`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:223`
 
 ```python
 async def stroke_path(path_name: str | None = None, path_index: int | None = None, color: str | None = None, brush_size: float | None = None, layer_name: str | None = None, layer_index: int | None = None) -> ToolResult
@@ -166,7 +166,7 @@ Returns:
 
 ## `remove_path` {#remove-path}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:252`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:300`
 
 ```python
 async def remove_path(path_name: str | None = None, path_index: int | None = None) -> ToolResult
@@ -203,7 +203,7 @@ Returns:
 
 ## `edit_paths` {#edit-paths}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:286`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:342`
 
 ```python
 async def edit_paths(action: str, path: dict[str, Any] | str | None = None, points: list[Any] | None = None, stroke_options: dict[str, Any] | None = None) -> ToolResult
@@ -244,7 +244,7 @@ Returns:
 
 ## `create_and_edit_paths` {#create-and-edit-paths}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:325`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:381`
 
 ```python
 async def create_and_edit_paths(action: str, points: list[Any] | None = None, closed: bool = False, path_ref: dict[str, Any] | str | None = None, name: str | None = None) -> ToolResult
@@ -287,7 +287,7 @@ Returns:
 
 ## `stroke_or_fill_path` {#stroke-or-fill-path}
 
-Source: `src/gimp_mcp_pro/tools/path_tools.py:367`
+Source: `src/gimp_mcp_pro/tools/path_tools.py:423`
 
 ```python
 async def stroke_or_fill_path(path_ref: dict[str, Any] | str, mode: str, paint: dict[str, Any] | None = None) -> ToolResult

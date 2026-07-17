@@ -98,3 +98,17 @@ async def test_sample_pixels_rejects_excessive_average_radius_before_bridge_call
     assert result["success"] is False
     assert "average_radius" in result["error"]
     assert bridge.calls == []
+
+
+@pytest.mark.asyncio
+async def test_sample_color_honors_merged_composite_mode() -> None:
+    mcp = CaptureMCP()
+    bridge = ScriptedBridge()
+    register_color_tools(mcp, bridge)
+
+    result = await mcp.tools["sample_color"](x=7, y=9, sample_merged=True)
+
+    assert result["success"] is True
+    generated = "\n".join(bridge.calls[-1][1])
+    assert "image.pick_color([drawable], 7, 9, True, False, 0.0)" in generated
+    assert "drawable.get_pixel(7, 9)" not in generated

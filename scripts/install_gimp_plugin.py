@@ -16,6 +16,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = PROJECT_ROOT / "gimp_plugin" / "gimp_mcp_plugin.py"
+DEFAULT_GIMP_VERSION = "3.2"
 DEFAULT_PLUGIN_DIR_NAME = "gimp-mcp-pro"
 DEFAULT_PLUGIN_EXECUTABLE_NAME = "gimp-mcp-pro"
 
@@ -38,7 +39,7 @@ def detect_gimp_version(config_home: Path) -> str:
     """Prefer the newest local GIMP profile directory, falling back to 3.2."""
     gimp_root = config_home / "GIMP"
     if not gimp_root.exists():
-        return "3.2"
+        return DEFAULT_GIMP_VERSION
 
     versions: list[tuple[tuple[int, ...], str]] = []
     for child in gimp_root.iterdir():
@@ -51,8 +52,14 @@ def detect_gimp_version(config_home: Path) -> str:
         versions.append((parsed, child.name))
 
     if not versions:
-        return "3.2"
+        return DEFAULT_GIMP_VERSION
     return sorted(versions)[-1][1]
+
+
+def gimp_profile_dir(config_home: Path, *, gimp_version: str | None = None) -> Path:
+    """Return the active GIMP profile directory under one config home."""
+    version = gimp_version or detect_gimp_version(config_home)
+    return config_home / "GIMP" / version
 
 
 def plugin_target(
@@ -63,7 +70,12 @@ def plugin_target(
     executable_name: str = DEFAULT_PLUGIN_EXECUTABLE_NAME,
 ) -> Path:
     """Return the target executable path for a GIMP plug-in profile."""
-    return config_home / "GIMP" / gimp_version / "plug-ins" / plugin_dir_name / executable_name
+    return (
+        gimp_profile_dir(config_home, gimp_version=gimp_version)
+        / "plug-ins"
+        / plugin_dir_name
+        / executable_name
+    )
 
 
 def install_plugin(
